@@ -9,7 +9,9 @@ import Anthropic from "@anthropic-ai/sdk";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+// Port is configurable via the PORT env var so you can run on another port
+// if 3000 is busy, e.g.  PORT=3001 npm run dev
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
