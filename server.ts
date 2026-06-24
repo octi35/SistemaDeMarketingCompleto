@@ -1,13 +1,13 @@
 import express from "express";
 import path from "path";
 import cors from "cors";
-import crypto from "crypto";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import nodemailer from "nodemailer";
 import { listProjects, getProject, saveProject, deleteProject } from "./serverStore";
+import { issueOAuthState, consumeOAuthState, sanitizeOAuthCode } from "./oauthState";
 
 dotenv.config();
 
@@ -80,29 +80,6 @@ function getCustomAiClient(req: express.Request): GoogleGenAI | null {
 
 // Flag to keep track of shared API key quota exhaustion to avoid lagging and error flooding
 let sharedKeyExhaustedUntil = 0;
-
-// --- OAuth CSRF protection: short-lived random state tokens (in-memory) ---
-const oauthStates = new Map<string, number>(); // state -> expiry timestamp (ms)
-function issueOAuthState(): string {
-  const state = crypto.randomBytes(16).toString("hex");
-  oauthStates.set(state, Date.now() + 10 * 60 * 1000); // valid 10 min
-  // Opportunistic cleanup of expired entries
-  const now = Date.now();
-  for (const [s, exp] of oauthStates) if (exp < now) oauthStates.delete(s);
-  return state;
-}
-function consumeOAuthState(state: unknown): boolean {
-  if (!state || typeof state !== "string") return false;
-  const exp = oauthStates.get(state);
-  if (exp === undefined) return false;
-  oauthStates.delete(state);
-  return Date.now() < exp;
-}
-// Allow only safe characters when echoing an OAuth `code` back into HTML/JS,
-// preventing script injection via the query string.
-function sanitizeOAuthCode(code: unknown): string {
-  return typeof code === "string" ? code.replace(/[^A-Za-z0-9._\-]/g, "").slice(0, 512) : "";
-}
 
 // Helper wrapper to handle 503/service availability errors by falling back from gemini-2.5-flash to gemini-flash-latest or gemini-2.5-flash-lite
 async function generateContentWithFallback(params: any, customAi?: GoogleGenAI | null) {

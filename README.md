@@ -7,9 +7,15 @@
 
 ## ✨ Novedades
 
-- **Carruseles a partir de un prompt + Nano Banana 🍌**: la IA (Gemini o Claude) escribe los slides y el modelo de imágenes de Gemini (*Nano Banana*, `gemini-2.5-flash-image`) genera la imagen de fondo real de cada diapositiva. Puedes generar todas las imágenes de golpe o regenerar slide por slide, y descargarlas en PNG de alta resolución (1080×1350 / 1080×1080) con el texto ya superpuesto.
-- **Estilo visual configurable**: un campo de "Estilo Visual" deja que indiques el look de las imágenes (cinematográfico, neón, 3D, minimalista, etc.).
-- **Modelos corregidos**: se usan IDs reales de Gemini (`gemini-2.5-flash`, `gemini-flash-latest`, `gemini-2.5-flash-lite`) con reintentos y fallback automático.
+- **Carruseles a partir de un prompt + Nano Banana 🍌**: la IA (Gemini o Claude) escribe los slides y el modelo de imágenes de Gemini (*Nano Banana*, `gemini-2.5-flash-image`) genera la imagen de fondo real de cada diapositiva.
+- **Nano Banana 2.0**: generación de imágenes **en paralelo** (3 a la vez), opción **Nano Banana Pro** (`gemini-3-pro-image`) e **imagen de referencia** (subes tu logo/producto y el modelo lo integra — image-to-image).
+- **Estilo visual configurable** y regeneración por slide; **descarga ZIP real** de todo el carrusel (no PNGs sueltos).
+- **Guardar / cargar carruseles**: persistencia en el servidor (`/api/projects`); recupera tus carruseles aunque cierres el navegador.
+- **Publicación real a Meta/Instagram**: selector de Página de Facebook + cuenta de Instagram Business (usa `/api/meta/accounts` y el token de página).
+- **Correo real (SMTP / Nodemailer)** desde el panel de Integraciones (Drive y Calendar siguen simulados — requieren OAuth de Google).
+- **Seguridad**: OAuth con `state` aleatorio verificado (anti‑CSRF) y callbacks sin XSS; se eliminaron las API keys hardcodeadas del cliente.
+- **Calidad**: ESLint + Prettier + tests (Vitest) + CI en GitHub Actions; notificaciones tipo *toast* en vez de `alert()`.
+- **Modelos corregidos**: IDs reales de Gemini (`gemini-2.5-flash`, `gemini-flash-latest`, `gemini-2.5-flash-lite`) con reintentos y fallback automático.
 
 ## 🔑 Configuración mínima (lo más simple posible)
 
@@ -49,10 +55,15 @@ Abre 👉 **http://localhost:3000**
 
 | Comando | Descripción |
 | --- | --- |
-| `npm run dev` | Levanta el servidor Express + Vite en desarrollo (puerto 3000) |
+| `npm run dev` | Levanta el servidor Express + Vite en desarrollo (puerto 3000, configurable con `PORT`) |
 | `npm run build` | Compila el frontend (Vite) y empaqueta el servidor |
 | `npm run start` | Sirve el build de producción |
 | `npm run lint` | Chequeo de tipos con TypeScript |
+| `npm run lint:eslint` | Linter ESLint sobre `src` |
+| `npm test` | Tests unitarios con Vitest |
+| `npm run format` | Formatea el código con Prettier |
+
+> ¿El puerto 3000 ocupado? Usa otro: `PORT=3001 npm run dev` (o en PowerShell `$env:PORT=3001; npm run dev`).
 
 ## 🍌 Cómo generar un carrusel con imágenes
 
