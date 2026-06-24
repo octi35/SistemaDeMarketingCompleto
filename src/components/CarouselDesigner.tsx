@@ -46,36 +46,6 @@ export const CarouselDesigner: React.FC = () => {
     { name: "LinkedIn Blue", bgStart: "#0a66c2", bgEnd: "#004182", text: "#ffffff", accent: "#86efac" },
   ];
 
-  const generateCarousel = async (withImages = false) => {
-    setLoading(true);
-    setSlides([]);
-    setCurrentSlideIndex(0);
-    setUploaded(false);
-    setImageError(null);
-    try {
-      const data = await apiPost<{ slides?: CarouselSlide[]; isMock?: boolean }>(
-        "/api/generate-carousel",
-        { topic, slideCount, platform, tone, engine },
-        { includeAnthropic: true }
-      );
-      if (data.slides) {
-        setSlides(data.slides);
-        setIsDemo(!!data.isMock);
-        if (withImages) generateAllImages(data.slides);
-      }
-    } catch (err: any) {
-      console.error("Error generating carousel:", err);
-      toast.error(`No se pudo generar el carrusel: ${err.message || err}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    generateCarousel(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // ---- Nano Banana image generation ----
   const generateSlideImage = async (index: number, slideOverride?: CarouselSlide): Promise<boolean> => {
     const slide = slideOverride || slides[index];
@@ -135,6 +105,36 @@ export const CarouselDesigner: React.FC = () => {
     else if (ok > 0) toast.info(`${ok}/${list.length} imágenes generadas. Reintenta las que faltan.`);
     else toast.error("No se pudieron generar las imágenes. Revisa tu API Key / cuota de Gemini.");
   };
+
+  const generateCarousel = async (withImages = false) => {
+    setLoading(true);
+    setSlides([]);
+    setCurrentSlideIndex(0);
+    setUploaded(false);
+    setImageError(null);
+    try {
+      const data = await apiPost<{ slides?: CarouselSlide[]; isMock?: boolean }>(
+        "/api/generate-carousel",
+        { topic, slideCount, platform, tone, engine },
+        { includeAnthropic: true }
+      );
+      if (data.slides) {
+        setSlides(data.slides);
+        setIsDemo(!!data.isMock);
+        if (withImages) generateAllImages(data.slides);
+      }
+    } catch (err: any) {
+      console.error("Error generating carousel:", err);
+      toast.error(`No se pudo generar el carrusel: ${err.message || err}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    generateCarousel(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const removeSlideImage = (index: number) => {
     setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, imageUrl: undefined } : s)));
