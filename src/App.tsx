@@ -10,6 +10,7 @@ import { IntegrationsManager } from "./components/IntegrationsManager";
 import { TeamPipeline } from "./components/TeamPipeline";
 import { AutopilotEngine } from "./components/AutopilotEngine";
 import { SocialPublisher } from "./components/SocialPublisher";
+import { Toaster } from "./components/ui/Toaster";
 import { Sparkles, Users, Award, TrendingUp, Settings, HelpCircle, Activity, LayoutGrid, Calendar, HelpCircle as HelpIcon, ArrowUpRight } from "lucide-react";
 
 export default function App() {
@@ -157,6 +158,7 @@ export default function App() {
         </div>
       </footer>
 
+      <Toaster />
     </div>
   );
 }

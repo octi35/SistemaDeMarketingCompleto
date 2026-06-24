@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
+import JSZip from "jszip";
 import { CarouselSlide } from "../types";
-import { Sparkles, Download, ArrowLeft, ArrowRight, RefreshCw, Upload, Check, Palette, Image as ImageIcon, Wand2, Trash2, AlertCircle } from "lucide-react";
+import { apiPost } from "../lib/api";
+import { toast } from "../lib/toast";
+import { Sparkles, Download, ArrowLeft, ArrowRight, RefreshCw, Upload, Check, Palette, Image as ImageIcon, Wand2, Trash2, AlertCircle, Paperclip } from "lucide-react";
 
 export const CarouselDesigner: React.FC = () => {
   // Config state
@@ -12,6 +15,8 @@ export const CarouselDesigner: React.FC = () => {
 
   // Nano Banana (Gemini image generation) state
   const [imagePrompt, setImagePrompt] = useState("");
+  const [imageModel, setImageModel] = useState<"standard" | "pro">("standard");
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [autoImages, setAutoImages] = useState(false);
   const [generatingImages, setGeneratingImages] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
@@ -22,12 +27,14 @@ export const CarouselDesigner: React.FC = () => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isDemo, setIsDemo] = useState(false);
 
-  // Upload state
+  // Upload / export state
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
+  const [zipping, setZipping] = useState(false);
 
   // Refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const refInputRef = useRef<HTMLInputElement | null>(null);
 
   // Presets themes
   const colorThemes = [
@@ -46,26 +53,19 @@ export const CarouselDesigner: React.FC = () => {
     setUploaded(false);
     setImageError(null);
     try {
-      const response = await fetch("/api/generate-carousel", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Gemini-Key": localStorage.getItem("custom_gemini_api_key") || "",
-          "X-Anthropic-Key": localStorage.getItem("custom_anthropic_api_key") || ""
-        },
-        body: JSON.stringify({ topic, slideCount, platform, tone, engine }),
-      });
-      const data = await response.json();
+      const data = await apiPost<{ slides?: CarouselSlide[]; isMock?: boolean }>(
+        "/api/generate-carousel",
+        { topic, slideCount, platform, tone, engine },
+        { includeAnthropic: true }
+      );
       if (data.slides) {
         setSlides(data.slides);
         setIsDemo(!!data.isMock);
-        if (withImages) {
-          // Fire image generation with the freshly generated slides
-          generateAllImages(data.slides);
-        }
+        if (withImages) generateAllImages(data.slides);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error generating carousel:", err);
+      toast.error(`No se pudo generar el carrusel: ${err.message || err}`);
     } finally {
       setLoading(false);
     }
@@ -77,19 +77,14 @@ export const CarouselDesigner: React.FC = () => {
   }, []);
 
   // ---- Nano Banana image generation ----
-  const generateSlideImage = async (index: number, slideOverride?: CarouselSlide) => {
+  const generateSlideImage = async (index: number, slideOverride?: CarouselSlide): Promise<boolean> => {
     const slide = slideOverride || slides[index];
-    if (!slide) return;
-    setImageError(null);
+    if (!slide) return false;
     setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, imageLoading: true } : s)));
     try {
-      const response = await fetch("/api/generate-carousel-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Gemini-Key": localStorage.getItem("custom_gemini_api_key") || "",
-        },
-        body: JSON.stringify({
+      const data = await apiPost<{ image?: string; warning?: string; error?: string }>(
+        "/api/generate-carousel-image",
+        {
           prompt: imagePrompt,
           slideTitle: slide.title,
           slideBody: slide.body,
@@ -98,19 +93,22 @@ export const CarouselDesigner: React.FC = () => {
           topic,
           accentColor: slide.accentColor,
           bgGradientStart: slide.bgGradientStart,
-        }),
-      });
-      const data = await response.json();
+          imageModel,
+          referenceImage,
+        }
+      );
       if (data.image) {
         setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, imageUrl: data.image, imageLoading: false } : s)));
-      } else {
-        setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, imageLoading: false } : s)));
-        setImageError(data.warning || data.error || "Nano Banana no pudo generar la imagen.");
+        return true;
       }
-    } catch (err) {
+      setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, imageLoading: false } : s)));
+      setImageError(data.warning || data.error || "Nano Banana no pudo generar la imagen.");
+      return false;
+    } catch (err: any) {
       console.error("Error generating Nano Banana image:", err);
       setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, imageLoading: false } : s)));
-      setImageError("Error de red al generar la imagen con Nano Banana.");
+      setImageError(err.message || "Error al generar la imagen con Nano Banana.");
+      return false;
     }
   };
 
@@ -119,15 +117,38 @@ export const CarouselDesigner: React.FC = () => {
     if (list.length === 0) return;
     setGeneratingImages(true);
     setImageError(null);
-    // Sequential generation to respect API rate limits
-    for (let i = 0; i < list.length; i++) {
-      await generateSlideImage(i, list[i]);
-    }
+
+    // Parallel generation with a small concurrency limit to respect rate limits.
+    const concurrency = 3;
+    let next = 0;
+    let ok = 0;
+    const worker = async () => {
+      while (next < list.length) {
+        const i = next++;
+        if (await generateSlideImage(i, list[i])) ok++;
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(concurrency, list.length) }, () => worker()));
+
     setGeneratingImages(false);
+    if (ok === list.length) toast.success(`${ok} imágenes generadas con Nano Banana 🍌`);
+    else if (ok > 0) toast.info(`${ok}/${list.length} imágenes generadas. Reintenta las que faltan.`);
+    else toast.error("No se pudieron generar las imágenes. Revisa tu API Key / cuota de Gemini.");
   };
 
   const removeSlideImage = (index: number) => {
     setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, imageUrl: undefined } : s)));
+  };
+
+  const handleReferenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReferenceImage(reader.result as string);
+      toast.info("Imagen de referencia cargada. Nano Banana la usará como sujeto.");
+    };
+    reader.readAsDataURL(file);
   };
 
   // Sync edits to the active slide in state
@@ -159,38 +180,31 @@ export const CarouselDesigner: React.FC = () => {
       img.src = src;
     });
 
-  // Download a single slide as PNG using HTML5 canvas
-  const downloadSlidePNG = async (slide: CarouselSlide) => {
-    if (!canvasRef.current) return;
+  // Renders one slide onto the shared canvas (image background + overlaid text).
+  const drawSlide = async (slide: CarouselSlide) => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Use IG Portrait size: 1080x1350px (highly engaging) or Square: 1080x1080px
     const isPortrait = platform === "Instagram";
     canvas.width = 1080;
     canvas.height = isPortrait ? 1350 : 1080;
 
     const hasImage = !!slide.imageUrl;
-
-    // When an AI image is the background we always use light text for readability.
     const isDarkText = !hasImage && (slide.textColor === "#111112" || slide.textColor === "#000000" || slide.textColor === "#121214");
     const textColor = hasImage ? "#ffffff" : slide.textColor;
 
     if (hasImage) {
-      // Draw the Nano Banana image as a cover background
       try {
         const img = await loadImage(slide.imageUrl as string);
         const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
         const w = img.width * scale;
         const h = img.height * scale;
-        const x = (canvas.width - w) / 2;
-        const y = (canvas.height - h) / 2;
-        ctx.drawImage(img, x, y, w, h);
+        ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
       } catch (err) {
         console.error("Failed to draw Nano Banana image, falling back to gradient:", err);
       }
-      // Dark gradient overlay for text legibility
       const overlay = ctx.createLinearGradient(0, 0, 0, canvas.height);
       overlay.addColorStop(0, "rgba(0,0,0,0.20)");
       overlay.addColorStop(0.55, "rgba(0,0,0,0.45)");
@@ -198,14 +212,12 @@ export const CarouselDesigner: React.FC = () => {
       ctx.fillStyle = overlay;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     } else {
-      // Clear and draw gradient
       const gradient = ctx.createLinearGradient(0, 0, 1080, canvas.height);
       gradient.addColorStop(0, slide.bgGradientStart);
       gradient.addColorStop(1, slide.bgGradientEnd);
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 1080, canvas.height);
 
-      // Dynamic graphic patterns (pixelated or sleek grid)
       ctx.strokeStyle = isDarkText ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.05)";
       ctx.lineWidth = 1;
       for (let i = 0; i < 1080; i += 60) {
@@ -221,13 +233,12 @@ export const CarouselDesigner: React.FC = () => {
         ctx.stroke();
       }
 
-      // Border Frame
       ctx.strokeStyle = isDarkText ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.06)";
       ctx.lineWidth = 16;
       ctx.strokeRect(20, 20, 1040, canvas.height - 40);
     }
 
-    // Slide Number Counter top right
+    // Slide number counter top right
     ctx.fillStyle = isDarkText ? "rgba(0,0,0,0.05)" : "rgba(0,0,0,0.25)";
     ctx.fillRect(880, 60, 140, 50);
     ctx.fillStyle = slide.accentColor;
@@ -235,34 +246,30 @@ export const CarouselDesigner: React.FC = () => {
     ctx.textAlign = "center";
     ctx.fillText(`${slide.slideNumber} / ${slides.length}`, 950, 92);
 
-    // Logo Watermark bottom center
+    // Watermark
     ctx.fillStyle = isDarkText ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.45)";
     ctx.font = "18px sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(platform === "Instagram" ? "@tu_cuenta • IG Carousel" : "LinkedIn Post • Creado por AdTeam AI", 1080 / 2, canvas.height - 70);
 
-    // Optional text shadow when over an image
     if (hasImage) {
       ctx.shadowColor = "rgba(0,0,0,0.6)";
       ctx.shadowBlur = 16;
       ctx.shadowOffsetY = 2;
     }
 
-    // Title (bold, modern)
+    // Title
     ctx.fillStyle = textColor;
     ctx.font = "bold 56px system-ui, -apple-system, sans-serif";
     ctx.textAlign = "left";
-
     const words = slide.title.split(" ");
     let line = "";
     let y = hasImage ? 760 : 320;
     const maxWidth = 900;
     const lineHeight = 74;
-
     for (let n = 0; n < words.length; n++) {
       const testLine = line + words[n] + " ";
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && n > 0) {
+      if (ctx.measureText(testLine).width > maxWidth && n > 0) {
         ctx.fillText(line, 90, y);
         line = words[n] + " ";
         y += lineHeight;
@@ -272,14 +279,14 @@ export const CarouselDesigner: React.FC = () => {
     }
     ctx.fillText(line, 90, y);
 
-    // Accent slide separator bar
+    // Accent bar
     y += 40;
     ctx.shadowColor = "transparent";
     ctx.shadowBlur = 0;
     ctx.fillStyle = slide.accentColor;
     ctx.fillRect(90, y, 160, 10);
 
-    // Body text (clean sans font)
+    // Body
     if (hasImage) {
       ctx.shadowColor = "rgba(0,0,0,0.6)";
       ctx.shadowBlur = 12;
@@ -287,15 +294,12 @@ export const CarouselDesigner: React.FC = () => {
     y += 90;
     ctx.fillStyle = hasImage ? "rgba(255,255,255,0.92)" : (isDarkText ? "rgba(17,17,18,0.85)" : "rgba(255,255,255,0.85)");
     ctx.font = "34px sans-serif";
-
     const bodyWords = slide.body.split(" ");
     let bodyLine = "";
     const bodyLineHeight = 52;
-
     for (let n = 0; n < bodyWords.length; n++) {
       const testLine = bodyLine + bodyWords[n] + " ";
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && n > 0) {
+      if (ctx.measureText(testLine).width > maxWidth && n > 0) {
         ctx.fillText(bodyLine, 90, y);
         bodyLine = bodyWords[n] + " ";
         y += bodyLineHeight;
@@ -307,7 +311,6 @@ export const CarouselDesigner: React.FC = () => {
     ctx.shadowColor = "transparent";
     ctx.shadowBlur = 0;
 
-    // Graphic cue / Visual idea helper text (only when there is no AI image)
     if (!hasImage) {
       ctx.fillStyle = isDarkText ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.15)";
       ctx.fillRect(90, canvas.height - 250, 900, 120);
@@ -318,33 +321,59 @@ export const CarouselDesigner: React.FC = () => {
       ctx.fillStyle = isDarkText ? "rgba(17,17,18,0.55)" : "#94a3b8";
       ctx.fillText((slide.visualIdea || "").slice(0, 85) + "...", 110, canvas.height - 175);
     }
+  };
 
-    // Save
-    const imageURI = canvas.toDataURL("image/png");
+  const downloadSlidePNG = async (slide: CarouselSlide) => {
+    await drawSlide(slide);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const link = document.createElement("a");
     link.download = `CAROUSEL_SLIDE_${slide.slideNumber}_OF_${slides.length}.png`;
-    link.href = imageURI;
+    link.href = canvas.toDataURL("image/png");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Loop through all slides and download each sequentially
-  const handleDownloadAllSlides = async () => {
-    for (const slide of slides) {
-      await downloadSlidePNG(slide);
-      // small gap so the browser registers each download
-      await new Promise((r) => setTimeout(r, 250));
+  // Render every slide and bundle them into a real .zip download.
+  const downloadAllAsZip = async () => {
+    if (slides.length === 0) return;
+    setZipping(true);
+    try {
+      const zip = new JSZip();
+      for (const slide of slides) {
+        await drawSlide(slide);
+        const blob: Blob | null = await new Promise((resolve) =>
+          canvasRef.current!.toBlob((b) => resolve(b), "image/png")
+        );
+        if (blob) zip.file(`slide_${String(slide.slideNumber).padStart(2, "0")}.png`, blob);
+      }
+      const content = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(content);
+      const link = document.createElement("a");
+      link.download = `carrusel_${platform.toLowerCase()}_${slides.length}_slides.zip`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Carrusel descargado como ZIP 📦");
+    } catch (err: any) {
+      console.error("Error building ZIP:", err);
+      toast.error("No se pudo crear el ZIP del carrusel.");
+    } finally {
+      setZipping(false);
     }
   };
 
-  // Simulated API direct upload to Meta Instagram Graph API or LinkedIn Content API
+  // Direct publish from the carousel is a guided shortcut to the real publisher.
   const handleDirectUploadAPI = () => {
     setUploading(true);
     setTimeout(() => {
       setUploading(false);
       setUploaded(true);
-    }, 2000);
+      toast.info(`Para publicar de verdad en ${platform}, conecta tu cuenta en "Integración Nube" y usa "Gestor de Contenido".`);
+    }, 1200);
   };
 
   const activeSlide = slides[currentSlideIndex];
@@ -423,7 +452,7 @@ export const CarouselDesigner: React.FC = () => {
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#66666E] uppercase tracking-wider">Motor IA</label>
+            <label className="text-[10px] font-semibold text-[#66666E] uppercase tracking-wider">Motor IA (texto)</label>
             <select
               value={engine}
               onChange={(e) => setEngine(e.target.value)}
@@ -435,9 +464,9 @@ export const CarouselDesigner: React.FC = () => {
           </div>
         </div>
 
-        {/* Nano Banana visual style prompt */}
+        {/* Nano Banana visual controls */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-          <div className="space-y-1.5 md:col-span-4">
+          <div className="space-y-1.5 md:col-span-3">
             <label className="text-[10px] font-semibold text-[#66666E] uppercase tracking-wider flex items-center gap-1.5">
               <ImageIcon className="w-3 h-3 text-[#FCE22A]" /> Estilo Visual para las imágenes (Nano Banana) — opcional
             </label>
@@ -449,6 +478,17 @@ export const CarouselDesigner: React.FC = () => {
               placeholder="Ej: fotografía cinematográfica, tonos neón, minimalista, 3D render..."
             />
           </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold text-[#66666E] uppercase tracking-wider">Modelo de imagen</label>
+            <select
+              value={imageModel}
+              onChange={(e) => setImageModel(e.target.value as "standard" | "pro")}
+              className="w-full bg-[#1A1A1C] border border-[#2A2A2C] focus:border-[#FCE22A] rounded-lg p-3 text-xs text-[#FCE22A] focus:outline-none font-semibold"
+            >
+              <option value="standard" className="text-[#88888E]">Nano Banana 🍌</option>
+              <option value="pro" className="text-[#FCE22A]">Nano Banana Pro ✨</option>
+            </select>
+          </div>
           <div className="space-y-1.5 md:col-span-2 flex items-end">
             <label className="flex items-center gap-2 bg-[#1A1A1C] border border-[#2A2A2C] rounded-lg px-3 py-3 text-xs text-[#88888E] cursor-pointer w-full">
               <input
@@ -457,9 +497,29 @@ export const CarouselDesigner: React.FC = () => {
                 onChange={(e) => setAutoImages(e.target.checked)}
                 className="accent-[#FCE22A] w-4 h-4"
               />
-              <span>Generar imágenes con Nano Banana al crear el carrusel</span>
+              <span>Generar imágenes al crear el carrusel</span>
             </label>
           </div>
+        </div>
+
+        {/* Reference image */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <input ref={refInputRef} type="file" accept="image/*" className="hidden" onChange={handleReferenceUpload} />
+          <button
+            onClick={() => refInputRef.current?.click()}
+            className="bg-[#1A1A1C] border border-[#2A2A2C] hover:border-[#FCE22A]/50 text-[#88888E] hover:text-white text-[11px] px-3 py-2 rounded-lg flex items-center gap-2 transition"
+          >
+            <Paperclip className="w-3.5 h-3.5 text-[#FCE22A]" />
+            <span>{referenceImage ? "Cambiar imagen de referencia" : "Subir imagen de referencia (logo/producto)"}</span>
+          </button>
+          {referenceImage && (
+            <div className="flex items-center gap-2">
+              <img src={referenceImage} alt="referencia" className="w-9 h-9 rounded object-cover border border-[#2A2A2C]" />
+              <button onClick={() => setReferenceImage(null)} className="text-[#66666E] hover:text-red-400 transition" title="Quitar referencia">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
@@ -491,7 +551,7 @@ export const CarouselDesigner: React.FC = () => {
             {generatingImages ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Nano Banana generando imágenes...</span>
+                <span>Nano Banana generando...</span>
               </>
             ) : (
               <>
@@ -518,9 +578,8 @@ export const CarouselDesigner: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* LEFT side: Visual Slide editor layout (takes 7 cols) */}
-          <div className="lg:col-span-7 bg-[#141416] border border-[#222224] rounded-2xl p-6 flex flex-col justify-between h-[650px]">
+          <div className="lg:col-span-7 bg-[#141416] border border-[#222224] rounded-2xl p-6 flex flex-col justify-between min-h-[650px]">
 
-            {/* Top index and info */}
             <div className="flex items-center justify-between border-b border-[#222224] pb-3 mb-4">
               <span className="text-xs font-semibold text-[#88888E] font-mono">
                 DIAPOSITIVA ACTIVA: {currentSlideIndex + 1} de {slides.length}
@@ -530,31 +589,21 @@ export const CarouselDesigner: React.FC = () => {
               </div>
             </div>
 
-            {/* Slider container representing the actual post */}
             <div
               className="flex-1 rounded-2xl p-8 relative flex flex-col justify-between border border-[#222224] shadow-inner overflow-hidden select-none"
               style={{
                 background: `linear-gradient(135deg, ${activeSlide.bgGradientStart}, ${activeSlide.bgGradientEnd})`,
                 color: activeSlide.imageUrl ? "#ffffff" : activeSlide.textColor,
-                height: platform === "Instagram" ? "420px" : "360px"
+                minHeight: platform === "Instagram" ? "420px" : "360px"
               }}
             >
-              {/* Nano Banana AI background image */}
               {activeSlide.imageUrl && (
                 <>
-                  <img
-                    src={activeSlide.imageUrl}
-                    alt="Imagen generada por Nano Banana"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div
-                    className="absolute inset-0"
-                    style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0.78) 100%)" }}
-                  />
+                  <img src={activeSlide.imageUrl} alt="Imagen generada por Nano Banana" className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0.78) 100%)" }} />
                 </>
               )}
 
-              {/* Loading overlay while Nano Banana renders */}
               {activeSlide.imageLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20">
                   <div className="flex flex-col items-center gap-2 text-white">
@@ -564,12 +613,10 @@ export const CarouselDesigner: React.FC = () => {
                 </div>
               )}
 
-              {/* Corner abstract vectors (only when no image) */}
               {!activeSlide.imageUrl && (
                 <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/5 -mr-16 -mt-16 filter blur" />
               )}
 
-              {/* Header and Slide Count */}
               <div className="flex justify-between items-center relative z-10">
                 <span className="text-[10px] font-bold tracking-widest uppercase opacity-75 font-mono" style={activeSlide.imageUrl ? { textShadow: "0 1px 6px rgba(0,0,0,0.8)" } : undefined}>
                   {platform.toUpperCase()} SLIDES
@@ -579,33 +626,28 @@ export const CarouselDesigner: React.FC = () => {
                 </span>
               </div>
 
-              {/* Core visual slide content */}
               <div className="my-auto space-y-4 relative z-10" style={activeSlide.imageUrl ? { textShadow: "0 2px 12px rgba(0,0,0,0.75)" } : undefined}>
                 <h3 className="text-2xl md:text-3xl font-extrabold leading-tight">
                   {activeSlide.title}
                 </h3>
-
-                {/* Accent bar color line */}
                 <div className="h-1.5 w-24 rounded" style={{ backgroundColor: activeSlide.accentColor }} />
-
                 <p className="text-sm md:text-base leading-relaxed opacity-90 font-medium">
                   {activeSlide.body}
                 </p>
               </div>
 
-              {/* Bottom design footer */}
               <div className="flex justify-between items-center text-[10px] opacity-60 font-mono mt-4 border-t border-white/10 pt-3 relative z-10">
                 <span>{activeSlide.imageUrl ? "IMAGEN POR NANO BANANA 🍌" : "DISEÑO AUTO-SINC • ADTEAM AI"}</span>
                 <span>DESLIZA 👉</span>
               </div>
             </div>
 
-            {/* Pagination Controls */}
             <div className="flex items-center justify-between mt-6 bg-[#0A0A0B] p-3 rounded-xl border border-[#222224]">
               <button
                 disabled={currentSlideIndex === 0}
                 onClick={() => setCurrentSlideIndex(currentSlideIndex - 1)}
                 className="p-2 bg-[#1A1A1C] hover:bg-[#2A2A2C] disabled:opacity-30 rounded-lg text-[#88888E] border border-[#2A2A2C] transition"
+                aria-label="Diapositiva anterior"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
@@ -618,6 +660,7 @@ export const CarouselDesigner: React.FC = () => {
                     className={`w-2.5 h-2.5 rounded-full shrink-0 transition-colors ${
                       idx === currentSlideIndex ? "bg-[#D1FF26]" : "bg-[#222224] hover:bg-[#2A2A2C]"
                     }`}
+                    aria-label={`Ir a diapositiva ${idx + 1}`}
                   />
                 ))}
               </div>
@@ -626,6 +669,7 @@ export const CarouselDesigner: React.FC = () => {
                 disabled={currentSlideIndex === slides.length - 1}
                 onClick={() => setCurrentSlideIndex(currentSlideIndex + 1)}
                 className="p-2 bg-[#1A1A1C] hover:bg-[#2A2A2C] disabled:opacity-30 rounded-lg text-[#88888E] border border-[#2A2A2C] transition"
+                aria-label="Diapositiva siguiente"
               >
                 <ArrowRight className="w-4 h-4" />
               </button>
@@ -633,7 +677,7 @@ export const CarouselDesigner: React.FC = () => {
           </div>
 
           {/* RIGHT side: Customizer side panel (takes 5 cols) */}
-          <div className="lg:col-span-5 bg-[#141416] border border-[#222224] rounded-2xl p-6 flex flex-col justify-between h-[650px] overflow-y-auto custom-scrollbar">
+          <div className="lg:col-span-5 bg-[#141416] border border-[#222224] rounded-2xl p-6 flex flex-col justify-between min-h-[650px] overflow-y-auto custom-scrollbar">
 
             <div className="space-y-4">
               <h3 className="text-xs font-semibold text-[#88888E] uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-[#222224]">
@@ -651,11 +695,7 @@ export const CarouselDesigner: React.FC = () => {
                     disabled={activeSlide.imageLoading || generatingImages}
                     className="flex-1 bg-[#FCE22A] hover:bg-[#FCD900] disabled:opacity-50 text-black font-bold text-[11px] px-3 py-2 rounded flex items-center justify-center gap-1.5 transition"
                   >
-                    {activeSlide.imageLoading ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Wand2 className="w-3.5 h-3.5" />
-                    )}
+                    {activeSlide.imageLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
                     <span>{activeSlide.imageUrl ? "Regenerar 🍌" : "Generar imagen 🍌"}</span>
                   </button>
                   {activeSlide.imageUrl && (
@@ -669,7 +709,7 @@ export const CarouselDesigner: React.FC = () => {
                   )}
                 </div>
                 <p className="text-[10px] text-[#88888E] leading-snug">
-                  La imagen se genera con el modelo de imágenes de Gemini (Nano Banana) usando el concepto visual del slide y tu estilo.
+                  Se genera con el modelo de imágenes de Gemini ({imageModel === "pro" ? "Nano Banana Pro" : "Nano Banana"}) usando el concepto visual del slide y tu estilo.
                 </p>
               </div>
 
@@ -724,7 +764,6 @@ export const CarouselDesigner: React.FC = () => {
                   />
                 </div>
 
-                {/* Color customization */}
                 <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
                   <div>
                     <label className="text-[10px] font-semibold text-[#66666E] font-mono block mb-1">Color Inicio</label>
@@ -734,6 +773,7 @@ export const CarouselDesigner: React.FC = () => {
                         value={activeSlide.bgGradientStart}
                         onChange={(e) => handleEditActiveSlide("bgGradientStart", e.target.value)}
                         className="w-5 h-5 rounded border border-[#2A2A2C] bg-transparent cursor-pointer shrink-0"
+                        aria-label="Color de inicio del degradado"
                       />
                       <span className="font-mono text-[10px] text-[#88888E] uppercase select-all">{activeSlide.bgGradientStart}</span>
                     </div>
@@ -746,6 +786,7 @@ export const CarouselDesigner: React.FC = () => {
                         value={activeSlide.accentColor}
                         onChange={(e) => handleEditActiveSlide("accentColor", e.target.value)}
                         className="w-5 h-5 rounded border border-[#2A2A2C] bg-transparent cursor-pointer shrink-0"
+                        aria-label="Color destacado"
                       />
                       <span className="font-mono text-[10px] text-[#88888E] uppercase select-all">{activeSlide.accentColor}</span>
                     </div>
@@ -765,12 +806,13 @@ export const CarouselDesigner: React.FC = () => {
               </button>
 
               <button
-                onClick={handleDownloadAllSlides}
-                className="w-full bg-[#D1FF26] hover:bg-[#c2ed1c] active:bg-[#b3db18] text-black font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition"
+                onClick={downloadAllAsZip}
+                disabled={zipping}
+                className="w-full bg-[#D1FF26] hover:bg-[#c2ed1c] active:bg-[#b3db18] disabled:opacity-50 text-black font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition"
                 id="btn-download-carousel-all"
               >
-                <Download className="w-4 h-4" />
-                <span>Descargar Carrusel Completo (PNG)</span>
+                {zipping ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                <span>{zipping ? "Creando ZIP..." : "Descargar Carrusel Completo (ZIP)"}</span>
               </button>
 
               <button
@@ -786,29 +828,21 @@ export const CarouselDesigner: React.FC = () => {
                 {uploading ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin text-[#D1FF26]" />
-                    <span>Conectando con la API de {platform}...</span>
+                    <span>Preparando para {platform}...</span>
                   </>
                 ) : uploaded ? (
                   <>
                     <Check className="w-4 h-4 text-[#D1FF26]" />
-                    <span>Publicado con Éxito ({platform} API)</span>
+                    <span>Listo para publicar en {platform}</span>
                   </>
                 ) : (
                   <>
                     <Upload className="w-4 h-4 text-green-500" />
-                    <span>Publicar en mi {platform} directamente</span>
+                    <span>Publicar en mi {platform}</span>
                   </>
                 )}
               </button>
             </div>
-
-            {/* Sync codes visual logs */}
-            {uploaded && (
-              <div className="bg-[#0A0A0B] rounded p-2.5 border border-[#222224] font-mono text-[9px] text-[#88888E] space-y-0.5 mt-2">
-                <div>GET /v15.0/me/media_publish?creation_id=184910478201 HTTP/1.1</div>
-                <div className="text-green-400">HTTP/1.1 200 OK {"{"} "id": "184910478201", "status": "PUBLISHED" {"}"}</div>
-              </div>
-            )}
           </div>
         </div>
       )}

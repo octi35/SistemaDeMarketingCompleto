@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { 
-  Sparkles, Play, CheckCircle2, Copy, Check, Code, Eye, FileText, Send, Share2, 
-  Loader2, ArrowRight, Layers, Layout, BookOpen, Facebook, Linkedin, Instagram, 
-  RefreshCw, Upload, Image as ImageIcon, Video as VideoIcon, Trash2, Calendar, 
+import { apiPost } from "../lib/api";
+import { toast } from "../lib/toast";
+import { STORAGE_KEYS, getStored, setStored } from "../lib/storageKeys";
+import {
+  Sparkles, Play, CheckCircle2, Copy, Check, Code, Eye, FileText, Send, Share2,
+  Loader2, ArrowRight, Layers, Layout, BookOpen, Facebook, Linkedin, Instagram,
+  RefreshCw, Upload, Image as ImageIcon, Video as VideoIcon, Trash2, Calendar,
   Clock, Plus, Sparkle, AlertTriangle, CloudLightning, HelpCircle
 } from "lucide-react";
 
@@ -85,6 +88,48 @@ export const SocialPublisher: React.FC = () => {
   // OAuth Token check from localStorage
   const [linkedinToken, setLinkedinToken] = useState(() => localStorage.getItem("linkedin_access_token") || "");
   const [metaToken, setMetaToken] = useState(() => localStorage.getItem("meta_access_token") || "");
+
+  // Real Meta account/page selection (Facebook Page + linked Instagram Business account)
+  const [metaAccounts, setMetaAccounts] = useState<any[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [selectedPageId, setSelectedPageId] = useState(() => getStored(STORAGE_KEYS.metaPageId));
+  const [selectedIgId, setSelectedIgId] = useState(() => getStored(STORAGE_KEYS.metaIgAccountId));
+  const [selectedPageToken, setSelectedPageToken] = useState("");
+
+  const selectMetaPage = (page: any) => {
+    setSelectedPageId(page.id || "");
+    setStored(STORAGE_KEYS.metaPageId, page.id || "");
+    const ig = page.instagram_business_account?.id || "";
+    setSelectedIgId(ig);
+    setStored(STORAGE_KEYS.metaIgAccountId, ig);
+    setSelectedPageToken(page.access_token || "");
+  };
+
+  const loadMetaAccounts = async () => {
+    if (!metaToken) {
+      toast.error("Conecta tu cuenta de Meta en 'Integración Nube' primero.");
+      return;
+    }
+    setLoadingAccounts(true);
+    try {
+      const res = await fetch("/api/meta/accounts", { headers: { Authorization: `Bearer ${metaToken}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || data?.error || "Error al cargar cuentas");
+      const pages = data.pages || [];
+      setMetaAccounts(pages);
+      if (pages.length > 0) {
+        const current = pages.find((p: any) => p.id === selectedPageId) || pages[0];
+        selectMetaPage(current);
+        toast.success(`${pages.length} página(s) de Meta cargada(s).`);
+      } else {
+        toast.info("No se encontraron páginas en esta cuenta de Meta.");
+      }
+    } catch (err: any) {
+      toast.error(`No se pudieron cargar las cuentas: ${err.message}`);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
 
   // Update localStorage when library changes
   useEffect(() => {
@@ -196,7 +241,7 @@ export const SocialPublisher: React.FC = () => {
       setGeneratedResult(data);
     } catch (error: any) {
       console.error("Error al generar descripciones:", error);
-      alert("Hubo un problema al generar las descripciones de tus redes. Se cargará una plantilla offline.");
+      toast.error("Hubo un problema al generar las descripciones de tus redes. Se cargará una plantilla offline.");
     } finally {
       setIsGenerating(false);
     }
@@ -219,20 +264,22 @@ export const SocialPublisher: React.FC = () => {
       let endpoint = "";
       let body: any = {};
 
+      // Page access token is preferred for Facebook/Instagram publishing.
+      const metaPublishToken = selectedPageToken || metaToken;
+
       if (network === "linkedin") {
         endpoint = "/api/linkedin/post";
         body = { text: fullText, token: linkedinToken };
       } else if (network === "facebook") {
         endpoint = "/api/meta/facebook/post";
-        // Default page id or fallback
-        body = { pageId: "sandbox_page_id", message: fullText, token: metaToken };
+        body = { pageId: selectedPageId || "sandbox_page_id", message: fullText, token: metaPublishToken };
       } else if (network === "instagram") {
         endpoint = "/api/meta/instagram/post";
-        body = { 
-          igAccountId: "sandbox_ig_id", 
-          imageUrl: selectedMedia?.data || selectedMedia?.url || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe", 
+        body = {
+          igAccountId: selectedIgId || "sandbox_ig_id",
+          imageUrl: selectedMedia?.data || selectedMedia?.url || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
           caption: fullText,
-          token: metaToken
+          token: metaPublishToken
         };
       }
 
@@ -244,24 +291,24 @@ export const SocialPublisher: React.FC = () => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setPublishStatus(prev => ({ 
-          ...prev, 
-          [network]: { 
-            status: "¡Publicado!", 
-            link: network === "linkedin" ? "https://linkedin.com" : "https://facebook.com" 
-          } 
+        setPublishStatus(prev => ({
+          ...prev,
+          [network]: {
+            status: "¡Publicado!",
+            link: network === "linkedin" ? "https://linkedin.com" : "https://facebook.com"
+          }
         }));
-        alert(`¡Subido con éxito a tu canal oficial de ${network.toUpperCase()}! 🎉`);
+        toast.success(`¡Subido con éxito a tu canal oficial de ${network.toUpperCase()}! 🎉`);
       } else {
         // Fallback simulation status
-        setPublishStatus(prev => ({ 
-          ...prev, 
-          [network]: { 
-            status: "Simulado con Éxito (Sandbox)", 
-            link: "#" 
-          } 
+        setPublishStatus(prev => ({
+          ...prev,
+          [network]: {
+            status: "Simulado con Éxito (Sandbox)",
+            link: "#"
+          }
         }));
-        alert(`Simulación Sandbox Completada: El copy se ha estructurado perfectamente y se ha sincronizado con el simulador de AdTeam AI. Configura tus tokens de acceso en 'Integración Nube' para publicar de forma real.`);
+        toast.info("Simulación completada. Conecta tu cuenta y elige tu página/IG en 'Integración Nube' para publicar de forma real.");
       }
     } catch (err: any) {
       console.error(err);
@@ -622,6 +669,48 @@ export const SocialPublisher: React.FC = () => {
                         </p>
                       </div>
                     </div>
+
+                    {/* Meta account / page selector (real publishing target) */}
+                    {(activeNetworkTab === "instagram" || activeNetworkTab === "facebook") && (
+                      <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-zinc-500 uppercase font-mono font-bold">Cuenta de destino (Meta)</span>
+                          <button
+                            onClick={loadMetaAccounts}
+                            disabled={loadingAccounts}
+                            className="text-[10px] font-bold text-[#D1FF26] hover:underline flex items-center gap-1 disabled:opacity-50"
+                          >
+                            {loadingAccounts ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                            <span>{metaAccounts.length ? "Recargar" : "Cargar mis páginas"}</span>
+                          </button>
+                        </div>
+                        {metaAccounts.length > 0 ? (
+                          <select
+                            value={selectedPageId}
+                            onChange={(e) => {
+                              const p = metaAccounts.find((a) => a.id === e.target.value);
+                              if (p) selectMetaPage(p);
+                            }}
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#D1FF26]"
+                          >
+                            {metaAccounts.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}{p.instagram_business_account ? " (IG ✓)" : " (sin IG)"}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p className="text-[11px] text-zinc-400">
+                            {metaToken
+                              ? "Pulsa “Cargar mis páginas” para elegir dónde publicar."
+                              : "Conecta tu cuenta de Meta en “Integración Nube” para publicar de forma real."}
+                          </p>
+                        )}
+                        {activeNetworkTab === "instagram" && metaAccounts.length > 0 && !selectedIgId && (
+                          <p className="text-[10px] text-amber-400">⚠ La página elegida no tiene una cuenta de Instagram Business vinculada.</p>
+                        )}
+                      </div>
+                    )}
 
                     {/* Direct execution controls */}
                     <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">

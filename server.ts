@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import cors from "cors";
+import crypto from "crypto";
 import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
@@ -77,6 +78,29 @@ function getCustomAiClient(req: express.Request): GoogleGenAI | null {
 
 // Flag to keep track of shared API key quota exhaustion to avoid lagging and error flooding
 let sharedKeyExhaustedUntil = 0;
+
+// --- OAuth CSRF protection: short-lived random state tokens (in-memory) ---
+const oauthStates = new Map<string, number>(); // state -> expiry timestamp (ms)
+function issueOAuthState(): string {
+  const state = crypto.randomBytes(16).toString("hex");
+  oauthStates.set(state, Date.now() + 10 * 60 * 1000); // valid 10 min
+  // Opportunistic cleanup of expired entries
+  const now = Date.now();
+  for (const [s, exp] of oauthStates) if (exp < now) oauthStates.delete(s);
+  return state;
+}
+function consumeOAuthState(state: unknown): boolean {
+  if (!state || typeof state !== "string") return false;
+  const exp = oauthStates.get(state);
+  if (exp === undefined) return false;
+  oauthStates.delete(state);
+  return Date.now() < exp;
+}
+// Allow only safe characters when echoing an OAuth `code` back into HTML/JS,
+// preventing script injection via the query string.
+function sanitizeOAuthCode(code: unknown): string {
+  return typeof code === "string" ? code.replace(/[^A-Za-z0-9._\-]/g, "").slice(0, 512) : "";
+}
 
 // Helper wrapper to handle 503/service availability errors by falling back from gemini-2.5-flash to gemini-flash-latest or gemini-2.5-flash-lite
 async function generateContentWithFallback(params: any, customAi?: GoogleGenAI | null) {
@@ -163,21 +187,32 @@ const NANO_BANANA_MODELS = [
   "gemini-2.5-flash-image-preview",  // Nano Banana (preview alias)
 ];
 
-// Generates a single image from a text prompt and returns it as a data URL,
-// or null if no image could be produced.
-async function generateNanoBananaImage(prompt: string, customAi?: GoogleGenAI | null): Promise<string | null> {
-  const activeAi = customAi || ai;
+// "Nano Banana Pro" — higher quality / better text rendering. Falls back to the
+// standard model if the Pro id is not available for the account.
+const NANO_BANANA_PRO_MODELS = [
+  "gemini-3-pro-image-preview",
+  "gemini-2.5-flash-image",
+];
+
+// Generates a single image from `contents` (a prompt string, or a parts object
+// when a reference image is supplied) and returns it as a data URL, or null.
+async function generateNanoBananaImage(
+  contents: any,
+  opts: { customAi?: GoogleGenAI | null; models?: string[] } = {}
+): Promise<string | null> {
+  const activeAi = opts.customAi || ai;
   if (!activeAi) {
     throw new Error("Gemini client not initialized");
   }
 
+  const models = opts.models && opts.models.length ? opts.models : NANO_BANANA_MODELS;
   let lastError: any = null;
-  for (const model of NANO_BANANA_MODELS) {
+  for (const model of models) {
     try {
       console.log(`[Nano Banana] Generating image with model: ${model}`);
       const response: any = await activeAi.models.generateContent({
         model,
-        contents: prompt,
+        contents,
         // Ask explicitly for image output. Cast to any to stay compatible
         // across @google/genai minor versions.
         config: { responseModalities: ["IMAGE"] } as any,
@@ -592,7 +627,7 @@ Return strictly valid JSON conforming to the requested schema. No markdown wrapp
 
 // 2.b ENDPOINT: Generate a real AI image for a carousel slide using Nano Banana
 app.post("/api/generate-carousel-image", async (req, res) => {
-  const { prompt, slideTitle, slideBody, visualIdea, platform, topic, accentColor, bgGradientStart } = req.body;
+  const { prompt, slideTitle, slideBody, visualIdea, platform, topic, accentColor, bgGradientStart, imageModel, referenceImage } = req.body;
 
   const activeAi = getCustomAiClient(req) || ai;
   if (!activeAi) {
@@ -620,8 +655,25 @@ Visual concept: ${visualIdea || "modern abstract marketing visual"}.
 Style: modern, high-end premium advertising design, cinematic lighting, clean composition with generous negative space so text can be overlaid later. ${accentColor || bgGradientStart ? `Color palette inspired by ${bgGradientStart || ""} ${accentColor || ""}.` : ""}
 Important: do NOT render any text, words or letters in the image. Photorealistic or sleek vector illustration. Ultra high quality, 4k.`;
 
+  // If a reference image is supplied, send it alongside the prompt so the model
+  // can use it as the main subject (Nano Banana supports image-to-image).
+  let contents: any = fullPrompt;
+  if (referenceImage && typeof referenceImage === "string" && referenceImage.includes("base64,")) {
+    const [meta, b64] = referenceImage.split("base64,");
+    const mimeType = meta.split(":")[1]?.split(";")[0] || "image/png";
+    contents = {
+      parts: [
+        { inlineData: { mimeType, data: b64 } },
+        { text: `${fullPrompt} Use the provided image as the main subject/product and integrate it tastefully into the composition.` },
+      ],
+    };
+  }
+
+  const isPro = imageModel === "pro";
+  const models = isPro ? NANO_BANANA_PRO_MODELS : NANO_BANANA_MODELS;
+
   try {
-    const image = await generateNanoBananaImage(fullPrompt, activeAi);
+    const image = await generateNanoBananaImage(contents, { customAi: activeAi, models });
     if (!image) {
       return res.json({
         image: null,
@@ -629,7 +681,7 @@ Important: do NOT render any text, words or letters in the image. Photorealistic
         error: "Nano Banana no devolvió ninguna imagen. Reintenta en unos segundos o revisa tu cuota de Gemini.",
       });
     }
-    res.json({ image, isMock: false, engineUsed: "Nano Banana (gemini-2.5-flash-image)" });
+    res.json({ image, isMock: false, engineUsed: isPro ? "Nano Banana Pro (gemini-3-pro-image)" : "Nano Banana (gemini-2.5-flash-image)" });
   } catch (error: any) {
     console.error("Error generating carousel image via Nano Banana:", error);
     const msg = (error?.message || String(error)).toLowerCase();
@@ -940,84 +992,55 @@ Return strictly valid JSON with an array named "ideas" containing these 30 items
 app.get("/api/auth/linkedin/url", (req, res) => {
   const clientId = process.env.LINKEDIN_CLIENT_ID || req.query.client_id || "demo_linkedin_client_id";
   const redirectUri = (req.query.redirect_uri as string) || `${process.env.APP_URL || "http://localhost:3000"}/api/auth/linkedin/callback`;
-  
-  const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=w_member_social%20openid%20profile%20email`;
-  res.json({ url: linkedinAuthUrl });
+  const state = issueOAuthState();
+
+  const linkedinAuthUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=w_member_social%20openid%20profile%20email`;
+  res.json({ url: linkedinAuthUrl, state });
 });
 
 app.get("/api/auth/meta/url", (req, res) => {
   const clientId = process.env.META_CLIENT_ID || req.query.client_id || "demo_meta_client_id";
   const redirectUri = (req.query.redirect_uri as string) || `${process.env.APP_URL || "http://localhost:3000"}/api/auth/meta/callback`;
-  
-  const facebookAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=instagram_basic,instagram_content_publish,ads_management,ads_read,pages_show_list,pages_read_engagement`;
-  res.json({ url: facebookAuthUrl });
+  const state = issueOAuthState();
+
+  const facebookAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=instagram_basic,instagram_content_publish,ads_management,ads_read,pages_show_list,pages_read_engagement`;
+  res.json({ url: facebookAuthUrl, state });
 });
 
-// Callback Handlers
+// Renders the popup result page that messages the opener and closes itself.
+// `code` is sanitized and the message targets the same origin (no wildcard).
+function renderOAuthCallbackPage(provider: "linkedin" | "meta", code: string, ok: boolean) {
+  const icon = provider === "linkedin" ? "🔗" : "📸";
+  const title = ok
+    ? (provider === "linkedin" ? "¡LinkedIn Autorizado!" : "¡Meta & Instagram Autorizado!")
+    : "No se pudo verificar la autorización";
+  const body = ok
+    ? "La cuenta ha sido vinculada con éxito. Esta ventana se cerrará automáticamente."
+    : "El parámetro de seguridad (state) no coincide. Por seguridad, vuelve a iniciar la conexión.";
+  const script = ok
+    ? `if (window.opener) { window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', provider: ${JSON.stringify(provider)}, code: ${JSON.stringify(code)} }, window.location.origin); setTimeout(function(){ window.close(); }, 2500); }`
+    : "";
+  return `<!doctype html><html><head><title>${title}</title><meta charset="utf-8"><style>
+      body { background:#0A0A0B; color:#E5E5E7; font-family:sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; margin:0; }
+      .card { background:#141416; border:1px solid #222224; border-radius:16px; padding:32px; text-align:center; max-width:400px; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+      .icon { font-size:48px; margin-bottom:16px; color:#D1FF26; }
+      h2 { margin:0 0 8px; color:white; } p { color:#88888E; font-size:14px; line-height:1.5; margin:0 0 24px; }
+      .btn { background:#D1FF26; color:black; border:none; padding:10px 20px; border-radius:9999px; font-weight:bold; cursor:pointer; }
+    </style></head><body><div class="card"><div class="icon">${ok ? icon : "⚠️"}</div><h2>${title}</h2><p>${body}</p>
+    <button class="btn" onclick="window.close()">Cerrar Ventana</button></div><script>${script}</script></body></html>`;
+}
+
+// Callback Handlers (state-verified, code sanitized)
 app.get(["/api/auth/linkedin/callback", "/api/auth/linkedin/callback/"], async (req, res) => {
-  const { code } = req.query;
-  res.send(`
-    <html>
-      <head>
-        <title>LinkedIn Conectado</title>
-        <style>
-          body { background: #0A0A0B; color: #E5E5E7; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-          .card { background: #141416; border: 1px solid #222224; border-radius: 16px; padding: 32px; text-align: center; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-          .icon { font-size: 48px; margin-bottom: 16px; color: #D1FF26; }
-          h2 { margin: 0 0 8px; color: white; }
-          p { color: #88888E; font-size: 14px; line-height: 1.5; margin: 0 0 24px; }
-          .btn { background: #D1FF26; color: black; border: none; padding: 10px 20px; border-radius: 9999px; font-weight: bold; cursor: pointer; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <div class="icon">🔗</div>
-          <h2>¡LinkedIn Autorizado!</h2>
-          <p>La cuenta ha sido vinculada con éxito. Esta ventana se cerrará automáticamente en unos segundos.</p>
-          <button class="btn" onclick="window.close()">Cerrar Ventana</button>
-        </div>
-        <script>
-          if (window.opener) {
-            window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', provider: 'linkedin', code: '${code}' }, '*');
-            setTimeout(() => { window.close(); }, 3000);
-          }
-        </script>
-      </body>
-    </html>
-  `);
+  const code = sanitizeOAuthCode(req.query.code);
+  const ok = consumeOAuthState(req.query.state);
+  res.send(renderOAuthCallbackPage("linkedin", code, ok));
 });
 
 app.get(["/api/auth/meta/callback", "/api/auth/meta/callback/"], async (req, res) => {
-  const { code } = req.query;
-  res.send(`
-    <html>
-      <head>
-        <title>Meta Conectado</title>
-        <style>
-          body { background: #0A0A0B; color: #E5E5E7; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-          .card { background: #141416; border: 1px solid #222224; border-radius: 16px; padding: 32px; text-align: center; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-          .icon { font-size: 48px; margin-bottom: 16px; color: #D1FF26; }
-          h2 { margin: 0 0 8px; color: white; }
-          p { color: #88888E; font-size: 14px; line-height: 1.5; margin: 0 0 24px; }
-          .btn { background: #D1FF26; color: black; border: none; padding: 10px 20px; border-radius: 9999px; font-weight: bold; cursor: pointer; }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <div class="icon">📸</div>
-          <h2>¡Meta & Instagram Autorizado!</h2>
-          <p>Tu cuenta publicitaria y perfil de Instagram han sido vinculados. Esta ventana se cerrará automáticamente.</p>
-          <button class="btn" onclick="window.close()">Cerrar Ventana</button>
-        </div>
-        <script>
-          if (window.opener) {
-            window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', provider: 'meta', code: '${code}' }, '*');
-            setTimeout(() => { window.close(); }, 3000);
-          }
-        </script>
-      </body>
-    </html>
-  `);
+  const code = sanitizeOAuthCode(req.query.code);
+  const ok = consumeOAuthState(req.query.state);
+  res.send(renderOAuthCallbackPage("meta", code, ok));
 });
 
 // Live / Simulated Proxy Endpoint for Integration Actions
@@ -1647,7 +1670,7 @@ app.get("/api/linkedin/auth", (req, res) => {
     response_type: "code",
     client_id: clientId,
     redirect_uri: redirectUri,
-    state: "linkedin_auth_state",
+    state: issueOAuthState(),
     scope: "openid profile email w_member_social"
   }).toString();
   
@@ -1829,7 +1852,7 @@ app.get("/api/meta/auth", (req, res) => {
   const authUrl = `https://www.facebook.com/v18.0/dialog/oauth?` + new URLSearchParams({
     client_id: appId,
     redirect_uri: redirectUri,
-    state: "meta_auth_state",
+    state: issueOAuthState(),
     scope: "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish,ads_management,ads_read"
   }).toString();
   

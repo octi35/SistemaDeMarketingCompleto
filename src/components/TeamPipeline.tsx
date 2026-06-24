@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { PixelAvatar } from "./AgentProfiles";
+import { toast } from "../lib/toast";
 import { Play, Check, RefreshCw, Award, ArrowUpRight, ShieldAlert, FileText, ChevronRight, X, CheckSquare, Layers, Sparkles, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -410,7 +411,7 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
             <button
               onClick={() => {
                 navigator.clipboard.writeText(compiledReport);
-                alert("¡Informe copiado al portapapeles con éxito!");
+                toast.success("¡Informe copiado al portapapeles con éxito!");
               }}
               className="text-[10px] bg-[#0A0A0B] text-[#88888E] hover:text-[#D1FF26] px-4 py-2 rounded-xl border border-[#222224] font-mono transition-colors"
             >

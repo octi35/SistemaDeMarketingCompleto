@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { toast } from "../lib/toast";
 import { Sparkles, Play, CheckCircle2, Copy, Check, Code, Eye, FileText, Send, Share2, TrendingUp, HelpCircle, Loader2, ArrowRight, Layers, Layout, BookOpen, Facebook, Linkedin, Instagram, RefreshCw } from "lucide-react";
 
 interface AutopilotData {
@@ -216,11 +217,11 @@ export const AutopilotEngine: React.FC = () => {
 
       if (response.ok && data.success) {
         setSocialPublishStatus(prev => ({ ...prev, [network]: "¡Publicado con Éxito!" }));
-        alert(`¡Contenido publicado correctamente en tu cuenta de ${network.toUpperCase()}! 🎉`);
+        toast.success(`¡Contenido publicado correctamente en tu cuenta de ${network.toUpperCase()}! 🎉`);
       } else {
         // Fallback to sandbox simulation success if using demo credentials
         setSocialPublishStatus(prev => ({ ...prev, [network]: "Sincronizado (Prueba)" }));
-        alert(`Sincronización simulada completada para ${network.toUpperCase()}. Configura tus llaves de producción reales en la sección 'Integración Nube' para publicar directamente en vivo.`);
+        toast.info(`Sincronización simulada para ${network.toUpperCase()}. Configura tus llaves reales en 'Integración Nube' para publicar en vivo.`);
       }
     } catch (err: any) {
       console.error(err);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { 
-  Cloud, Folder, FileText, CheckCircle, RefreshCw, Calendar, Mail, 
+import { toast } from "../lib/toast";
+import {
+  Cloud, Folder, FileText, CheckCircle, RefreshCw, Calendar, Mail,
   FileCheck, ArrowUpRight, ArrowRight, ShieldAlert, Key, Globe, 
   Terminal, Lock, Unlock, Zap, Settings2, Sparkles, AlertCircle,
   Eye, EyeOff, Sliders, ExternalLink
@@ -243,7 +244,7 @@ export const IntegrationsManager: React.FC = () => {
     const anthropicKey = (anthropicApiKey || localStorage.getItem("custom_anthropic_api_key") || "").trim();
 
     if (!geminiKey && !anthropicKey) {
-      alert("Primero ingresa tu API Key de Gemini y/o Claude en los paneles de abajo, luego presiona este botón para vincularlas de forma rápida.");
+      toast.info("Primero ingresa tu API Key de Gemini y/o Claude en los paneles de abajo, luego presiona este botón para vincularlas de forma rápida.");
       return;
     }
 
@@ -348,14 +349,14 @@ export const IntegrationsManager: React.FC = () => {
       `[Sincronizador] 💡 ¡Todos tus canales e inteligencias están listos para actuar autónomamente!`
     ]);
 
-    alert("¡Fantástico! Hemos sincronizado Gemini, Claude, LinkedIn, Meta (Instagram y Ads), Google Drive, Gmail y Google Calendar al instante con 1 solo clic.");
+    toast.success("¡Listo! Sincronizamos las claves de IA y los canales en modo de prueba con un solo clic.");
   };
 
   const handleQuickConnectLinkedin = () => {
     // Open the real LinkedIn OAuth window directly
     const authWindow = window.open("/api/linkedin/auth", "oauth_popup", "width=600,height=700");
     if (!authWindow) {
-      alert("El navegador bloqueó la ventana emergente. Por favor, habilita las ventanas emergentes para conectar tu cuenta de LinkedIn.");
+      toast.info("El navegador bloqueó la ventana emergente. Por favor, habilita las ventanas emergentes para conectar tu cuenta de LinkedIn.");
     } else {
       setTerminalLogs(prev => [...prev, `[LinkedIn] 🔌 Iniciando conexión OAuth real en ventana emergente...`]);
     }
@@ -365,7 +366,7 @@ export const IntegrationsManager: React.FC = () => {
     // Open the real Meta OAuth window directly
     const authWindow = window.open("/api/meta/auth", "oauth_popup", "width=600,height=700");
     if (!authWindow) {
-      alert("El navegador bloqueó la ventana emergente. Por favor, habilita las ventanas emergentes para conectar tu cuenta de Meta.");
+      toast.info("El navegador bloqueó la ventana emergente. Por favor, habilita las ventanas emergentes para conectar tu cuenta de Meta.");
     } else {
       setTerminalLogs(prev => [...prev, `[Meta Suite] 🔌 Iniciando conexión OAuth real en ventana emergente...`]);
     }
@@ -412,7 +413,7 @@ export const IntegrationsManager: React.FC = () => {
 
   const handleDetectAndSaveKeys = () => {
     if (!fastInputText.trim()) {
-      alert("Por favor ingresa texto o pega tus claves para realizar la detección.");
+      toast.info("Por favor ingresa texto o pega tus claves para realizar la detección.");
       return;
     }
 
@@ -453,9 +454,9 @@ export const IntegrationsManager: React.FC = () => {
         `[Sincronizador] ¡Claves vinculadas exitosamente!`
       ]);
       setFastInputText("");
-      alert(`¡Súper fácil! Se detectaron y guardaron ${logsAdded.length} claves de API de manera segura en tu navegador.`);
+      toast.info(`¡Súper fácil! Se detectaron y guardaron ${logsAdded.length} claves de API de manera segura en tu navegador.`);
     } else {
-      alert("No se pudieron extraer claves válidas (Gemini debe comenzar con 'AIzaSy' o 'AQ.Ab', Claude debe comenzar con 'sk-ant-'). Intenta pegar el bloque de texto completo.");
+      toast.info("No se pudieron extraer claves válidas (Gemini debe comenzar con 'AIzaSy' o 'AQ.Ab', Claude debe comenzar con 'sk-ant-'). Intenta pegar el bloque de texto completo.");
     }
   };
 
@@ -517,7 +518,7 @@ export const IntegrationsManager: React.FC = () => {
   const startOAuth = async (provider: "linkedin" | "meta") => {
     const clientId = provider === "linkedin" ? linkedinClientId : metaClientId;
     if (!clientId) {
-      alert(`Por favor, ingresa tu Client ID de ${provider === "linkedin" ? "LinkedIn" : "Meta"} en el formulario primero para iniciar el flujo de producción real.`);
+      toast.info(`Por favor, ingresa tu Client ID de ${provider === "linkedin" ? "LinkedIn" : "Meta"} en el formulario primero para iniciar el flujo de producción real.`);
       return;
     }
 
@@ -531,7 +532,7 @@ export const IntegrationsManager: React.FC = () => {
       setTerminalLogs(prev => [...prev, `[OAuth] Abriendo ventana flotante para autenticarte directamente en ${provider}...`]);
       const authWindow = window.open(data.url, "oauth_popup", "width=600,height=700");
       if (!authWindow) {
-        alert("El navegador bloqueó la ventana emergente. Por favor, habilita las ventanas emergentes en tu navegador para continuar.");
+        toast.info("El navegador bloqueó la ventana emergente. Por favor, habilita las ventanas emergentes en tu navegador para continuar.");
       }
     } catch (err: any) {
       console.error(err);
@@ -557,7 +558,7 @@ export const IntegrationsManager: React.FC = () => {
           `[OAuth LinkedIn] ✔ ¡Sincronización Exitosa! Token de producción real recibido.`,
           `[OAuth LinkedIn] Conectado en Modo Producción mediante flujo OAuth real.`
         ]);
-        alert("¡Conexión real establecida con LinkedIn! 🎉");
+        toast.info("¡Conexión real establecida con LinkedIn! 🎉");
       }
       
       if (e.data?.type === "OAUTH_META_SUCCESS") {
@@ -570,7 +571,7 @@ export const IntegrationsManager: React.FC = () => {
           `[OAuth Meta] ✔ ¡Sincronización con Meta Exitosa! Token de producción real recibido.`,
           `[OAuth Meta] Conectado en Modo Producción con Facebook e Instagram.`
         ]);
-        alert("¡Conexión real establecida con Meta (Facebook & Instagram)! 🎉");
+        toast.info("¡Conexión real establecida con Meta (Facebook & Instagram)! 🎉");
       }
 
       if (e.data?.type === "OAUTH_AUTH_SUCCESS") {
