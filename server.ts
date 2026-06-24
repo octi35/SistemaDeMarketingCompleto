@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
+import nodemailer from "nodemailer";
 import { listProjects, getProject, saveProject, deleteProject } from "./serverStore";
 
 dotenv.config();
@@ -734,6 +735,43 @@ app.delete("/api/projects/:id", (req, res) => {
   const ok = deleteProject(req.params.id);
   if (!ok) return res.status(404).json({ error: "Proyecto no encontrado" });
   res.json({ success: true });
+});
+
+// Send a real email via SMTP (Nodemailer). Credentials come from the request
+// body (entered in the UI) or from SMTP_* env vars. If none are present, the
+// caller is told so it can fall back to a simulated send.
+app.post("/api/mail/send", async (req, res) => {
+  const { host, port, user, pass, to, subject, text, html } = req.body || {};
+  const smtpHost = host || process.env.SMTP_HOST;
+  const smtpUser = user || process.env.SMTP_USER;
+  const smtpPass = pass || process.env.SMTP_PASS;
+  const smtpPort = Number(port || process.env.SMTP_PORT || 465);
+
+  if (!smtpHost || !smtpUser || !smtpPass) {
+    return res.json({ success: false, simulated: true, error: "Faltan credenciales SMTP (host, usuario o contraseña)." });
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465, // 465 = SSL, otherwise STARTTLS
+      auth: { user: smtpUser, pass: smtpPass },
+    });
+
+    const info = await transporter.sendMail({
+      from: smtpUser,
+      to: to || smtpUser,
+      subject: subject || "Informe de Marketing — AdTeam AI",
+      text: text || "Reporte generado por AdTeam AI.",
+      html,
+    });
+
+    res.json({ success: true, messageId: info.messageId });
+  } catch (error: any) {
+    console.error("Error sending email via SMTP:", error);
+    res.status(500).json({ success: false, error: error.message || "Fallo el envío SMTP" });
+  }
 });
 
 // 3. ENDPOINT: Generate copies based on Copywriting Frameworks

@@ -480,22 +480,62 @@ export const IntegrationsManager: React.FC = () => {
     }, 1800);
   };
 
-  // Trigger simulated email digest dispatch
-  const handleSendEmailDigest = (e: React.FormEvent) => {
+  // Send the marketing digest. Uses the real SMTP endpoint when credentials are
+  // configured; otherwise falls back to a clearly-labelled simulation.
+  const handleSendEmailDigest = async (e: React.FormEvent) => {
     e.preventDefault();
     setSendingMail(true);
+
+    const canSendReal = !!(smtpUser && smtpPass && smtpHost);
     setTerminalLogs(prev => [
-      ...prev, 
-      mailStatus === "CONNECTED"
-        ? `[Mailer SMTP] Enviando por correo seguro usando el servidor SMTP: ${smtpHost} via ${smtpUser}...`
-        : `[Mailer (Simulación)] Despachando informe de marketing unificado a ${recipient} por Sofi...`
+      ...prev,
+      canSendReal
+        ? `[Mailer SMTP] Enviando por SMTP real: ${smtpHost} via ${smtpUser}...`
+        : `[Mailer (Simulación)] Despachando informe a ${recipient} (configura SMTP para envío real)...`
     ]);
+
+    if (canSendReal) {
+      try {
+        const res = await fetch("/api/mail/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            host: smtpHost,
+            port: smtpPort,
+            user: smtpUser,
+            pass: smtpPass,
+            to: recipient,
+            subject: "Informe de Marketing — AdTeam AI",
+            text: "Reporte unificado de campañas generado por AdTeam AI.",
+          }),
+        });
+        const data = await res.json();
+        setSendingMail(false);
+        if (res.ok && data.success) {
+          setMailSent(true);
+          setTerminalLogs(prev => [...prev, `[Mailer] ✔ Correo enviado realmente. ID: ${data.messageId}`]);
+          toast.success(`Correo enviado a ${recipient} ✓`);
+          setTimeout(() => setMailSent(false), 5000);
+        } else {
+          setTerminalLogs(prev => [...prev, `[Mailer] ✖ Error SMTP: ${data.error || "desconocido"}`]);
+          toast.error(`No se pudo enviar el correo: ${data.error || "error SMTP"}`);
+        }
+      } catch (err: any) {
+        setSendingMail(false);
+        setTerminalLogs(prev => [...prev, `[Mailer] ✖ Error de red: ${err.message}`]);
+        toast.error("Error de red al enviar el correo.");
+      }
+      return;
+    }
+
+    // Simulation fallback
     setTimeout(() => {
       setSendingMail(false);
       setMailSent(true);
-      setTerminalLogs(prev => [...prev, `[Mailer] Correo enviado y recibido con éxito. ID de Despacho: msg_${Math.floor(Math.random() * 900000 + 100000)}`]);
+      setTerminalLogs(prev => [...prev, `[Mailer] Correo simulado enviado. Configura SMTP en este panel para envío real.`]);
+      toast.info("Correo simulado. Configura el SMTP de abajo para enviar de verdad.");
       setTimeout(() => setMailSent(false), 5000);
-    }, 1500);
+    }, 1200);
   };
 
   // Trigger Google Calendar link
