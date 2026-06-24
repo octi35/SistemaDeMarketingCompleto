@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
+import { listProjects, getProject, saveProject, deleteProject } from "./serverStore";
 
 dotenv.config();
 
@@ -690,6 +691,49 @@ Important: do NOT render any text, words or letters in the image. Photorealistic
       : `No se pudo generar la imagen con Nano Banana: ${error?.message || error}`;
     res.json({ image: null, isMock: true, error: friendly });
   }
+});
+
+// ==========================================
+// CONFIG & PERSISTENCE
+// ==========================================
+
+// Lets the frontend know whether server-side API keys are configured, so the
+// UI can show "server key active" without the user pasting their own key.
+app.get("/api/config", (_req, res) => {
+  res.json({
+    geminiServerKey: !!ai,
+    anthropicServerKey: !!anthropicClient,
+  });
+});
+
+// Save / list / load / delete carousel projects (file-based persistence).
+app.get("/api/projects", (_req, res) => {
+  res.json({ projects: listProjects() });
+});
+
+app.get("/api/projects/:id", (req, res) => {
+  const project = getProject(req.params.id);
+  if (!project) return res.status(404).json({ error: "Proyecto no encontrado" });
+  res.json(project);
+});
+
+app.post("/api/projects", (req, res) => {
+  try {
+    const { id, name, platform, topic, slides } = req.body || {};
+    if (!Array.isArray(slides) || slides.length === 0) {
+      return res.status(400).json({ error: "El carrusel no tiene diapositivas para guardar." });
+    }
+    const saved = saveProject({ id, name, platform, topic, slides });
+    res.json({ project: saved });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo guardar el proyecto" });
+  }
+});
+
+app.delete("/api/projects/:id", (req, res) => {
+  const ok = deleteProject(req.params.id);
+  if (!ok) return res.status(404).json({ error: "Proyecto no encontrado" });
+  res.json({ success: true });
 });
 
 // 3. ENDPOINT: Generate copies based on Copywriting Frameworks

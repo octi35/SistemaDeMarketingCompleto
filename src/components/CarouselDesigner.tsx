@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import JSZip from "jszip";
 import { CarouselSlide } from "../types";
-import { apiPost } from "../lib/api";
+import { apiPost, apiGet } from "../lib/api";
 import { toast } from "../lib/toast";
-import { Sparkles, Download, ArrowLeft, ArrowRight, RefreshCw, Upload, Check, Palette, Image as ImageIcon, Wand2, Trash2, AlertCircle, Paperclip } from "lucide-react";
+import { Sparkles, Download, ArrowLeft, ArrowRight, RefreshCw, Upload, Check, Palette, Image as ImageIcon, Wand2, Trash2, AlertCircle, Paperclip, Save, FolderOpen } from "lucide-react";
 
 export const CarouselDesigner: React.FC = () => {
   // Config state
@@ -31,6 +31,10 @@ export const CarouselDesigner: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [zipping, setZipping] = useState(false);
+
+  // Saved projects (server-side persistence)
+  const [savedProjects, setSavedProjects] = useState<any[]>([]);
+  const [savingProject, setSavingProject] = useState(false);
 
   // Refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -133,8 +137,55 @@ export const CarouselDesigner: React.FC = () => {
 
   useEffect(() => {
     generateCarousel(false);
+    loadProjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ---- Saved projects (server persistence) ----
+  const loadProjects = async () => {
+    try {
+      const data = await apiGet<{ projects: any[] }>("/api/projects");
+      setSavedProjects(data.projects || []);
+    } catch {
+      /* persistence is optional; ignore if unavailable */
+    }
+  };
+
+  const saveCurrentCarousel = async () => {
+    if (slides.length === 0) return;
+    setSavingProject(true);
+    try {
+      await apiPost("/api/projects", {
+        name: (topic || "Carrusel").slice(0, 80),
+        platform,
+        topic,
+        slides,
+      });
+      toast.success("Carrusel guardado ✓");
+      loadProjects();
+    } catch (err: any) {
+      toast.error(`No se pudo guardar: ${err.message || err}`);
+    } finally {
+      setSavingProject(false);
+    }
+  };
+
+  const loadProject = async (id: string) => {
+    if (!id) return;
+    try {
+      const proj = await apiGet<any>(`/api/projects/${id}`);
+      if (proj.slides) {
+        setSlides(proj.slides);
+        setCurrentSlideIndex(0);
+        setIsDemo(false);
+        if (proj.platform) setPlatform(proj.platform);
+        if (proj.topic) setTopic(proj.topic);
+        toast.success(`Cargado: ${proj.name}`);
+      }
+    } catch (err: any) {
+      toast.error(`No se pudo cargar: ${err.message || err}`);
+    }
+  };
 
   const removeSlideImage = (index: number) => {
     setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, imageUrl: undefined } : s)));
@@ -560,6 +611,33 @@ export const CarouselDesigner: React.FC = () => {
               </>
             )}
           </button>
+        </div>
+
+        {/* Persistence bar: save / load carousels */}
+        <div className="mt-3 flex flex-col sm:flex-row gap-2 sm:items-center">
+          <button
+            onClick={saveCurrentCarousel}
+            disabled={slides.length === 0 || savingProject}
+            className="bg-[#1A1A1C] border border-[#2A2A2C] hover:border-[#D1FF26]/50 text-[#88888E] hover:text-white text-[11px] px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50"
+          >
+            {savingProject ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5 text-[#D1FF26]" />}
+            <span>Guardar carrusel</span>
+          </button>
+          <div className="flex items-center gap-2 flex-1">
+            <FolderOpen className="w-3.5 h-3.5 text-[#66666E] shrink-0" />
+            <select
+              defaultValue=""
+              onChange={(e) => loadProject(e.target.value)}
+              className="flex-1 bg-[#1A1A1C] border border-[#2A2A2C] focus:border-[#D1FF26] rounded-lg px-3 py-2 text-[11px] text-[#88888E] focus:outline-none"
+            >
+              <option value="">{savedProjects.length ? "Cargar carrusel guardado..." : "No hay carruseles guardados"}</option>
+              {savedProjects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} · {p.platform} · {p.slideCount} slides
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {imageError && (
