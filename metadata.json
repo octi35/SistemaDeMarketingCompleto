@@ -1,0 +1,6 @@
+{
+  "name": "AdTeam AI",
+  "description": "Suite de marketing automatizada con un equipo de 6 estrategas de contenido IA (Mateo, Santi, Cami, Lauti, Facu y Sofi) para crear 50 creativos de Meta Ads, diseñar carruseles de Instagram/LinkedIn en alta resolución, programar publicaciones y analizar métricas en tiempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
