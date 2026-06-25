@@ -23,9 +23,19 @@ export interface CalendarPlan {
   updatedAt: string;
 }
 
+export interface PublishedPost {
+  id: string;
+  network: "instagram" | "facebook" | "linkedin";
+  postId: string;
+  caption?: string;
+  permalink?: string;
+  createdAt: string;
+}
+
 interface Store {
   projects: CarouselProject[];
   calendar?: CalendarPlan;
+  posts?: PublishedPost[];
 }
 
 function readStore(): Store {
@@ -36,6 +46,7 @@ function readStore(): Store {
     return {
       projects: Array.isArray(parsed.projects) ? parsed.projects : [],
       calendar: parsed.calendar,
+      posts: Array.isArray(parsed.posts) ? parsed.posts : [],
     };
   } catch (err) {
     console.error("[store] Failed to read store, starting empty:", err);
@@ -123,4 +134,24 @@ export function saveCalendar(items: any[], meta?: any): CalendarPlan {
   store.calendar = { items: items || [], meta, updatedAt: new Date().toISOString() };
   writeStore(store);
   return store.calendar;
+}
+
+// ---- Published posts (to link metrics to what we published) ----
+export function listPosts(): PublishedPost[] {
+  return (readStore().posts || []).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export function savePost(input: Omit<PublishedPost, "id" | "createdAt"> & { createdAt?: string }): PublishedPost {
+  const store = readStore();
+  const post: PublishedPost = {
+    id: `post_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    network: input.network,
+    postId: input.postId,
+    caption: input.caption,
+    permalink: input.permalink,
+    createdAt: input.createdAt || new Date().toISOString(),
+  };
+  store.posts = [post, ...(store.posts || [])].slice(0, 200);
+  writeStore(store);
+  return post;
 }

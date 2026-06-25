@@ -267,19 +267,42 @@ export const SocialPublisher: React.FC = () => {
       // Page access token is preferred for Facebook/Instagram publishing.
       const metaPublishToken = selectedPageToken || metaToken;
 
+      // Resolve a PUBLIC image URL. Networks (IG/FB/LinkedIn) need a reachable
+      // URL; base64 selections are uploaded to our /uploads hosting first.
+      const rawImage = selectedMedia?.data || selectedMedia?.url || "";
+      let publicImageUrl = rawImage;
+      if (rawImage.startsWith("data:")) {
+        try {
+          const up = await fetch("/api/upload-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dataUrl: rawImage }),
+          });
+          const upData = await up.json();
+          if (up.ok && upData.urls?.[0]) publicImageUrl = upData.urls[0];
+        } catch {
+          /* fall back to the raw value */
+        }
+      }
+
       if (network === "linkedin") {
         endpoint = "/api/linkedin/post";
-        body = { text: fullText, token: linkedinToken };
+        body = { text: fullText, token: linkedinToken, imageUrls: publicImageUrl ? [publicImageUrl] : [] };
       } else if (network === "facebook") {
         endpoint = "/api/meta/facebook/post";
-        body = { pageId: selectedPageId || "sandbox_page_id", message: fullText, token: metaPublishToken };
+        body = {
+          pageId: selectedPageId || "sandbox_page_id",
+          message: fullText,
+          token: metaPublishToken,
+          imageUrls: publicImageUrl ? [publicImageUrl] : [],
+        };
       } else if (network === "instagram") {
         endpoint = "/api/meta/instagram/post";
         body = {
           igAccountId: selectedIgId || "sandbox_ig_id",
-          imageUrl: selectedMedia?.data || selectedMedia?.url || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
+          imageUrl: publicImageUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
           caption: fullText,
-          token: metaPublishToken
+          token: metaPublishToken,
         };
       }
 

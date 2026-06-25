@@ -6,7 +6,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import nodemailer from "nodemailer";
-import { listProjects, getProject, saveProject, deleteProject, getCalendar, saveCalendar } from "./serverStore";
+import { listProjects, getProject, saveProject, deleteProject, getCalendar, saveCalendar, listPosts, savePost } from "./serverStore";
 import { issueOAuthState, consumeOAuthState, sanitizeOAuthCode } from "./oauthState";
 import { ensureUploadsDir, saveDataUrlImage, UPLOADS_DIR } from "./imageStore";
 
@@ -722,6 +722,11 @@ app.delete("/api/projects/:id", (req, res) => {
   const ok = deleteProject(req.params.id);
   if (!ok) return res.status(404).json({ error: "Proyecto no encontrado" });
   res.json({ success: true });
+});
+
+// Published posts registry (links metrics to what we actually published)
+app.get("/api/posts", (_req, res) => {
+  res.json({ posts: listPosts() });
 });
 
 // Calendar plan persistence (single current plan)
@@ -1823,7 +1828,7 @@ app.get(["/api/linkedin/callback", "/api/linkedin/callback/"], async (req, res) 
                   type: 'OAUTH_LINKEDIN_SUCCESS', 
                   token: ${JSON.stringify(accessToken)},
                   expires_in: ${JSON.stringify(data.expires_in)}
-                }, '*');
+                }, window.location.origin);
                 setTimeout(() => window.close(), 1000);
               } else {
                 document.body.innerHTML = "<h3>Conexión exitosa con LinkedIn. Puedes cerrar esta ventana.</h3>";
@@ -1882,7 +1887,7 @@ app.get("/api/linkedin/profile", async (req, res) => {
 
 // 4. POST /api/linkedin/post - Publishes posts on LinkedIn via ugcPosts
 app.post("/api/linkedin/post", async (req, res) => {
-  const { text, authorUrn, token } = req.body;
+  const { text, authorUrn, token, imageUrls } = req.body;
   const activeToken = token || req.headers.authorization?.replace("Bearer ", "");
   if (!activeToken) {
     return res.status(401).json({ error: "Missing active LinkedIn token" });
@@ -1910,6 +1915,49 @@ app.post("/api/linkedin/post", async (req, res) => {
       }
     }
 
+    // Optional: upload images (register asset -> upload bytes) for an IMAGE post.
+    const images: string[] = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : [];
+    const mediaEntries: any[] = [];
+    for (const url of images.slice(0, 9)) {
+      // 1. Register the upload
+      const reg = await fetch("https://api.linkedin.com/v2/assets?action=registerUpload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${activeToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          registerUploadRequest: {
+            recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
+            owner: urn,
+            serviceRelationships: [{ relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" }],
+          },
+        }),
+      });
+      const regData = (await reg.json()) as any;
+      if (!reg.ok) return res.status(reg.status).json({ step: "register_upload", error: regData });
+      const asset = regData.value?.asset;
+      const uploadUrl =
+        regData.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]?.uploadUrl;
+      if (!asset || !uploadUrl) return res.status(500).json({ step: "register_upload", error: regData });
+
+      // 2. Fetch the image bytes from our public hosting and upload them
+      const imgRes = await fetch(url);
+      if (!imgRes.ok) return res.status(502).json({ step: "fetch_image", error: `No se pudo leer la imagen ${url}` });
+      const bytes = Buffer.from(await imgRes.arrayBuffer());
+      const upRes = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${activeToken}` },
+        body: bytes,
+      });
+      if (!upRes.ok) return res.status(upRes.status).json({ step: "upload_image", error: await upRes.text() });
+
+      mediaEntries.push({ status: "READY", media: asset, title: { text: "AdTeam AI" } });
+    }
+
+    const shareContent: any = {
+      shareCommentary: { text: text || "Publicación automática desde AdTeam AI Marketing Assistant" },
+      shareMediaCategory: mediaEntries.length > 0 ? "IMAGE" : "NONE",
+    };
+    if (mediaEntries.length > 0) shareContent.media = mediaEntries;
+
     const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
       method: "POST",
       headers: {
@@ -1920,17 +1968,8 @@ app.post("/api/linkedin/post", async (req, res) => {
       body: JSON.stringify({
         author: urn,
         lifecycleState: "PUBLISHED",
-        specificContent: {
-          "com.linkedin.ugc.ShareContent": {
-            "shareCommentary": {
-              "text": text || "Publicación automática desde AdTeam AI Marketing Assistant"
-            },
-            "shareMediaCategory": "NONE"
-          }
-        },
-        visibility: {
-          "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-        }
+        specificContent: { "com.linkedin.ugc.ShareContent": shareContent },
+        visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" }
       })
     });
 
@@ -1939,6 +1978,7 @@ app.post("/api/linkedin/post", async (req, res) => {
       console.error("LinkedIn ugcPosts post failed:", resData);
       return res.status(response.status).json({ success: false, error: resData });
     }
+    try { savePost({ network: "linkedin", postId: resData.id || "", caption: text }); } catch { /* non-fatal */ }
     return res.json({ success: true, result: resData });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || "Failed to create LinkedIn post" });
@@ -2000,7 +2040,7 @@ app.get(["/api/meta/callback", "/api/meta/callback/"], async (req, res) => {
                   type: 'OAUTH_META_SUCCESS', 
                   token: ${JSON.stringify(accessToken)},
                   expires_in: ${JSON.stringify(data.expires_in)}
-                }, '*');
+                }, window.location.origin);
                 setTimeout(() => window.close(), 1000);
               } else {
                 document.body.innerHTML = "<h3>Conexión exitosa con Meta. Puedes cerrar esta ventana.</h3>";
@@ -2113,6 +2153,7 @@ app.post("/api/meta/instagram/post", async (req, res) => {
       return res.status(publishRes.status).json({ step: "publish", error: publishData });
     }
 
+    try { savePost({ network: "instagram", postId: publishData.id, caption }); } catch { /* non-fatal */ }
     res.json({ success: true, result: publishData });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to publish on Instagram Business" });
@@ -2170,6 +2211,7 @@ app.post("/api/meta/instagram/carousel", async (req, res) => {
     const publishData = (await publishRes.json()) as any;
     if (!publishRes.ok) return res.status(publishRes.status).json({ step: "publish", error: publishData });
 
+    try { savePost({ network: "instagram", postId: publishData.id, caption }); } catch { /* non-fatal */ }
     res.json({ success: true, result: publishData, postId: publishData.id });
   } catch (error: any) {
     console.error("Error publishing IG carousel:", error);
@@ -2177,9 +2219,9 @@ app.post("/api/meta/instagram/carousel", async (req, res) => {
   }
 });
 
-// 9. POST /api/meta/facebook/post - Publishes message on a Facebook page feed
+// 9. POST /api/meta/facebook/post - Publishes a message (and optional photos) on a Facebook page
 app.post("/api/meta/facebook/post", async (req, res) => {
-  const { pageId, message, pageToken, token } = req.body;
+  const { pageId, message, imageUrls, pageToken, token } = req.body;
   const activeToken = pageToken || token || req.headers.authorization?.replace("Bearer ", "");
   if (!activeToken) {
     return res.status(401).json({ error: "Missing page or user access token to post on Facebook Page" });
@@ -2188,23 +2230,53 @@ app.post("/api/meta/facebook/post", async (req, res) => {
     return res.status(400).json({ error: "Missing target pageId" });
   }
 
-  try {
-    const feedUrl = `https://graph.facebook.com/v18.0/${pageId}/feed`;
-    const feedRes = await fetch(feedUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: message || "",
-        access_token: activeToken
-      })
-    });
+  const images: string[] = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : [];
 
-    const feedData = await feedRes.json() as any;
-    if (!feedRes.ok) {
-      return res.status(feedRes.status).json({ error: feedData });
+  try {
+    let result: any;
+
+    if (images.length === 1) {
+      // Single photo post
+      const r = await fetch(`https://graph.facebook.com/v18.0/${pageId}/photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: images[0], caption: message || "", access_token: activeToken }),
+      });
+      result = await r.json();
+      if (!r.ok) return res.status(r.status).json({ error: result });
+    } else if (images.length > 1) {
+      // Multi-photo: upload each unpublished, then attach to a feed post
+      const mediaFbids: { media_fbid: string }[] = [];
+      for (const url of images.slice(0, 10)) {
+        const up = await fetch(`https://graph.facebook.com/v18.0/${pageId}/photos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, published: false, access_token: activeToken }),
+        });
+        const upData = (await up.json()) as any;
+        if (!up.ok) return res.status(up.status).json({ step: "upload_photo", error: upData });
+        mediaFbids.push({ media_fbid: upData.id });
+      }
+      const r = await fetch(`https://graph.facebook.com/v18.0/${pageId}/feed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message || "", attached_media: mediaFbids, access_token: activeToken }),
+      });
+      result = await r.json();
+      if (!r.ok) return res.status(r.status).json({ step: "feed_with_media", error: result });
+    } else {
+      // Text-only post
+      const r = await fetch(`https://graph.facebook.com/v18.0/${pageId}/feed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message || "", access_token: activeToken }),
+      });
+      result = await r.json();
+      if (!r.ok) return res.status(r.status).json({ error: result });
     }
 
-    res.json({ success: true, result: feedData });
+    try { savePost({ network: "facebook", postId: result.id || result.post_id || "", caption: message }); } catch { /* non-fatal */ }
+    res.json({ success: true, result });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to publish post on Facebook Page" });
   }

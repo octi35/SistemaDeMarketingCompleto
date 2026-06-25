@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { apiPost } from "../lib/api";
+import React, { useState, useEffect } from "react";
+import { apiPost, apiGet } from "../lib/api";
 import { toast } from "../lib/toast";
 import { STORAGE_KEYS, getStored } from "../lib/storageKeys";
-import { BarChart3, RefreshCw, Heart, MessageCircle, Sparkles, TrendingUp, TrendingDown, Wrench, ExternalLink } from "lucide-react";
+import { BarChart3, RefreshCw, Heart, MessageCircle, Sparkles, TrendingUp, TrendingDown, Wrench, ExternalLink, Send } from "lucide-react";
 
 interface MediaMetric {
   id: string;
@@ -34,6 +34,14 @@ export const RealMetricsPanel: React.FC = () => {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [isMockReco, setIsMockReco] = useState(false);
+  const [publishedPosts, setPublishedPosts] = useState<any[]>([]);
+
+  // Posts published through AdTeam (so metrics can be linked to them).
+  useEffect(() => {
+    apiGet<{ posts: any[] }>("/api/posts")
+      .then((d) => setPublishedPosts(d.posts || []))
+      .catch(() => {});
+  }, []);
 
   const igId = getStored(STORAGE_KEYS.metaIgAccountId);
   const token = getStored(STORAGE_KEYS.metaAccessToken);
@@ -106,6 +114,26 @@ export const RealMetricsPanel: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {publishedPosts.length > 0 && (
+        <div className="bg-[#1A1A1C] border border-[#222224] rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Send className="w-3.5 h-3.5 text-[#D1FF26]" />
+            <span className="text-[10px] uppercase tracking-wider text-[#66666E] font-mono">
+              Publicado desde AdTeam ({publishedPosts.length})
+            </span>
+          </div>
+          <div className="space-y-1 max-h-28 overflow-y-auto custom-scrollbar">
+            {publishedPosts.slice(0, 8).map((p) => (
+              <div key={p.id} className="flex items-center justify-between text-[11px] text-[#88888E]">
+                <span className="uppercase font-mono text-[9px] text-[#D1FF26] w-16 shrink-0">{p.network}</span>
+                <span className="truncate flex-1 px-2">{p.caption || p.postId}</span>
+                <span className="text-[9px] text-[#66666E] shrink-0">{(p.createdAt || "").slice(0, 10)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {media.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
