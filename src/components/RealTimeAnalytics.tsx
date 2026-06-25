@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Legend, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from "recharts";
 import { BarChart3, TrendingUp, Skull, RotateCcw, AlertTriangle, ArrowUpRight, ShieldCheck, Mail, Sparkles } from "lucide-react";
+import { RealMetricsPanel } from "./RealMetricsPanel";
 
 export const RealTimeAnalytics: React.FC = () => {
   // Mock interactive dates
@@ -132,7 +133,10 @@ export const RealTimeAnalytics: React.FC = () => {
 
   return (
     <div className="space-y-6" id="realtime-analytics-root">
-      
+
+      {/* Real Instagram metrics + AI recommendations (live when connected) */}
+      <RealMetricsPanel />
+
       {/* Top statistical summaries bar */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-[#141416] border border-[#222224] rounded-2xl p-4 flex items-center justify-between">

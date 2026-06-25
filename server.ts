@@ -2195,6 +2195,96 @@ app.post("/api/meta/facebook/post", async (req, res) => {
   }
 });
 
+// ==========================================
+// METRICS & AI RECOMMENDATIONS
+// ==========================================
+
+// Real Instagram metrics: recent media with likes/comments (Graph API).
+app.post("/api/metrics/instagram", async (req, res) => {
+  const { igUserId, token, limit } = req.body || {};
+  const activeToken = token || req.headers.authorization?.replace("Bearer ", "");
+  if (!activeToken || !igUserId) {
+    return res.status(400).json({ error: "Faltan igUserId y token de Meta." });
+  }
+  try {
+    const n = Math.min(Number(limit) || 12, 25);
+    const url = `https://graph.facebook.com/v18.0/${igUserId}/media?fields=id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count&limit=${n}&access_token=${activeToken}`;
+    const r = await fetch(url);
+    const d = (await r.json()) as any;
+    if (!r.ok) return res.status(r.status).json({ error: d.error?.message || d });
+    const media = (d.data || []).map((m: any) => ({
+      id: m.id,
+      caption: m.caption || "",
+      type: m.media_type,
+      url: m.media_url,
+      permalink: m.permalink,
+      timestamp: m.timestamp,
+      likes: m.like_count || 0,
+      comments: m.comments_count || 0,
+      engagement: (m.like_count || 0) + (m.comments_count || 0),
+    }));
+    res.json({ media });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudieron obtener las métricas" });
+  }
+});
+
+// AI recommendations ("repeat / kill / tweak") from a set of metrics.
+app.post("/api/recommendations", async (req, res) => {
+  const { metrics, niche } = req.body || {};
+  const activeAi = getCustomAiClient(req) || ai;
+
+  const getMock = () => ({
+    recommendations: [
+      { action: "repeat", title: "Repetir carruseles educativos con tips concretos", reason: "Suelen tener más guardados y comentarios; el algoritmo premia el tiempo de permanencia.", priority: "alta" },
+      { action: "kill", title: "Reducir posts solo-texto sin gancho visual", reason: "Bajo alcance frente a piezas visuales: el primer segundo no retiene.", priority: "media" },
+      { action: "tweak", title: "Agregar CTA de comentario en la última slide", reason: "Aumenta interacción y señal de relevancia.", priority: "media" },
+    ],
+  });
+
+  if (!activeAi) return res.json({ ...getMock(), isMock: true });
+
+  try {
+    const prompt = `Eres Mateo, analista de performance de marketing. A partir de estas métricas de publicaciones (JSON), da recomendaciones accionables de qué REPETIR, qué MATAR y qué AJUSTAR para mejorar alcance y conversión${niche ? ` en el nicho ${niche}` : ""}.
+Métricas: ${JSON.stringify(metrics || []).slice(0, 4000)}
+Devuelve JSON con un array "recommendations" de 4-6 objetos { action: "repeat"|"kill"|"tweak", title, reason, priority: "alta"|"media"|"baja" }. En español, conciso y accionable.`;
+    const response = await generateContentWithFallback(
+      {
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              recommendations: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    action: { type: Type.STRING },
+                    title: { type: Type.STRING },
+                    reason: { type: Type.STRING },
+                    priority: { type: Type.STRING },
+                  },
+                  required: ["action", "title", "reason", "priority"],
+                },
+              },
+            },
+            required: ["recommendations"],
+          },
+        },
+      },
+      activeAi
+    );
+    const parsed = JSON.parse(response.text || "{}");
+    res.json({ ...parsed, isMock: false });
+  } catch (error: any) {
+    console.error("Error generating recommendations:", error);
+    res.json({ ...getMock(), isMock: true, error: error.message || error });
+  }
+});
+
 
 // Serve static frontend assets in production or integrate Vite in dev
 async function startServer() {
