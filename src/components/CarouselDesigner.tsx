@@ -3,7 +3,8 @@ import JSZip from "jszip";
 import { CarouselSlide } from "../types";
 import { apiPost, apiGet } from "../lib/api";
 import { toast } from "../lib/toast";
-import { Sparkles, Download, ArrowLeft, ArrowRight, RefreshCw, Upload, Check, Palette, Image as ImageIcon, Wand2, Trash2, AlertCircle, Paperclip, Save, FolderOpen } from "lucide-react";
+import { STORAGE_KEYS, getStored } from "../lib/storageKeys";
+import { Sparkles, Download, ArrowLeft, ArrowRight, RefreshCw, Upload, Check, Palette, Image as ImageIcon, Wand2, Trash2, AlertCircle, Paperclip, Save, FolderOpen, Instagram, X } from "lucide-react";
 
 export const CarouselDesigner: React.FC = () => {
   // Config state
@@ -35,6 +36,11 @@ export const CarouselDesigner: React.FC = () => {
   // Saved projects (server-side persistence)
   const [savedProjects, setSavedProjects] = useState<any[]>([]);
   const [savingProject, setSavingProject] = useState(false);
+
+  // Instagram publishing (real, via /api/upload-image + carousel endpoint)
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const [publishingIG, setPublishingIG] = useState(false);
+  const [publishStep, setPublishStep] = useState("");
 
   // Refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -425,6 +431,51 @@ export const CarouselDesigner: React.FC = () => {
       setUploaded(true);
       toast.info(`Para publicar de verdad en ${platform}, conecta tu cuenta en "Integración Nube" y usa "Gestor de Contenido".`);
     }, 1200);
+  };
+
+  // ---- Real Instagram carousel publishing ----
+  const renderSlideToDataUrl = async (slide: CarouselSlide): Promise<string> => {
+    await drawSlide(slide);
+    return canvasRef.current ? canvasRef.current.toDataURL("image/png") : "";
+  };
+
+  const publishCarouselToInstagram = async () => {
+    const token = getStored(STORAGE_KEYS.metaAccessToken);
+    const ig = getStored(STORAGE_KEYS.metaIgAccountId);
+    if (!token || !ig) {
+      toast.error("Conecta Meta y elige tu cuenta de Instagram en 'Gestor de Contenido' → 'Cargar mis páginas'.");
+      setShowPublishConfirm(false);
+      return;
+    }
+    if (slides.length < 2) {
+      toast.error("Instagram necesita al menos 2 diapositivas para un carrusel.");
+      setShowPublishConfirm(false);
+      return;
+    }
+    setPublishingIG(true);
+    try {
+      setPublishStep("Renderizando diapositivas en alta resolución...");
+      const dataUrls: string[] = [];
+      for (const s of slides.slice(0, 10)) dataUrls.push(await renderSlideToDataUrl(s));
+
+      setPublishStep("Subiendo imágenes al hosting público...");
+      const up = await apiPost<{ urls: string[] }>("/api/upload-image", { images: dataUrls });
+
+      setPublishStep("Publicando carrusel en Instagram...");
+      await apiPost("/api/meta/instagram/carousel", {
+        igAccountId: ig,
+        imageUrls: up.urls,
+        caption: topic,
+        token,
+      });
+      toast.success("¡Carrusel publicado en Instagram! 🎉");
+      setShowPublishConfirm(false);
+    } catch (err: any) {
+      toast.error(`No se pudo publicar: ${err.message || err}`);
+    } finally {
+      setPublishingIG(false);
+      setPublishStep("");
+    }
   };
 
   const activeSlide = slides[currentSlideIndex];
@@ -893,6 +944,18 @@ export const CarouselDesigner: React.FC = () => {
                 <span>{zipping ? "Creando ZIP..." : "Descargar Carrusel Completo (ZIP)"}</span>
               </button>
 
+              {platform === "Instagram" && (
+                <button
+                  onClick={() => setShowPublishConfirm(true)}
+                  disabled={slides.length < 2 || publishingIG}
+                  className="w-full bg-gradient-to-r from-[#feda75] via-[#d62976] to-[#962fbf] hover:opacity-90 disabled:opacity-50 text-white font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition"
+                  id="btn-publish-instagram-carousel"
+                >
+                  <Instagram className="w-4 h-4" />
+                  <span>Publicar carrusel en Instagram</span>
+                </button>
+              )}
+
               <button
                 onClick={handleDirectUploadAPI}
                 disabled={uploading || uploaded}
@@ -921,6 +984,62 @@ export const CarouselDesigner: React.FC = () => {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Instagram publish confirmation modal */}
+      {showPublishConfirm && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4"
+          onClick={() => !publishingIG && setShowPublishConfirm(false)}
+        >
+          <div
+            className="bg-[#141416] border border-[#2A2A2C] rounded-2xl p-6 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Instagram className="w-4 h-4 text-pink-400" /> Publicar carrusel en Instagram
+              </h3>
+              {!publishingIG && (
+                <button onClick={() => setShowPublishConfirm(false)} className="text-[#66666E] hover:text-white" aria-label="Cerrar">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {publishingIG ? (
+              <div className="flex flex-col items-center gap-3 py-8">
+                <RefreshCw className="w-7 h-7 animate-spin text-[#D1FF26]" />
+                <span className="text-xs text-[#88888E]">{publishStep || "Publicando..."}</span>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-[#88888E] leading-relaxed mb-4">
+                  Se publicará un carrusel de <strong className="text-white">{Math.min(slides.length, 10)} imágenes</strong> en tu cuenta de Instagram Business conectada. El texto de cada slide ya va incrustado en la imagen y el tema se usa como descripción.
+                </p>
+                {!getStored(STORAGE_KEYS.metaIgAccountId) && (
+                  <p className="text-[11px] text-amber-400 mb-3 leading-relaxed">
+                    ⚠ No hay cuenta de Instagram conectada. Conéctala en "Gestor de Contenido" → "Cargar mis páginas". (Requiere app de Meta + servidor con URL pública.)
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowPublishConfirm(false)}
+                    className="flex-1 bg-[#1A1A1C] border border-[#2A2A2C] text-[#88888E] text-xs py-2.5 rounded-lg hover:text-white transition"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={publishCarouselToInstagram}
+                    className="flex-1 bg-gradient-to-r from-[#feda75] via-[#d62976] to-[#962fbf] text-white font-bold text-xs py-2.5 rounded-lg transition"
+                  >
+                    Confirmar y publicar
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

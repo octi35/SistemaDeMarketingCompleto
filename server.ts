@@ -8,6 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import nodemailer from "nodemailer";
 import { listProjects, getProject, saveProject, deleteProject } from "./serverStore";
 import { issueOAuthState, consumeOAuthState, sanitizeOAuthCode } from "./oauthState";
+import { ensureUploadsDir, saveDataUrlImage, UPLOADS_DIR } from "./imageStore";
 
 dotenv.config();
 
@@ -17,7 +18,16 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "25mb" }));
+
+// Serve uploaded carousel images publicly (needed for Instagram publishing).
+ensureUploadsDir();
+app.use("/uploads", express.static(UPLOADS_DIR));
+
+// Public base URL used to build absolute image URLs for external APIs.
+function publicBaseUrl(req: express.Request): string {
+  return process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+}
 
 // Initialize Gemini safely
 let ai: GoogleGenAI | null = null;
@@ -748,6 +758,23 @@ app.post("/api/mail/send", async (req, res) => {
   } catch (error: any) {
     console.error("Error sending email via SMTP:", error);
     res.status(500).json({ success: false, error: error.message || "Fallo el envío SMTP" });
+  }
+});
+
+// Upload one or more base64 images and get back public URLs (for IG publishing).
+app.post("/api/upload-image", (req, res) => {
+  try {
+    const { images, dataUrl } = req.body || {};
+    const list: string[] = Array.isArray(images) ? images : dataUrl ? [dataUrl] : [];
+    if (list.length === 0) {
+      return res.status(400).json({ error: "No hay imágenes para subir." });
+    }
+    const base = publicBaseUrl(req);
+    const urls = list.map((d) => `${base}/uploads/${saveDataUrlImage(d)}`);
+    res.json({ urls, publicBase: base });
+  } catch (error: any) {
+    console.error("Error uploading image:", error);
+    res.status(500).json({ error: error.message || "No se pudo subir la imagen" });
   }
 });
 
@@ -2074,6 +2101,64 @@ app.post("/api/meta/instagram/post", async (req, res) => {
     res.json({ success: true, result: publishData });
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to publish on Instagram Business" });
+  }
+});
+
+// 8.b POST /api/meta/instagram/carousel - Publishes a multi-image carousel
+// (create a child container per image -> a CAROUSEL container -> publish).
+app.post("/api/meta/instagram/carousel", async (req, res) => {
+  const { igAccountId, imageUrls, caption, token } = req.body || {};
+  const activeToken = token || req.headers.authorization?.replace("Bearer ", "");
+  if (!activeToken) {
+    return res.status(401).json({ error: "Falta el token de acceso de Meta." });
+  }
+  if (!igAccountId || !Array.isArray(imageUrls) || imageUrls.length < 2) {
+    return res.status(400).json({ error: "Se requieren igAccountId y al menos 2 imágenes (máx 10)." });
+  }
+
+  try {
+    const slice = imageUrls.slice(0, 10);
+
+    // Step 1: create a child container for each image
+    const childIds: string[] = [];
+    for (const url of slice) {
+      const r = await fetch(`https://graph.facebook.com/v18.0/${igAccountId}/media`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_url: url, is_carousel_item: true, access_token: activeToken }),
+      });
+      const d = (await r.json()) as any;
+      if (!r.ok) return res.status(r.status).json({ step: "child_container", error: d });
+      childIds.push(d.id);
+    }
+
+    // Step 2: create the carousel container referencing the children
+    const carouselRes = await fetch(`https://graph.facebook.com/v18.0/${igAccountId}/media`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        media_type: "CAROUSEL",
+        children: childIds.join(","),
+        caption: caption || "",
+        access_token: activeToken,
+      }),
+    });
+    const carouselData = (await carouselRes.json()) as any;
+    if (!carouselRes.ok) return res.status(carouselRes.status).json({ step: "carousel_container", error: carouselData });
+
+    // Step 3: publish the carousel container
+    const publishRes = await fetch(`https://graph.facebook.com/v18.0/${igAccountId}/media_publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ creation_id: carouselData.id, access_token: activeToken }),
+    });
+    const publishData = (await publishRes.json()) as any;
+    if (!publishRes.ok) return res.status(publishRes.status).json({ step: "publish", error: publishData });
+
+    res.json({ success: true, result: publishData, postId: publishData.id });
+  } catch (error: any) {
+    console.error("Error publishing IG carousel:", error);
+    res.status(500).json({ error: error.message || "Failed to publish Instagram carousel" });
   }
 });
 
