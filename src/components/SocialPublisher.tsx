@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { apiPost } from "../lib/api";
+import { apiPost, apiGet } from "../lib/api";
 import { toast } from "../lib/toast";
 import { STORAGE_KEYS, getStored, setStored } from "../lib/storageKeys";
 import {
@@ -95,6 +95,11 @@ export const SocialPublisher: React.FC = () => {
   const [selectedPageId, setSelectedPageId] = useState(() => getStored(STORAGE_KEYS.metaPageId));
   const [selectedIgId, setSelectedIgId] = useState(() => getStored(STORAGE_KEYS.metaIgAccountId));
   const [selectedPageToken, setSelectedPageToken] = useState("");
+
+  // Scheduling (auto-publishing)
+  const [scheduleAt, setScheduleAt] = useState("");
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduledList, setScheduledList] = useState<any[]>([]);
 
   const selectMetaPage = (page: any) => {
     setSelectedPageId(page.id || "");
@@ -247,64 +252,61 @@ export const SocialPublisher: React.FC = () => {
     }
   };
 
+  // Builds the {endpoint, body} for a given network, uploading the selected
+  // image to a public URL when needed. Shared by publish-now and scheduling.
+  const buildNetworkBody = async (network: "linkedin" | "facebook" | "instagram") => {
+    const copyNode = generatedResult![network];
+    const fullText = `${copyNode.hook}\n\n${copyNode.body}\n\n${copyNode.cta}\n\n${copyNode.hashtags.join(" ")}`;
+    const metaPublishToken = selectedPageToken || metaToken;
+
+    const rawImage = selectedMedia?.data || selectedMedia?.url || "";
+    let publicImageUrl = rawImage;
+    if (rawImage.startsWith("data:")) {
+      try {
+        const up = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dataUrl: rawImage }),
+        });
+        const upData = await up.json();
+        if (up.ok && upData.urls?.[0]) publicImageUrl = upData.urls[0];
+      } catch {
+        /* fall back to the raw value */
+      }
+    }
+
+    if (network === "linkedin") {
+      return { endpoint: "/api/linkedin/post", body: { text: fullText, token: linkedinToken, imageUrls: publicImageUrl ? [publicImageUrl] : [] } };
+    }
+    if (network === "facebook") {
+      return {
+        endpoint: "/api/meta/facebook/post",
+        body: { pageId: selectedPageId || "sandbox_page_id", message: fullText, token: metaPublishToken, imageUrls: publicImageUrl ? [publicImageUrl] : [] },
+      };
+    }
+    return {
+      endpoint: "/api/meta/instagram/post",
+      body: {
+        igAccountId: selectedIgId || "sandbox_ig_id",
+        imageUrl: publicImageUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
+        caption: fullText,
+        token: metaPublishToken,
+      },
+    };
+  };
+
   // Social Media Direct Publisher
   const handlePublish = async (network: "linkedin" | "facebook" | "instagram") => {
     if (!generatedResult) return;
-    
+
     setIsPublishing(network);
-    setPublishStatus(prev => ({ 
-      ...prev, 
-      [network]: { status: "Publicando..." } 
+    setPublishStatus(prev => ({
+      ...prev,
+      [network]: { status: "Publicando..." }
     }));
 
-    const copyNode = generatedResult[network];
-    const fullText = `${copyNode.hook}\n\n${copyNode.body}\n\n${copyNode.cta}\n\n${copyNode.hashtags.join(" ")}`;
-    
     try {
-      let endpoint = "";
-      let body: any = {};
-
-      // Page access token is preferred for Facebook/Instagram publishing.
-      const metaPublishToken = selectedPageToken || metaToken;
-
-      // Resolve a PUBLIC image URL. Networks (IG/FB/LinkedIn) need a reachable
-      // URL; base64 selections are uploaded to our /uploads hosting first.
-      const rawImage = selectedMedia?.data || selectedMedia?.url || "";
-      let publicImageUrl = rawImage;
-      if (rawImage.startsWith("data:")) {
-        try {
-          const up = await fetch("/api/upload-image", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ dataUrl: rawImage }),
-          });
-          const upData = await up.json();
-          if (up.ok && upData.urls?.[0]) publicImageUrl = upData.urls[0];
-        } catch {
-          /* fall back to the raw value */
-        }
-      }
-
-      if (network === "linkedin") {
-        endpoint = "/api/linkedin/post";
-        body = { text: fullText, token: linkedinToken, imageUrls: publicImageUrl ? [publicImageUrl] : [] };
-      } else if (network === "facebook") {
-        endpoint = "/api/meta/facebook/post";
-        body = {
-          pageId: selectedPageId || "sandbox_page_id",
-          message: fullText,
-          token: metaPublishToken,
-          imageUrls: publicImageUrl ? [publicImageUrl] : [],
-        };
-      } else if (network === "instagram") {
-        endpoint = "/api/meta/instagram/post";
-        body = {
-          igAccountId: selectedIgId || "sandbox_ig_id",
-          imageUrl: publicImageUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
-          caption: fullText,
-          token: metaPublishToken,
-        };
-      }
+      const { endpoint, body } = await buildNetworkBody(network);
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -344,6 +346,64 @@ export const SocialPublisher: React.FC = () => {
       }));
     } finally {
       setIsPublishing(null);
+    }
+  };
+
+  // ---- Scheduling ----
+  const loadScheduled = async () => {
+    try {
+      const data = await apiGet<{ scheduled: any[] }>("/api/scheduled");
+      setScheduledList(data.scheduled || []);
+    } catch {
+      /* scheduler optional */
+    }
+  };
+
+  useEffect(() => {
+    loadScheduled();
+  }, []);
+
+  const schedulePublish = async () => {
+    if (!generatedResult) {
+      toast.error("Primero genera el contenido.");
+      return;
+    }
+    if (!scheduleAt) {
+      toast.error("Elige fecha y hora para programar.");
+      return;
+    }
+    if (new Date(scheduleAt).getTime() <= Date.now()) {
+      toast.error("La fecha/hora debe ser futura.");
+      return;
+    }
+    setScheduling(true);
+    try {
+      const { body } = await buildNetworkBody(activeNetworkTab);
+      await apiPost("/api/schedule", {
+        network: activeNetworkTab,
+        payload: body,
+        publishAt: new Date(scheduleAt).toISOString(),
+        label: productName.slice(0, 60),
+      });
+      toast.success(`Publicación programada para ${new Date(scheduleAt).toLocaleString()}`);
+      setScheduleAt("");
+      loadScheduled();
+    } catch (err: any) {
+      toast.error(`No se pudo programar: ${err.message || err}`);
+    } finally {
+      setScheduling(false);
+    }
+  };
+
+  const cancelScheduledPost = async (id: string) => {
+    try {
+      const res = await fetch(`/api/scheduled/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Programación cancelada.");
+        loadScheduled();
+      }
+    } catch {
+      toast.error("No se pudo cancelar.");
     }
   };
 
@@ -759,6 +819,49 @@ export const SocialPublisher: React.FC = () => {
                           </>
                         )}
                       </button>
+                    </div>
+
+                    {/* Scheduling controls */}
+                    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-[#D1FF26]" />
+                        <span className="text-[10px] text-zinc-500 uppercase font-mono font-bold">Programar publicación</span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="datetime-local"
+                          value={scheduleAt}
+                          onChange={(e) => setScheduleAt(e.target.value)}
+                          className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#D1FF26]"
+                        />
+                        <button
+                          onClick={schedulePublish}
+                          disabled={scheduling || !scheduleAt}
+                          className="bg-[#1A1A1C] border border-[#2A2A2C] hover:border-[#D1FF26]/50 text-[#88888E] hover:text-white text-[11px] px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50 shrink-0"
+                        >
+                          {scheduling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5 text-[#D1FF26]" />}
+                          <span>Programar en {activeNetworkTab}</span>
+                        </button>
+                      </div>
+
+                      {scheduledList.length > 0 && (
+                        <div className="space-y-1 pt-1 max-h-32 overflow-y-auto">
+                          {scheduledList.map((s) => (
+                            <div key={s.id} className="flex items-center justify-between text-[11px] bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1.5">
+                              <span className="uppercase font-mono text-[9px] text-[#D1FF26] w-16 shrink-0">{s.network}</span>
+                              <span className="flex-1 px-2 text-zinc-400 truncate">{new Date(s.publishAt).toLocaleString()}</span>
+                              <span className={`text-[9px] font-mono shrink-0 ${s.status === "published" ? "text-green-400" : s.status === "failed" ? "text-red-400" : s.status === "canceled" ? "text-zinc-600" : "text-amber-400"}`}>
+                                {s.status}
+                              </span>
+                              {s.status === "pending" && (
+                                <button onClick={() => cancelScheduledPost(s.id)} className="ml-2 text-zinc-600 hover:text-red-400 shrink-0">
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                   </div>

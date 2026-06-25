@@ -6,7 +6,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import nodemailer from "nodemailer";
-import { listProjects, getProject, saveProject, deleteProject, getCalendar, saveCalendar, listPosts, savePost } from "./serverStore";
+import { listProjects, getProject, saveProject, deleteProject, getCalendar, saveCalendar, listPosts, savePost, listScheduled, addScheduled, cancelScheduled, getDuePending, markScheduled } from "./serverStore";
 import { issueOAuthState, consumeOAuthState, sanitizeOAuthCode } from "./oauthState";
 import { ensureUploadsDir, saveDataUrlImage, UPLOADS_DIR } from "./imageStore";
 
@@ -728,6 +728,76 @@ app.delete("/api/projects/:id", (req, res) => {
 app.get("/api/posts", (_req, res) => {
   res.json({ posts: listPosts() });
 });
+
+// ---- Scheduled posts (auto-publishing) ----
+app.get("/api/scheduled", (_req, res) => {
+  res.json({ scheduled: listScheduled() });
+});
+
+app.post("/api/schedule", (req, res) => {
+  try {
+    const { network, payload, publishAt, label } = req.body || {};
+    if (!network || !payload || !publishAt) {
+      return res.status(400).json({ error: "Faltan network, payload o publishAt." });
+    }
+    if (isNaN(Date.parse(publishAt))) {
+      return res.status(400).json({ error: "publishAt debe ser una fecha/hora válida (ISO)." });
+    }
+    const post = addScheduled({ network, payload, publishAt, label });
+    res.json({ scheduled: { id: post.id, network: post.network, publishAt: post.publishAt, status: post.status, label: post.label } });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo programar la publicación" });
+  }
+});
+
+app.delete("/api/scheduled/:id", (req, res) => {
+  const ok = cancelScheduled(req.params.id);
+  if (!ok) return res.status(404).json({ error: "No se encontró o ya no está pendiente." });
+  res.json({ success: true });
+});
+
+// Maps a scheduled network to its publish endpoint.
+function endpointForScheduled(post: { network: string; payload: any }): string {
+  if (post.network === "instagram") {
+    return Array.isArray(post.payload?.imageUrls) && post.payload.imageUrls.length >= 2
+      ? "/api/meta/instagram/carousel"
+      : "/api/meta/instagram/post";
+  }
+  if (post.network === "facebook") return "/api/meta/facebook/post";
+  return "/api/linkedin/post";
+}
+
+// Worker: publishes due scheduled posts by calling our own endpoints.
+let schedulerRunning = false;
+async function processScheduledPosts() {
+  if (schedulerRunning) return;
+  schedulerRunning = true;
+  try {
+    const due = getDuePending(new Date().toISOString());
+    for (const post of due) {
+      const url = `http://127.0.0.1:${PORT}${endpointForScheduled(post)}`;
+      try {
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(post.payload),
+        });
+        const data = (await r.json()) as any;
+        if (r.ok && (data.success || data.id || data.result)) {
+          markScheduled(post.id, { status: "published", resultId: data.result?.id || data.postId || data.id });
+          console.log(`[Scheduler] Published scheduled post ${post.id} (${post.network}).`);
+        } else {
+          markScheduled(post.id, { status: "failed", error: JSON.stringify(data).slice(0, 500) });
+          console.warn(`[Scheduler] Failed scheduled post ${post.id}:`, data?.error || data);
+        }
+      } catch (err: any) {
+        markScheduled(post.id, { status: "failed", error: err.message || String(err) });
+      }
+    }
+  } finally {
+    schedulerRunning = false;
+  }
+}
 
 // Calendar plan persistence (single current plan)
 app.get("/api/calendar", (_req, res) => {
@@ -2394,6 +2464,10 @@ async function startServer() {
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Express custom server running at http://0.0.0.0:${PORT}`);
   });
+
+  // Auto-publishing scheduler: check for due scheduled posts every 30s.
+  setInterval(processScheduledPosts, 30000);
+  console.log("Scheduler activo: revisando publicaciones programadas cada 30s.");
 }
 
 startServer();

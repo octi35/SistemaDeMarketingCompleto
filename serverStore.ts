@@ -32,10 +32,23 @@ export interface PublishedPost {
   createdAt: string;
 }
 
+export interface ScheduledPost {
+  id: string;
+  network: "instagram" | "facebook" | "linkedin";
+  payload: any; // body to POST to the network endpoint (includes token)
+  publishAt: string; // ISO datetime
+  status: "pending" | "published" | "failed" | "canceled";
+  label?: string;
+  error?: string;
+  resultId?: string;
+  createdAt: string;
+}
+
 interface Store {
   projects: CarouselProject[];
   calendar?: CalendarPlan;
   posts?: PublishedPost[];
+  scheduled?: ScheduledPost[];
 }
 
 function readStore(): Store {
@@ -47,6 +60,7 @@ function readStore(): Store {
       projects: Array.isArray(parsed.projects) ? parsed.projects : [],
       calendar: parsed.calendar,
       posts: Array.isArray(parsed.posts) ? parsed.posts : [],
+      scheduled: Array.isArray(parsed.scheduled) ? parsed.scheduled : [],
     };
   } catch (err) {
     console.error("[store] Failed to read store, starting empty:", err);
@@ -154,4 +168,49 @@ export function savePost(input: Omit<PublishedPost, "id" | "createdAt"> & { crea
   store.posts = [post, ...(store.posts || [])].slice(0, 200);
   writeStore(store);
   return post;
+}
+
+// ---- Scheduled posts (auto-publishing) ----
+// Returns scheduled posts WITHOUT exposing stored tokens.
+export function listScheduled(): Omit<ScheduledPost, "payload">[] & any[] {
+  return (readStore().scheduled || [])
+    .map(({ payload, ...rest }) => ({ ...rest, network: rest.network, hasMedia: !!(payload?.imageUrls?.length || payload?.imageUrl) }))
+    .sort((a, b) => (a.publishAt < b.publishAt ? -1 : 1));
+}
+
+export function addScheduled(input: { network: ScheduledPost["network"]; payload: any; publishAt: string; label?: string }): ScheduledPost {
+  const store = readStore();
+  const post: ScheduledPost = {
+    id: `sched_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    network: input.network,
+    payload: input.payload,
+    publishAt: input.publishAt,
+    status: "pending",
+    label: input.label,
+    createdAt: new Date().toISOString(),
+  };
+  store.scheduled = [post, ...(store.scheduled || [])];
+  writeStore(store);
+  return post;
+}
+
+export function cancelScheduled(id: string): boolean {
+  const store = readStore();
+  const item = (store.scheduled || []).find((s) => s.id === id);
+  if (!item || item.status !== "pending") return false;
+  item.status = "canceled";
+  writeStore(store);
+  return true;
+}
+
+export function getDuePending(nowIso: string): ScheduledPost[] {
+  return (readStore().scheduled || []).filter((s) => s.status === "pending" && s.publishAt <= nowIso);
+}
+
+export function markScheduled(id: string, patch: Partial<ScheduledPost>): void {
+  const store = readStore();
+  const item = (store.scheduled || []).find((s) => s.id === id);
+  if (!item) return;
+  Object.assign(item, patch);
+  writeStore(store);
 }
