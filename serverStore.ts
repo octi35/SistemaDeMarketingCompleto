@@ -17,8 +17,15 @@ export interface CarouselProject {
   updatedAt: string;
 }
 
+export interface CalendarPlan {
+  items: any[];
+  meta?: any;
+  updatedAt: string;
+}
+
 interface Store {
   projects: CarouselProject[];
+  calendar?: CalendarPlan;
 }
 
 function readStore(): Store {
@@ -26,7 +33,10 @@ function readStore(): Store {
     if (!fs.existsSync(STORE_FILE)) return { projects: [] };
     const raw = fs.readFileSync(STORE_FILE, "utf-8");
     const parsed = JSON.parse(raw);
-    return { projects: Array.isArray(parsed.projects) ? parsed.projects : [] };
+    return {
+      projects: Array.isArray(parsed.projects) ? parsed.projects : [],
+      calendar: parsed.calendar,
+    };
   } catch (err) {
     console.error("[store] Failed to read store, starting empty:", err);
     return { projects: [] };
@@ -101,4 +111,16 @@ export function deleteProject(id: string): boolean {
   if (store.projects.length === before) return false;
   writeStore(store);
   return true;
+}
+
+// ---- Calendar plan (single current plan) ----
+export function getCalendar(): CalendarPlan | null {
+  return readStore().calendar || null;
+}
+
+export function saveCalendar(items: any[], meta?: any): CalendarPlan {
+  const store = readStore();
+  store.calendar = { items: items || [], meta, updatedAt: new Date().toISOString() };
+  writeStore(store);
+  return store.calendar;
 }

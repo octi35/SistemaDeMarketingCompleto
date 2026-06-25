@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { CalendarItem } from "../types";
-import { Sparkles, Calendar, Plus, RefreshCw, Check, Clock, Trash2, Edit3, Share2, AlertCircle } from "lucide-react";
+import { apiPost, apiGet } from "../lib/api";
+import { toast } from "../lib/toast";
+import { Sparkles, Calendar, Plus, RefreshCw, Check, Clock, Trash2, Edit3, Share2, AlertCircle, Save } from "lucide-react";
 import { PixelAvatar } from "./AgentProfiles";
 
 export const CalendarManager: React.FC = () => {
@@ -49,9 +51,42 @@ export const CalendarManager: React.FC = () => {
     }
   };
 
+  const [savingPlan, setSavingPlan] = useState(false);
+
+  // On mount: load the saved plan if any; otherwise generate a fresh one.
   useEffect(() => {
-    generateCalendar();
+    (async () => {
+      try {
+        const data = await apiGet<{ calendar: { items: CalendarItem[]; meta?: any } | null }>("/api/calendar");
+        if (data.calendar && Array.isArray(data.calendar.items) && data.calendar.items.length > 0) {
+          setCalendar(data.calendar.items);
+          setActiveItem(data.calendar.items[0]);
+          if (data.calendar.meta?.niche) setNiche(data.calendar.meta.niche);
+          if (data.calendar.meta?.topic) setTopic(data.calendar.meta.topic);
+          setIsDemo(false);
+          return;
+        }
+      } catch {
+        /* no saved plan; fall through to generate */
+      }
+      generateCalendar();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Persist the current plan so it survives restarts.
+  const saveCalendarPlan = async () => {
+    if (calendar.length === 0) return;
+    setSavingPlan(true);
+    try {
+      await apiPost("/api/calendar", { items: calendar, meta: { niche, topic } });
+      toast.success("Plan de calendario guardado ✓");
+    } catch (err: any) {
+      toast.error(`No se pudo guardar el plan: ${err.message || err}`);
+    } finally {
+      setSavingPlan(false);
+    }
+  };
 
   // Sync edit form with active item selection
   useEffect(() => {
@@ -151,24 +186,34 @@ export const CalendarManager: React.FC = () => {
           </div>
         </div>
 
-        <button
-          onClick={generateCalendar}
-          disabled={loading}
-          className="bg-[#D1FF26] hover:bg-[#c2ed1c] active:bg-[#b3db18] text-black font-bold px-6 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider"
-          id="btn-generate-calendar"
-        >
-          {loading ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin text-black" />
-              <span>Cami y Facu están estructurando tu mes...</span>
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4 text-black" />
-              <span>Generar Plan de Publicación de 30 Días</span>
-            </>
-          )}
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={generateCalendar}
+            disabled={loading}
+            className="bg-[#D1FF26] hover:bg-[#c2ed1c] active:bg-[#b3db18] disabled:opacity-50 text-black font-bold px-6 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider"
+            id="btn-generate-calendar"
+          >
+            {loading ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                <span>Cami y Facu están estructurando tu mes...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 text-black" />
+                <span>Generar Plan de Publicación de 30 Días</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={saveCalendarPlan}
+            disabled={calendar.length === 0 || savingPlan}
+            className="bg-[#1A1A1C] border border-[#2A2A2C] hover:border-[#D1FF26]/50 text-[#88888E] hover:text-white font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider disabled:opacity-50"
+          >
+            {savingPlan ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-[#D1FF26]" />}
+            <span>Guardar plan</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Grid View */}

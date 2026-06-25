@@ -6,7 +6,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
 import nodemailer from "nodemailer";
-import { listProjects, getProject, saveProject, deleteProject } from "./serverStore";
+import { listProjects, getProject, saveProject, deleteProject, getCalendar, saveCalendar } from "./serverStore";
 import { issueOAuthState, consumeOAuthState, sanitizeOAuthCode } from "./oauthState";
 import { ensureUploadsDir, saveDataUrlImage, UPLOADS_DIR } from "./imageStore";
 
@@ -722,6 +722,21 @@ app.delete("/api/projects/:id", (req, res) => {
   const ok = deleteProject(req.params.id);
   if (!ok) return res.status(404).json({ error: "Proyecto no encontrado" });
   res.json({ success: true });
+});
+
+// Calendar plan persistence (single current plan)
+app.get("/api/calendar", (_req, res) => {
+  res.json({ calendar: getCalendar() });
+});
+
+app.post("/api/calendar", (req, res) => {
+  try {
+    const { items, meta } = req.body || {};
+    if (!Array.isArray(items)) return res.status(400).json({ error: "Se requiere un array 'items'." });
+    res.json({ calendar: saveCalendar(items, meta) });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo guardar el calendario" });
+  }
 });
 
 // Send a real email via SMTP (Nodemailer). Credentials come from the request
