@@ -9,6 +9,13 @@ import nodemailer from "nodemailer";
 import { listProjects, getProject, saveProject, deleteProject, getCalendar, saveCalendar, listPosts, savePost, listScheduled, addScheduled, cancelScheduled, getDuePending, markScheduled } from "./serverStore";
 import { issueOAuthState, consumeOAuthState, sanitizeOAuthCode } from "./oauthState";
 import { ensureUploadsDir, saveDataUrlImage, UPLOADS_DIR } from "./imageStore";
+import {
+  setDefaultAiClient,
+  generateContentWithFallback,
+  generateNanoBananaImage,
+  NANO_BANANA_MODELS,
+  NANO_BANANA_PRO_MODELS,
+} from "./aiHelpers";
 
 dotenv.config();
 
@@ -51,6 +58,9 @@ if (apiKey && apiKey !== "MY_GEMINI_API_KEY") {
   console.log("No valid GEMINI_API_KEY found, running in demo fallback mode.");
 }
 
+// Register the shared client with the AI helpers module.
+setDefaultAiClient(ai);
+
 // Initialize Anthropic safely
 let anthropicClient: Anthropic | null = null;
 const anthropicKey = process.env.ANTHROPIC_API_KEY;
@@ -88,142 +98,8 @@ function getCustomAiClient(req: express.Request): GoogleGenAI | null {
   return null;
 }
 
-// Flag to keep track of shared API key quota exhaustion to avoid lagging and error flooding
-let sharedKeyExhaustedUntil = 0;
-
-// Helper wrapper to handle 503/service availability errors by falling back from gemini-2.5-flash to gemini-flash-latest or gemini-2.5-flash-lite
-async function generateContentWithFallback(params: any, customAi?: GoogleGenAI | null) {
-  const activeAi = customAi || ai;
-  if (!activeAi) {
-    throw new Error("Gemini client not initialized");
-  }
-
-  // Check if we are using the shared AI client and it is currently flagged as exhausted
-  if (activeAi === ai && Date.now() < sharedKeyExhaustedUntil) {
-    console.log(`[Gemini Fallback Client] Skipping API call because the shared key is flagged as exhausted (cooldown active).`);
-    throw new Error("Shared key is currently exhausted. Falling back to simulated mode.");
-  }
-
-  // Fallback chain: requested model, then highly stable gemini-flash-latest, then gemini-2.5-flash-lite
-  const modelsToTry = [params.model, "gemini-flash-latest", "gemini-2.5-flash-lite"].filter(Boolean);
-  const uniqueModels = Array.from(new Set(modelsToTry));
-
-  let lastError: any = null;
-  for (const model of uniqueModels) {
-    let attempts = 0;
-    const maxAttempts = 3; // Retry up to 3 times per model for transient errors
-    while (attempts < maxAttempts) {
-      try {
-        attempts++;
-        console.log(`[Gemini Fallback Client] Attempting generation with model: ${model} (attempt ${attempts}/${maxAttempts})`);
-        const response = await activeAi.models.generateContent({
-          ...params,
-          model: model
-        });
-        console.log(`[Gemini Fallback Client] Successfully generated content using model: ${model}`);
-        return response;
-      } catch (err: any) {
-        lastError = err;
-        const errStr = (err.message || String(err)).toLowerCase();
-
-        // Check for hard quota limit (daily limits/resource exhaustion that won't recover immediately)
-        const isHardQuotaExceeded = errStr.includes("exceeded your current quota") || 
-                                    errStr.includes("quota_exhausted") || 
-                                    errStr.includes("resource_exhausted") ||
-                                    errStr.includes("generativelanguage.googleapis.com/generate_content_free_tier_requests") ||
-                                    (errStr.includes("429") && errStr.includes("limit"));
-
-        if (isHardQuotaExceeded) {
-          console.warn(`[Gemini Fallback Client] Model ${model} failed due to hard quota limit (daily limit hit). Skipping retries.`);
-          if (activeAi === ai) {
-            // Flag shared key as exhausted for 5 minutes
-            sharedKeyExhaustedUntil = Date.now() + 5 * 60 * 1000;
-            console.log(`[Gemini Fallback Client] Shared key flagged as exhausted until ${new Date(sharedKeyExhaustedUntil).toISOString()}`);
-          }
-          break; // Exit retry loop for this model immediately
-        }
-
-        const isQuotaOrTransient = errStr.includes("429") || 
-                                   errStr.includes("503") || 
-                                   errStr.includes("quota") || 
-                                   errStr.includes("unavailable") || 
-                                   errStr.includes("demand") || 
-                                   errStr.includes("limit") || 
-                                   errStr.includes("exhausted");
-        
-        if (isQuotaOrTransient && attempts < maxAttempts) {
-          const delay = attempts * 1000; // 1s, then 2s
-          console.warn(`[Gemini Fallback Client] Model ${model} got transient error/rate limit. Retrying in ${delay}ms... Error: ${err.message || err}`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        } else {
-          console.warn(`[Gemini Fallback Client] Model ${model} failed: ${err.message || err}`);
-          break; // Exit retry loop and try the next model
-        }
-      }
-    }
-  }
-  throw lastError || new Error("All models failed to generate content");
-}
-
-// ==========================================
-// NANO BANANA — Native image generation (Gemini image models)
-// ==========================================
-// "Nano Banana" is Google's native image generation model. We try the stable
-// id first and fall back to the preview alias so the feature keeps working
-// even if one of them is unavailable for the account.
-const NANO_BANANA_MODELS = [
-  "gemini-2.5-flash-image",          // Nano Banana (stable)
-  "gemini-2.5-flash-image-preview",  // Nano Banana (preview alias)
-];
-
-// "Nano Banana Pro" — higher quality / better text rendering. Falls back to the
-// standard model if the Pro id is not available for the account.
-const NANO_BANANA_PRO_MODELS = [
-  "gemini-3-pro-image-preview",
-  "gemini-2.5-flash-image",
-];
-
-// Generates a single image from `contents` (a prompt string, or a parts object
-// when a reference image is supplied) and returns it as a data URL, or null.
-async function generateNanoBananaImage(
-  contents: any,
-  opts: { customAi?: GoogleGenAI | null; models?: string[] } = {}
-): Promise<string | null> {
-  const activeAi = opts.customAi || ai;
-  if (!activeAi) {
-    throw new Error("Gemini client not initialized");
-  }
-
-  const models = opts.models && opts.models.length ? opts.models : NANO_BANANA_MODELS;
-  let lastError: any = null;
-  for (const model of models) {
-    try {
-      console.log(`[Nano Banana] Generating image with model: ${model}`);
-      const response: any = await activeAi.models.generateContent({
-        model,
-        contents,
-        // Ask explicitly for image output. Cast to any to stay compatible
-        // across @google/genai minor versions.
-        config: { responseModalities: ["IMAGE"] } as any,
-      });
-
-      const parts = response?.candidates?.[0]?.content?.parts || [];
-      for (const part of parts) {
-        if (part?.inlineData?.data) {
-          const mimeType = part.inlineData.mimeType || "image/png";
-          console.log(`[Nano Banana] Image generated successfully with ${model}.`);
-          return `data:${mimeType};base64,${part.inlineData.data}`;
-        }
-      }
-      console.warn(`[Nano Banana] Model ${model} returned no image part. Trying next model.`);
-    } catch (err: any) {
-      lastError = err;
-      console.warn(`[Nano Banana] Model ${model} failed: ${err?.message || err}`);
-    }
-  }
-  if (lastError) throw lastError;
-  return null;
-}
+// AI generation helpers (text fallback + Nano Banana images) live in ./aiHelpers.
+// The default client is registered after initialization above.
 
 // 1. ENDPOINT: Generate 50 creatives for Meta Ads
 app.post("/api/generate-creatives", async (req, res) => {
