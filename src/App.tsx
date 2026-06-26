@@ -1,17 +1,22 @@
-import React, { useState } from "react";
-import { AgentProfilesList } from "./components/AgentProfiles";
+import React, { useState, lazy, Suspense } from "react";
 import { TeamWorkflow } from "./components/TeamWorkflow";
-import { MetaAdsManager } from "./components/MetaAdsManager";
-import { CarouselDesigner } from "./components/CarouselDesigner";
-import { ContentStrategist } from "./components/ContentStrategist";
-import { CalendarManager } from "./components/CalendarManager";
-import { RealTimeAnalytics } from "./components/RealTimeAnalytics";
-import { IntegrationsManager } from "./components/IntegrationsManager";
-import { TeamPipeline } from "./components/TeamPipeline";
-import { AutopilotEngine } from "./components/AutopilotEngine";
-import { SocialPublisher } from "./components/SocialPublisher";
 import { Toaster } from "./components/ui/Toaster";
-import { Sparkles, Users, Award, TrendingUp, Settings, HelpCircle, Activity, LayoutGrid, Calendar, HelpCircle as HelpIcon, ArrowUpRight } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+
+// Tab views are code-split so each one only loads when opened (smaller initial bundle).
+const lazyNamed = <T extends Record<string, any>>(loader: () => Promise<T>, name: keyof T) =>
+  lazy(() => loader().then((m) => ({ default: m[name] as React.ComponentType })));
+
+const AgentProfilesList = lazyNamed(() => import("./components/AgentProfiles"), "AgentProfilesList");
+const MetaAdsManager = lazyNamed(() => import("./components/MetaAdsManager"), "MetaAdsManager");
+const CarouselDesigner = lazyNamed(() => import("./components/CarouselDesigner"), "CarouselDesigner");
+const ContentStrategist = lazyNamed(() => import("./components/ContentStrategist"), "ContentStrategist");
+const CalendarManager = lazyNamed(() => import("./components/CalendarManager"), "CalendarManager");
+const RealTimeAnalytics = lazyNamed(() => import("./components/RealTimeAnalytics"), "RealTimeAnalytics");
+const IntegrationsManager = lazyNamed(() => import("./components/IntegrationsManager"), "IntegrationsManager");
+const TeamPipeline = lazyNamed(() => import("./components/TeamPipeline"), "TeamPipeline");
+const AutopilotEngine = lazyNamed(() => import("./components/AutopilotEngine"), "AutopilotEngine");
+const SocialPublisher = lazyNamed(() => import("./components/SocialPublisher"), "SocialPublisher");
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>("autopilot");
@@ -130,16 +135,25 @@ export default function App() {
 
           {/* RIGHT: Active Tab container (takes 9 cols) */}
           <div className="lg:col-span-9">
-            {activeTab === "autopilot" && <AutopilotEngine />}
-            {activeTab === "social-publisher" && <SocialPublisher />}
-            {activeTab === "meta-ads" && <MetaAdsManager />}
-            {activeTab === "carousel" && <CarouselDesigner />}
-            {activeTab === "strategist" && <ContentStrategist />}
-            {activeTab === "calendar" && <CalendarManager />}
-            {activeTab === "pipeline" && <TeamPipeline />}
-            {activeTab === "analytics" && <RealTimeAnalytics />}
-            {activeTab === "team" && <AgentProfilesList />}
-            {activeTab === "integrations" && <IntegrationsManager />}
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center h-64 text-[#88888E] gap-2 text-sm">
+                  <RefreshCw className="w-4 h-4 animate-spin text-[#D1FF26]" />
+                  <span>Cargando módulo...</span>
+                </div>
+              }
+            >
+              {activeTab === "autopilot" && <AutopilotEngine />}
+              {activeTab === "social-publisher" && <SocialPublisher />}
+              {activeTab === "meta-ads" && <MetaAdsManager />}
+              {activeTab === "carousel" && <CarouselDesigner />}
+              {activeTab === "strategist" && <ContentStrategist />}
+              {activeTab === "calendar" && <CalendarManager />}
+              {activeTab === "pipeline" && <TeamPipeline />}
+              {activeTab === "analytics" && <RealTimeAnalytics />}
+              {activeTab === "team" && <AgentProfilesList />}
+              {activeTab === "integrations" && <IntegrationsManager />}
+            </Suspense>
           </div>
 
         </div>
