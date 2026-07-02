@@ -11,7 +11,12 @@ const STYLES: Record<ToastItem["type"], { border: string; icon: React.ReactNode 
 export const Toaster: React.FC = () => {
   const [items, setItems] = useState<ToastItem[]>([]);
 
-  useEffect(() => toast.subscribe(setItems), []);
+  useEffect(() => {
+    const unsubscribe = toast.subscribe(setItems);
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   if (items.length === 0) return null;
 

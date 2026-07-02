@@ -139,7 +139,7 @@ export function getAgentIcon(id: string) {
 
 interface PixelAvatarProps {
   agentId: string;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
 }
 
 export const PixelAvatar: React.FC<PixelAvatarProps> = ({ agentId, size = "md" }) => {
@@ -147,6 +147,7 @@ export const PixelAvatar: React.FC<PixelAvatarProps> = ({ agentId, size = "md" }
   if (!agent) return null;
 
   const sizeClasses = {
+    xs: "w-6 h-6 text-[10px] border",
     sm: "w-10 h-10 text-xs border-2",
     md: "w-16 h-16 text-xl border-4",
     lg: "w-24 h-24 text-3xl border-4"
