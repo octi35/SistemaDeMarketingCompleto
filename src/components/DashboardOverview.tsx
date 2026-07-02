@@ -104,14 +104,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
           <Card>
             <SectionTitle title="Embudo de conversión" subtitle="Total en pipeline" />
             <div className="mt-3 mb-6">
-              <span className="text-[28px] font-semibold tracking-tight text-[#111111]">$350.500</span>
+              <span className="text-[28px] font-semibold tracking-tight text-ink">$350.500</span>
             </div>
             <div className="space-y-5">
               {funnel.map((s) => (
                 <div key={s.label}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[13px] text-[#6b7280]">{s.label}</span>
-                    <span className="text-[13px] font-semibold text-[#111111]">{s.amount}</span>
+                    <span className="text-[13px] text-muted">{s.label}</span>
+                    <span className="text-[13px] font-semibold text-ink">{s.amount}</span>
                   </div>
                   <Progress value={s.value} tone={s.tone} />
                 </div>
@@ -129,22 +129,22 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({ onNavigate
         <Card>
           <div className="flex items-center justify-between">
             <SectionTitle title="Rendimiento" subtitle="Últimos 30 días" />
-            <button className="w-8 h-8 rounded-full bg-[#f3f5fb] text-[#6b7280] hover:bg-[#eaedf6] flex items-center justify-center transition">
+            <button className="w-8 h-8 rounded-full bg-sink text-muted hover:bg-[#eaedf6] flex items-center justify-center transition">
               <MoreHorizontal className="w-4 h-4" />
             </button>
           </div>
           <div className="grid grid-cols-2 gap-3 mt-5">
-            <div className="rounded-2xl bg-[#f7f8fc] p-4">
-              <div className="text-[22px] font-semibold text-[#111111]">+41%</div>
-              <div className="text-[12px] text-[#9ca3af] mt-1">Ganado (30 días)</div>
+            <div className="rounded-2xl bg-canvas p-4">
+              <div className="text-[22px] font-semibold text-ink">+41%</div>
+              <div className="text-[12px] text-faint mt-1">Ganado (30 días)</div>
             </div>
-            <div className="rounded-2xl bg-[#f7f8fc] p-4">
-              <div className="text-[22px] font-semibold text-[#111111]">6/6</div>
-              <div className="text-[12px] text-[#9ca3af] mt-1">Agentes IA online</div>
+            <div className="rounded-2xl bg-canvas p-4">
+              <div className="text-[22px] font-semibold text-ink">6/6</div>
+              <div className="text-[12px] text-faint mt-1">Agentes IA online</div>
             </div>
           </div>
           <div className="mt-4 flex items-center justify-between">
-            <span className="text-[13px] text-[#6b7280]">Equipo asignado</span>
+            <span className="text-[13px] text-muted">Equipo asignado</span>
             <AvatarGroup people={people} size="sm" max={4} />
           </div>
         </Card>

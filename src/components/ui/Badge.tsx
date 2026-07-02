@@ -11,19 +11,19 @@ export interface BadgeProps {
 }
 
 const tones: Record<Tone, string> = {
-  neutral: "bg-[#f3f5fb] text-[#6b7280]",
-  accent: "bg-[#eef1fe] text-[#4f6ef7]",
+  neutral: "bg-sink text-muted",
+  accent: "bg-accent-soft text-accent",
   yellow: "bg-[#fff6d6] text-[#a8791b]",
   green: "bg-[#e6f7e6] text-[#3f9a3f]",
   sky: "bg-[#e6f5fe] text-[#2b8fc7]",
-  dark: "bg-[#101010] text-white",
+  dark: "bg-black text-white",
   red: "bg-[#fdeaea] text-[#d5514f]",
 };
 
 const dotColors: Record<Tone, string> = {
   neutral: "bg-[#9ca3af]",
-  accent: "bg-[#4f6ef7]",
-  yellow: "bg-[#ffd84d]",
+  accent: "bg-accent",
+  yellow: "bg-yellow",
   green: "bg-[#7dd87d]",
   sky: "bg-[#8fd4f8]",
   dark: "bg-white",

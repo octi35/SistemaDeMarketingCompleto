@@ -32,7 +32,7 @@ export const Card: React.FC<CardProps> = ({
     onClick={onClick}
     whileHover={interactive ? { y: -2, boxShadow: "0 18px 45px rgba(15,23,42,0.09)" } : undefined}
     transition={{ duration: 0.2, ease: "easeOut" }}
-    className={`bg-white rounded-[22px] shadow-card ${padded ? "p-6" : ""} ${
+    className={`bg-white rounded-card shadow-card ${padded ? "p-6" : ""} ${
       interactive ? "cursor-pointer" : ""
     } ${className}`}
   >

@@ -411,30 +411,30 @@ export const SocialPublisher: React.FC = () => {
     <div className="space-y-6" id="social-publisher-root">
       
       {/* Overview header block */}
-      <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6">
+      <div className="bg-surface border border-line rounded-2xl p-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-[#101010]/10 text-[#101010] border border-[#101010]/20 text-lg">
+            <div className="p-2.5 rounded-lg bg-black/10 text-black border border-black/20 text-lg">
               📸
             </div>
             <div>
-              <h2 className="text-base font-semibold text-[#111111]">
+              <h2 className="text-base font-semibold text-ink">
                 Gestor y Publicador de Contenido Multimedia
               </h2>
-              <p className="text-xs text-[#6B7280] mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Sube tus imágenes, carruseles o videos de campañas. La IA autónoma los analiza para redactar copys de alta conversión y publicarlos en tus redes.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-[#6B7280] font-mono">Tokens:</span>
+            <span className="text-[11px] text-muted font-mono">Tokens:</span>
             <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
               linkedinToken ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-[#efeee7] text-zinc-500"
             }`}>
               LinkedIn: {linkedinToken ? "ON" : "OFF"}
             </span>
             <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
-              metaToken ? "bg-emerald-500/10 text-[#101010] border border-[#101010]/20" : "bg-[#efeee7] text-zinc-500"
+              metaToken ? "bg-emerald-500/10 text-black border border-black/20" : "bg-[#efeee7] text-zinc-500"
             }`}>
               Meta/IG: {metaToken ? "ON" : "OFF"}
             </span>
@@ -448,9 +448,9 @@ export const SocialPublisher: React.FC = () => {
         <div className="lg:col-span-5 space-y-6">
           
           {/* Section: Upload & Media Library */}
-          <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-4 space-y-4">
-            <h3 className="text-xs font-semibold text-[#111111] uppercase tracking-wider flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-[#101010]" />
+          <div className="bg-surface border border-line rounded-2xl p-4 space-y-4">
+            <h3 className="text-xs font-semibold text-ink uppercase tracking-wider flex items-center gap-1.5">
+              <Layers className="w-4 h-4 text-black" />
               Biblioteca de Contenidos
             </h3>
 
@@ -461,8 +461,8 @@ export const SocialPublisher: React.FC = () => {
               onDrop={handleDrop}
               className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-300 relative ${
                 isDragging 
-                  ? "border-[#101010] bg-[#101010]/5 scale-[0.99]" 
-                  : "border-[#ECECEC] bg-[#F3F5FB] hover:border-[#101010]/40"
+                  ? "border-black bg-black/5 scale-[0.99]" 
+                  : "border-line bg-sink hover:border-black/40"
               }`}
             >
               <input
@@ -473,23 +473,23 @@ export const SocialPublisher: React.FC = () => {
                 className="absolute inset-0 opacity-0 cursor-pointer"
               />
               <div className="flex flex-col items-center justify-center space-y-2">
-                <div className="p-3 bg-[#F3F5FB] rounded-full border border-[#ECECEC] text-zinc-400">
+                <div className="p-3 bg-sink rounded-full border border-line text-zinc-400">
                   <Upload className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-[#111111]">Arrastra tus fotos o videos aquí</p>
-                  <p className="text-[10px] text-[#6B7280] mt-0.5">O haz clic para explorar en tu dispositivo</p>
+                  <p className="text-xs font-medium text-ink">Arrastra tus fotos o videos aquí</p>
+                  <p className="text-[10px] text-muted mt-0.5">O haz clic para explorar en tu dispositivo</p>
                 </div>
-                <p className="text-[9px] text-[#9CA3AF]">Formatos soportados: PNG, JPG, MP4, GIF, WebM</p>
+                <p className="text-[9px] text-faint">Formatos soportados: PNG, JPG, MP4, GIF, WebM</p>
               </div>
             </div>
 
             {/* Media Gallery Grid */}
             <div className="space-y-2">
-              <span className="text-[10px] font-bold tracking-wider text-[#9CA3AF] uppercase block">Archivos Subidos ({mediaLibrary.length})</span>
+              <span className="text-[10px] font-bold tracking-wider text-faint uppercase block">Archivos Subidos ({mediaLibrary.length})</span>
               {mediaLibrary.length === 0 ? (
-                <div className="text-center py-6 border border-[#ECECEC] rounded-xl bg-[#F3F5FB]">
-                  <p className="text-xs text-[#6B7280]">No hay contenidos guardados en tu biblioteca.</p>
+                <div className="text-center py-6 border border-line rounded-xl bg-sink">
+                  <p className="text-xs text-muted">No hay contenidos guardados en tu biblioteca.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-2 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
@@ -501,8 +501,8 @@ export const SocialPublisher: React.FC = () => {
                         onClick={() => setSelectedMedia(item)}
                         className={`group relative rounded-xl border p-2 cursor-pointer transition-all flex flex-col justify-between h-[110px] ${
                           isSelected 
-                            ? "border-[#101010] bg-[#101010]/5 shadow-md shadow-[#101010]/5" 
-                            : "border-[#ECECEC] bg-[#F3F5FB] hover:bg-[#efeee7]/60 hover:border-[#E3E5EA]"
+                            ? "border-black bg-black/5 shadow-md shadow-[#101010]/5" 
+                            : "border-line bg-sink hover:bg-[#efeee7]/60 hover:border-line"
                         }`}
                       >
                         {/* Thumbnail overlay or preview */}
@@ -517,7 +517,7 @@ export const SocialPublisher: React.FC = () => {
                             ) : (
                               <ImageIcon className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                             )}
-                            <span className="text-[9px] font-mono text-[#9CA3AF] uppercase font-semibold">
+                            <span className="text-[9px] font-mono text-faint uppercase font-semibold">
                               {item.type}
                             </span>
                           </div>
@@ -534,7 +534,7 @@ export const SocialPublisher: React.FC = () => {
                           <p className="text-[10px] text-zinc-300 font-medium truncate pr-1" title={item.name}>
                             {item.name}
                           </p>
-                          <span className="text-[8px] text-[#9CA3AF] block font-mono">
+                          <span className="text-[8px] text-faint block font-mono">
                             {item.dateAdded}
                           </span>
                         </div>
@@ -547,32 +547,32 @@ export const SocialPublisher: React.FC = () => {
           </div>
 
           {/* Section: AI Generator Parameters */}
-          <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-4 space-y-4">
-            <h3 className="text-xs font-semibold text-[#111111] uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-[#101010]" />
+          <div className="bg-surface border border-line rounded-2xl p-4 space-y-4">
+            <h3 className="text-xs font-semibold text-ink uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-black" />
               Configurador del Copy AI
             </h3>
 
             <div className="space-y-3.5">
               {/* Product/Service Name */}
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider block">Producto o Servicio Relacionado</label>
+                <label className="text-[10px] font-bold text-faint uppercase tracking-wider block">Producto o Servicio Relacionado</label>
                 <input
                   type="text"
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
-                  className="w-full bg-[#F3F5FB] border border-[#ECECEC] focus:border-[#101010] rounded-lg p-2.5 text-xs text-[#111111] focus:outline-none"
+                  className="w-full bg-sink border border-line rounded-input p-2.5 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
                   placeholder="Ej: Curso de marketing, SaaS de finanzas..."
                 />
               </div>
 
               {/* Tone of Voice */}
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider block">Tono del Copy</label>
+                <label className="text-[10px] font-bold text-faint uppercase tracking-wider block">Tono del Copy</label>
                 <select
                   value={targetTone}
                   onChange={(e) => setTargetTone(e.target.value)}
-                  className="w-full bg-[#F3F5FB] border border-[#ECECEC] focus:border-[#101010] rounded-lg p-2.5 text-xs text-[#6B7280] focus:outline-none"
+                  className="w-full bg-sink border border-line rounded-input p-2.5 text-xs text-muted outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
                 >
                   <option value="Professional">Profesional & Informativo (Ideal para LinkedIn)</option>
                   <option value="Casual">Cercano & Amigable (Ideal para Instagram)</option>
@@ -584,12 +584,12 @@ export const SocialPublisher: React.FC = () => {
 
               {/* Additional notes */}
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider block">Instrucciones o Detalles Adicionales</label>
+                <label className="text-[10px] font-bold text-faint uppercase tracking-wider block">Instrucciones o Detalles Adicionales</label>
                 <textarea
                   value={additionalNotes}
                   onChange={(e) => setAdditionalNotes(e.target.value)}
                   rows={3}
-                  className="w-full bg-[#F3F5FB] border border-[#ECECEC] focus:border-[#101010] rounded-lg p-2.5 text-xs text-[#111111] focus:outline-none resize-none"
+                  className="w-full bg-sink border border-line rounded-input p-2.5 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20 resize-none"
                   placeholder="Ej: Mencionar el descuento del 20% que termina el viernes, incluir emojis, etc..."
                 />
               </div>
@@ -599,7 +599,7 @@ export const SocialPublisher: React.FC = () => {
             <button
               onClick={generateSocialCopy}
               disabled={isGenerating || !selectedMedia}
-              className="w-full bg-[#101010] text-white hover:bg-[#232323] transition-colors py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-black text-white hover:bg-sidebar transition-colors py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? (
                 <>
@@ -621,23 +621,23 @@ export const SocialPublisher: React.FC = () => {
         <div className="lg:col-span-7 flex flex-col h-full min-h-[500px]">
           
           {/* Main Workspace Frame */}
-          <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5 flex flex-col justify-between flex-1">
+          <div className="bg-surface border border-line rounded-2xl p-5 flex flex-col justify-between flex-1">
             
             {!generatedResult && !isGenerating && (
               <div className="flex-1 flex flex-col items-center justify-center text-center py-20 px-6 space-y-4">
-                <div className="w-14 h-14 rounded-full bg-[#F3F5FB] border border-[#ECECEC] flex items-center justify-center text-[#101010] text-xl">
+                <div className="w-14 h-14 rounded-full bg-sink border border-line flex items-center justify-center text-black text-xl">
                   ✨
                 </div>
                 <div className="max-w-sm space-y-1">
-                  <h4 className="text-sm font-semibold text-[#111111]">AdTeam AI: Redacción Autónoma</h4>
-                  <p className="text-xs text-[#6B7280] leading-relaxed">
+                  <h4 className="text-sm font-semibold text-ink">AdTeam AI: Redacción Autónoma</h4>
+                  <p className="text-xs text-muted leading-relaxed">
                     Selecciona un archivo multimedia de tu biblioteca en la izquierda, completa los detalles de tu producto y haz clic en "Generar Descripciones" para que nuestros agentes diseñen el copy optimizado para cada red.
                   </p>
                 </div>
                 {selectedMedia && (
-                  <div className="bg-[#F3F5FB] border border-[#ECECEC] rounded-lg p-2 flex items-center gap-2 max-w-xs truncate">
+                  <div className="bg-sink border border-line rounded-lg p-2 flex items-center gap-2 max-w-xs truncate">
                     <span className="text-[10px] text-zinc-500 font-mono">Seleccionado:</span>
-                    <span className="text-[10px] text-[#111111] font-medium truncate">{selectedMedia.name}</span>
+                    <span className="text-[10px] text-ink font-medium truncate">{selectedMedia.name}</span>
                   </div>
                 )}
               </div>
@@ -646,12 +646,12 @@ export const SocialPublisher: React.FC = () => {
             {isGenerating && (
               <div className="flex-1 flex flex-col items-center justify-center text-center py-20 px-6 space-y-4">
                 <div className="relative">
-                  <div className="w-12 h-12 rounded-full border-4 border-[#ECECEC] border-t-[#101010] animate-spin"></div>
+                  <div className="w-12 h-12 rounded-full border-4 border-line border-t-[#101010] animate-spin"></div>
                   <span className="absolute inset-0 flex items-center justify-center text-xs">🤖</span>
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-sm font-semibold text-[#111111]">Analizando Contenidos</h4>
-                  <p className="text-xs text-[#6B7280] leading-relaxed animate-pulse">
+                  <h4 className="text-sm font-semibold text-ink">Analizando Contenidos</h4>
+                  <p className="text-xs text-muted leading-relaxed animate-pulse">
                     Lauti (Guionista) y Mateo (Analista) están analizando los píxeles de tu archivo para crear el gancho psicológico perfecto...
                   </p>
                 </div>
@@ -662,8 +662,8 @@ export const SocialPublisher: React.FC = () => {
               <div className="space-y-5">
                 
                 {/* Visual Header / Analysis summary */}
-                <div className="bg-[#F3F5FB] border border-[#ECECEC] rounded-xl p-3 flex gap-3 items-center">
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-black border border-[#ECECEC] shrink-0">
+                <div className="bg-sink border border-line rounded-xl p-3 flex gap-3 items-center">
+                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-black border border-line shrink-0">
                     <img src={selectedMedia?.url} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -675,13 +675,13 @@ export const SocialPublisher: React.FC = () => {
                 </div>
 
                 {/* Network tabs switcher */}
-                <div className="flex border-b border-[#ECECEC] pb-px">
+                <div className="flex border-b border-line pb-px">
                   <button
                     onClick={() => setActiveNetworkTab("linkedin")}
                     className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition ${
                       activeNetworkTab === "linkedin" 
-                        ? "border-[#101010] text-[#101010]" 
-                        : "border-transparent text-[#6B7280] hover:text-[#111111]"
+                        ? "border-black text-black" 
+                        : "border-transparent text-muted hover:text-ink"
                     }`}
                   >
                     <Linkedin className="w-4 h-4 text-[#0077B5] fill-[#0077B5]" />
@@ -691,8 +691,8 @@ export const SocialPublisher: React.FC = () => {
                     onClick={() => setActiveNetworkTab("instagram")}
                     className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition ${
                       activeNetworkTab === "instagram" 
-                        ? "border-[#101010] text-[#101010]" 
-                        : "border-transparent text-[#6B7280] hover:text-[#111111]"
+                        ? "border-black text-black" 
+                        : "border-transparent text-muted hover:text-ink"
                     }`}
                   >
                     <Instagram className="w-4 h-4 text-[#E1306C]" />
@@ -702,8 +702,8 @@ export const SocialPublisher: React.FC = () => {
                     onClick={() => setActiveNetworkTab("facebook")}
                     className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition ${
                       activeNetworkTab === "facebook" 
-                        ? "border-[#101010] text-[#101010]" 
-                        : "border-transparent text-[#6B7280] hover:text-[#111111]"
+                        ? "border-black text-black" 
+                        : "border-transparent text-muted hover:text-ink"
                     }`}
                   >
                     <Facebook className="w-4 h-4 text-[#1877F2] fill-[#1877F2]" />
@@ -718,16 +718,16 @@ export const SocialPublisher: React.FC = () => {
                   <div className="md:col-span-7 space-y-4">
                     
                     {/* Copy Box container */}
-                    <div className="bg-[#F3F5FB] border border-[#ECECEC] rounded-xl p-4 space-y-3 relative overflow-hidden select-text">
-                      <div className="flex items-center justify-between border-b border-[#ECECEC] pb-2">
-                        <span className="text-[9px] text-[#9CA3AF] uppercase font-mono tracking-wider font-bold">Copy Optimizado</span>
+                    <div className="bg-sink border border-line rounded-xl p-4 space-y-3 relative overflow-hidden select-text">
+                      <div className="flex items-center justify-between border-b border-line pb-2">
+                        <span className="text-[9px] text-faint uppercase font-mono tracking-wider font-bold">Copy Optimizado</span>
                         <button
                           onClick={() => {
                             const copyNode = generatedResult[activeNetworkTab];
                             const fullCopy = `${copyNode.hook}\n\n${copyNode.body}\n\n${copyNode.cta}\n\n${copyNode.hashtags.join(" ")}`;
                             handleCopy(fullCopy, `copy-${activeNetworkTab}`);
                           }}
-                          className="text-zinc-500 hover:text-[#111111] transition flex items-center gap-1 text-[10px]"
+                          className="text-zinc-500 hover:text-ink transition flex items-center gap-1 text-[10px]"
                         >
                           {copiedState[`copy-${activeNetworkTab}`] ? (
                             <>
@@ -744,10 +744,10 @@ export const SocialPublisher: React.FC = () => {
                       </div>
 
                       <div className="space-y-3.5 text-xs leading-relaxed text-zinc-200">
-                        <p className="font-bold text-[#101010]">{generatedResult[activeNetworkTab].hook}</p>
+                        <p className="font-bold text-black">{generatedResult[activeNetworkTab].hook}</p>
                         <p className="whitespace-pre-wrap">{generatedResult[activeNetworkTab].body}</p>
                         <p className="text-zinc-400 font-medium italic">{generatedResult[activeNetworkTab].cta}</p>
-                        <p className="text-[#101010] font-mono tracking-wide">
+                        <p className="text-black font-mono tracking-wide">
                           {generatedResult[activeNetworkTab].hashtags.join(" ")}
                         </p>
                       </div>
@@ -755,13 +755,13 @@ export const SocialPublisher: React.FC = () => {
 
                     {/* Meta account / page selector (real publishing target) */}
                     {(activeNetworkTab === "instagram" || activeNetworkTab === "facebook") && (
-                      <div className="bg-[#F3F5FB]/60 border border-[#ECECEC] rounded-xl p-4 space-y-2">
+                      <div className="bg-sink/60 border border-line rounded-xl p-4 space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[10px] text-zinc-500 uppercase font-mono font-bold">Cuenta de destino (Meta)</span>
                           <button
                             onClick={loadMetaAccounts}
                             disabled={loadingAccounts}
-                            className="text-[10px] font-bold text-[#101010] hover:underline flex items-center gap-1 disabled:opacity-50"
+                            className="text-[10px] font-bold text-black hover:underline flex items-center gap-1 disabled:opacity-50"
                           >
                             {loadingAccounts ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                             <span>{metaAccounts.length ? "Recargar" : "Cargar mis páginas"}</span>
@@ -774,7 +774,7 @@ export const SocialPublisher: React.FC = () => {
                               const p = metaAccounts.find((a) => a.id === e.target.value);
                               if (p) selectMetaPage(p);
                             }}
-                            className="w-full bg-[#F3F5FB] border border-[#ECECEC] rounded-lg px-3 py-2 text-xs text-[#111111] focus:outline-none focus:border-[#101010]"
+                            className="w-full bg-sink border border-line rounded-input px-3 py-2 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
                           >
                             {metaAccounts.map((p) => (
                               <option key={p.id} value={p.id}>
@@ -796,7 +796,7 @@ export const SocialPublisher: React.FC = () => {
                     )}
 
                     {/* Direct execution controls */}
-                    <div className="bg-[#F3F5FB]/60 border border-[#ECECEC] rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div className="bg-sink/60 border border-line rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
                       <div className="space-y-0.5">
                         <span className="text-[10px] text-zinc-500 uppercase font-mono font-bold block">Acciones de Canal</span>
                         <p className="text-[11px] text-zinc-300">Publicar de forma autónoma e inmediata con AdTeam.</p>
@@ -805,7 +805,7 @@ export const SocialPublisher: React.FC = () => {
                       <button
                         onClick={() => handlePublish(activeNetworkTab)}
                         disabled={isPublishing !== null}
-                        className="bg-[#101010] hover:bg-[#232323] text-white font-bold text-xs uppercase py-2 px-4 rounded-lg flex items-center gap-2 transition tracking-wider shrink-0 w-full md:w-auto justify-center"
+                        className="bg-black hover:bg-sidebar text-white font-bold text-xs uppercase py-2 px-4 rounded-lg flex items-center gap-2 transition tracking-wider shrink-0 w-full md:w-auto justify-center"
                       >
                         {isPublishing === activeNetworkTab ? (
                           <>
@@ -822,9 +822,9 @@ export const SocialPublisher: React.FC = () => {
                     </div>
 
                     {/* Scheduling controls */}
-                    <div className="bg-[#F3F5FB]/60 border border-[#ECECEC] rounded-xl p-4 space-y-3">
+                    <div className="bg-sink/60 border border-line rounded-xl p-4 space-y-3">
                       <div className="flex items-center gap-2">
-                        <Clock className="w-3.5 h-3.5 text-[#101010]" />
+                        <Clock className="w-3.5 h-3.5 text-black" />
                         <span className="text-[10px] text-zinc-500 uppercase font-mono font-bold">Programar publicación</span>
                       </div>
                       <div className="flex flex-col sm:flex-row gap-2">
@@ -832,14 +832,14 @@ export const SocialPublisher: React.FC = () => {
                           type="datetime-local"
                           value={scheduleAt}
                           onChange={(e) => setScheduleAt(e.target.value)}
-                          className="flex-1 bg-[#F3F5FB] border border-[#ECECEC] rounded-lg px-3 py-2 text-xs text-[#111111] focus:outline-none focus:border-[#101010]"
+                          className="flex-1 bg-sink border border-line rounded-input px-3 py-2 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
                         />
                         <button
                           onClick={schedulePublish}
                           disabled={scheduling || !scheduleAt}
-                          className="bg-[#F3F5FB] border border-[#E3E5EA] hover:border-[#101010]/50 text-[#6B7280] hover:text-[#111111] text-[11px] px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50 shrink-0"
+                          className="bg-sink hover:border-black/50 text-muted hover:text-ink text-[11px] px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50 shrink-0"
                         >
-                          {scheduling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5 text-[#101010]" />}
+                          {scheduling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5 text-black" />}
                           <span>Programar en {activeNetworkTab}</span>
                         </button>
                       </div>
@@ -847,8 +847,8 @@ export const SocialPublisher: React.FC = () => {
                       {scheduledList.length > 0 && (
                         <div className="space-y-1 pt-1 max-h-32 overflow-y-auto">
                           {scheduledList.map((s) => (
-                            <div key={s.id} className="flex items-center justify-between text-[11px] bg-[#F3F5FB] border border-[#ECECEC] rounded px-2.5 py-1.5">
-                              <span className="uppercase font-mono text-[9px] text-[#101010] w-16 shrink-0">{s.network}</span>
+                            <div key={s.id} className="flex items-center justify-between text-[11px] bg-sink border border-line rounded px-2.5 py-1.5">
+                              <span className="uppercase font-mono text-[9px] text-black w-16 shrink-0">{s.network}</span>
                               <span className="flex-1 px-2 text-zinc-400 truncate">{new Date(s.publishAt).toLocaleString()}</span>
                               <span className={`text-[9px] font-mono shrink-0 ${s.status === "published" ? "text-green-400" : s.status === "failed" ? "text-red-400" : s.status === "canceled" ? "text-zinc-600" : "text-amber-400"}`}>
                                 {s.status}
@@ -868,41 +868,41 @@ export const SocialPublisher: React.FC = () => {
 
                   {/* Visual Post Mockup Simulator (5 cols) */}
                   <div className="md:col-span-5 space-y-2">
-                    <span className="text-[10px] font-bold text-[#9CA3AF] uppercase tracking-wider block">Vista Previa Móvil</span>
+                    <span className="text-[10px] font-bold text-faint uppercase tracking-wider block">Vista Previa Móvil</span>
                     
                     {/* Simulated Mobile Device Frame */}
-                    <div className="border border-[#ECECEC] bg-[#F3F5FB] rounded-2xl p-3 shadow-xl space-y-3 overflow-hidden text-zinc-100 max-w-[280px] mx-auto text-left relative">
+                    <div className="border border-line bg-sink rounded-2xl p-3 shadow-xl space-y-3 overflow-hidden text-zinc-100 max-w-[280px] mx-auto text-left relative">
                       
                       {/* Brand Header simulation */}
-                      <div className="flex items-center gap-2 border-b border-[#ECECEC] pb-2">
-                        <div className="w-7 h-7 rounded-full bg-[#101010] text-white font-bold flex items-center justify-center text-[10px]">
+                      <div className="flex items-center gap-2 border-b border-line pb-2">
+                        <div className="w-7 h-7 rounded-full bg-black text-white font-bold flex items-center justify-center text-[10px]">
                           AD
                         </div>
                         <div>
                           <div className="text-[10px] font-bold leading-none">Tu Perfil Oficial</div>
-                          <span className="text-[8px] text-[#9CA3AF] font-mono">Hace 1 min • Público</span>
+                          <span className="text-[8px] text-faint font-mono">Hace 1 min • Público</span>
                         </div>
                       </div>
 
                       {/* Post body snippets */}
                       <div className="space-y-1">
-                        <p className="text-[9px] text-[#101010] font-bold line-clamp-1">{generatedResult[activeNetworkTab].hook}</p>
+                        <p className="text-[9px] text-black font-bold line-clamp-1">{generatedResult[activeNetworkTab].hook}</p>
                         <p className="text-[9px] text-zinc-300 line-clamp-3 leading-normal">{generatedResult[activeNetworkTab].body}</p>
                         <p className="text-[9px] text-zinc-500 font-mono tracking-wide line-clamp-1">{generatedResult[activeNetworkTab].hashtags.join(" ")}</p>
                       </div>
 
                       {/* Image / Video thumbnail frame */}
-                      <div className="bg-black rounded-lg aspect-video overflow-hidden border border-[#ECECEC] relative flex items-center justify-center group">
+                      <div className="bg-black rounded-lg aspect-video overflow-hidden border border-line relative flex items-center justify-center group">
                         {selectedMedia?.type === "video" && (
                           <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-                            <Play className="w-6 h-6 text-[#111111] fill-white opacity-80" />
+                            <Play className="w-6 h-6 text-ink fill-white opacity-80" />
                           </div>
                         )}
                         <img src={selectedMedia?.url} alt="" className="w-full h-full object-cover" />
                       </div>
 
                       {/* Engagement bottom simulation */}
-                      <div className="border-t border-[#ECECEC] pt-2 flex justify-between text-zinc-500 text-[9px] font-medium font-mono px-1">
+                      <div className="border-t border-line pt-2 flex justify-between text-zinc-500 text-[9px] font-medium font-mono px-1">
                         <span>👍 1.2K Likes</span>
                         <span>💬 43 Comentarios</span>
                       </div>
@@ -916,12 +916,12 @@ export const SocialPublisher: React.FC = () => {
             )}
 
             {/* Bottom Actions footer */}
-            <div className="border-t border-[#ECECEC] pt-4 mt-6 flex items-center justify-between text-[#9CA3AF]">
+            <div className="border-t border-line pt-4 mt-6 flex items-center justify-between text-faint">
               <span className="text-[10px] font-mono uppercase">Media Engine • v2.1</span>
               {generatedResult && (
                 <button
                   onClick={generateSocialCopy}
-                  className="bg-transparent text-zinc-400 hover:text-[#111111] hover:bg-[#efeee7] transition py-1 px-2.5 rounded-lg text-[11px] flex items-center gap-1"
+                  className="bg-transparent text-zinc-400 hover:text-ink hover:bg-[#efeee7] transition py-1 px-2.5 rounded-lg text-[11px] flex items-center gap-1"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Volver a redactar</span>

@@ -28,7 +28,7 @@ export const TeamPipeline: React.FC = () => {
     {
       title: "Métricas (Mateo)",
       icon: "📊",
-      color: "border-[#EEF1F8] bg-[#FFFFFF]/40",
+      color: "border-[#EEF1F8] bg-surface/40",
       cards: [
         {
           id: "c-1",
@@ -69,7 +69,7 @@ export const TeamPipeline: React.FC = () => {
     {
       title: "Estrategia (Santi)",
       icon: "🧭",
-      color: "border-[#EEF1F8] bg-[#FFFFFF]/40",
+      color: "border-[#EEF1F8] bg-surface/40",
       cards: [
         {
           id: "c-3",
@@ -110,7 +110,7 @@ export const TeamPipeline: React.FC = () => {
     {
       title: "Ideas (Cami)",
       icon: "💡",
-      color: "border-[#EEF1F8] bg-[#FFFFFF]/40",
+      color: "border-[#EEF1F8] bg-surface/40",
       cards: [
         {
           id: "c-5",
@@ -151,7 +151,7 @@ export const TeamPipeline: React.FC = () => {
     {
       title: "Guiones (Lauti)",
       icon: "✍",
-      color: "border-[#EEF1F8] bg-[#FFFFFF]/40",
+      color: "border-[#EEF1F8] bg-surface/40",
       cards: [
         {
           id: "c-7",
@@ -192,7 +192,7 @@ export const TeamPipeline: React.FC = () => {
     {
       title: "Publicación (Facu)",
       icon: "📅",
-      color: "border-[#EEF1F8] bg-[#FFFFFF]/40",
+      color: "border-[#EEF1F8] bg-surface/40",
       cards: [
         {
           id: "c-9",
@@ -268,21 +268,21 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
     <div className="space-y-6 animate-fade-in" id="team-pipeline-root">
       
       {/* Kanban and flow pipeline section */}
-      <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6 md:p-8 space-y-6">
+      <div className="bg-surface border border-line rounded-2xl p-6 md:p-8 space-y-6">
         
         {/* Title and Trigger */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-[#ECECEC] pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 border-b border-line pb-6">
           <div className="flex items-center gap-3.5">
             <PixelAvatar agentId="sofi" size="md" />
             <div>
-              <h2 className="text-base font-bold text-[#111111] uppercase tracking-wider font-mono flex items-center gap-2">
+              <h2 className="text-base font-bold text-ink uppercase tracking-wider font-mono flex items-center gap-2">
                 Tablero de Control Pipeline Semanal (Sofi)
-                <span className="hidden sm:inline bg-[#101010]/10 border border-[#101010]/25 text-[#101010] text-[10px] px-2 py-0.5 rounded-md font-mono">
+                <span className="hidden sm:inline bg-black/10 border border-black/25 text-black text-[10px] px-2 py-0.5 rounded-md font-mono">
                   LIVE PIPELINE
                 </span>
               </h2>
-              <p className="text-xs text-[#6B7280] mt-1 leading-relaxed max-w-xl">
-                Supervisa el flujo estratégico de tu agencia de marketing. Asegura que el contenido pase por todas las etapas de validación e ideación. <strong className="text-[#111111] font-medium">Haz clic en cualquier tarjeta para ver su estrategia profunda de conversión.</strong>
+              <p className="text-xs text-muted mt-1 leading-relaxed max-w-xl">
+                Supervisa el flujo estratégico de tu agencia de marketing. Asegura que el contenido pase por todas las etapas de validación e ideación. <strong className="text-ink font-medium">Haz clic en cualquier tarjeta para ver su estrategia profunda de conversión.</strong>
               </p>
             </div>
           </div>
@@ -290,7 +290,7 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
           <button
             onClick={handleCompileSofiReport}
             disabled={compiling}
-            className="bg-[#101010] hover:bg-[#232323] disabled:bg-[#F3F5FB] disabled:text-[#9CA3AF] text-white font-extrabold text-xs px-6 py-3.5 rounded-xl flex items-center justify-center gap-2.5 transition-all duration-300 tracking-wider uppercase shadow-lg shadow-[#101010]/10 hover:shadow-[#101010]/20 active:scale-95 shrink-0"
+            className="bg-black hover:bg-sidebar disabled:bg-sink disabled:text-faint text-white font-extrabold text-xs px-6 py-3.5 rounded-xl flex items-center justify-center gap-2.5 transition-all duration-300 tracking-wider uppercase shadow-lg shadow-[#101010]/10 hover:shadow-[#101010]/20 active:scale-95 shrink-0"
             id="btn-compile-report"
           >
             {compiling ? (
@@ -317,12 +317,12 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
               >
                 <div className="flex flex-col h-full">
                   {/* Column Header */}
-                  <div className="flex items-center justify-between border-b border-[#ECECEC]/80 pb-3 mb-4">
-                    <span className="text-xs font-bold text-[#111111] font-mono flex items-center gap-2">
+                  <div className="flex items-center justify-between border-b border-line/80 pb-3 mb-4">
+                    <span className="text-xs font-bold text-ink font-mono flex items-center gap-2">
                       <span className="text-sm">{col.icon}</span> 
-                      <span className="text-[11px] uppercase tracking-wider text-[#111111]">{col.title}</span>
+                      <span className="text-[11px] uppercase tracking-wider text-ink">{col.title}</span>
                     </span>
-                    <span className="text-[10px] bg-[#F3F5FB] border border-[#ECECEC] px-2 py-0.5 rounded text-[#6B7280] font-mono font-bold">
+                    <span className="text-[10px] bg-sink border border-line px-2 py-0.5 rounded text-muted font-mono font-bold">
                       {col.cards.length}
                     </span>
                   </div>
@@ -333,7 +333,7 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
                       <div 
                         key={card.id} 
                         onClick={() => setSelectedCard(card)}
-                        className="group/card bg-[#F3F5FB] p-4 rounded-xl border border-[#ECECEC] hover:border-[#101010]/40 hover:bg-[#F3F5FB] transition-all duration-200 cursor-pointer shadow-md hover:shadow-[#101010]/5 space-y-3 transform hover:-translate-y-0.5 relative overflow-hidden"
+                        className="group/card bg-sink p-4 rounded-xl border border-line hover:border-black/40 hover:bg-sink transition-all duration-200 cursor-pointer shadow-md hover:shadow-[#101010]/5 space-y-3 transform hover:-translate-y-0.5 relative overflow-hidden"
                       >
                         {/* Interactive top line */}
                         <div className="flex justify-between items-center gap-1.5">
@@ -352,18 +352,18 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
                             {card.tag}
                           </span>
                           
-                          <span className="text-[9px] text-[#9CA3AF] font-mono flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity text-right">
-                            Ver Estrategia <Eye className="w-2.5 h-2.5 text-[#101010]" />
+                          <span className="text-[9px] text-faint font-mono flex items-center gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity text-right">
+                            Ver Estrategia <Eye className="w-2.5 h-2.5 text-black" />
                           </span>
                         </div>
 
                         {/* Card Title */}
-                        <h4 className="text-xs font-bold text-[#111111] group-hover/card:text-[#101010] leading-snug transition-colors">
+                        <h4 className="text-xs font-bold text-ink group-hover/card:text-black leading-snug transition-colors">
                           {card.title}
                         </h4>
 
                         {/* Card description */}
-                        <p className="text-[11px] text-[#6B7280] group-hover/card:text-[#6B7280] leading-relaxed line-clamp-2">
+                        <p className="text-[11px] text-muted group-hover/card:text-muted leading-relaxed line-clamp-2">
                           {card.desc}
                         </p>
 
@@ -371,12 +371,12 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
                         <div className="pt-2 border-t border-[#F3F5FB] flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <PixelAvatar agentId={card.assigneeId} size="xs" />
-                            <span className="text-[9px] text-[#9CA3AF] font-mono uppercase group-hover/card:text-[#6B7280] transition-colors">
+                            <span className="text-[9px] text-faint font-mono uppercase group-hover/card:text-muted transition-colors">
                               {card.assigneeName}
                             </span>
                           </div>
                           <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded ${
-                            card.status === "Completado" ? "bg-[#101010]/10 text-[#101010]" :
+                            card.status === "Completado" ? "bg-black/10 text-black" :
                             card.status === "Listo para Publicar" ? "bg-green-500/10 text-green-400" :
                             "bg-amber-400/10 text-amber-400"
                           }`}>
@@ -390,9 +390,9 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
 
                 {/* Column connector indicator at bottom */}
                 {idx < 4 && (
-                  <div className="hidden lg:flex items-center justify-center gap-1 text-[#9CA3AF] font-bold text-[10px] uppercase tracking-wider pt-3 border-t border-[#ECECEC]/80 mt-1">
+                  <div className="hidden lg:flex items-center justify-center gap-1 text-faint font-bold text-[10px] uppercase tracking-wider pt-3 border-t border-line/80 mt-1">
                     <span>Siguiente Paso</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-[#9CA3AF] shrink-0" />
+                    <ChevronRight className="w-3.5 h-3.5 text-faint shrink-0" />
                   </div>
                 )}
               </div>
@@ -403,23 +403,23 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
 
       {/* Compiled Report presentation card */}
       {compiledReport && (
-        <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6 shadow-xl space-y-4 animate-slide-up">
-          <div className="flex items-center justify-between border-b border-[#ECECEC] pb-4">
-            <h3 className="text-xs font-bold text-[#111111] uppercase tracking-widest font-mono flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#101010]" /> REPORTE EJECUTIVO INTEGRADO DE VENTAS
+        <div className="bg-surface border border-line rounded-2xl p-6 shadow-xl space-y-4 animate-slide-up">
+          <div className="flex items-center justify-between border-b border-line pb-4">
+            <h3 className="text-xs font-bold text-ink uppercase tracking-widest font-mono flex items-center gap-2">
+              <FileText className="w-4 h-4 text-black" /> REPORTE EJECUTIVO INTEGRADO DE VENTAS
             </h3>
             <button
               onClick={() => {
                 navigator.clipboard.writeText(compiledReport);
                 toast.success("¡Informe copiado al portapapeles con éxito!");
               }}
-              className="text-[10px] bg-[#F3F5FB] text-[#6B7280] hover:text-[#101010] px-4 py-2 rounded-xl border border-[#ECECEC] font-mono transition-colors"
+              className="text-[10px] bg-sink text-muted hover:text-black px-4 py-2 rounded-xl border border-line font-mono transition-colors"
             >
               Copiar Informe Completo
             </button>
           </div>
 
-          <pre className="bg-[#F3F5FB] border border-[#ECECEC] rounded-xl p-5 font-mono text-[11px] text-[#6B7280] leading-relaxed whitespace-pre-wrap select-text h-[350px] overflow-y-auto custom-scrollbar">
+          <pre className="bg-sink border border-line rounded-xl p-5 font-mono text-[11px] text-muted leading-relaxed whitespace-pre-wrap select-text h-[350px] overflow-y-auto custom-scrollbar">
             {compiledReport}
           </pre>
         </div>
@@ -444,20 +444,20 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ type: "spring", duration: 0.4 }}
-              className="relative w-full max-w-2xl bg-[#FFFFFF] border border-[#E3E5EA] rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[90vh]"
+              className="relative w-full max-w-2xl bg-surface border border-line rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[90vh]"
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-5 border-b border-[#ECECEC] bg-[#F3F5FB]">
+              <div className="flex items-center justify-between p-5 border-b border-line bg-sink">
                 <div className="flex items-center gap-3">
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-[#9CA3AF]">PIPELINE DE MARKETING</span>
-                  <span className="text-[#101010]">•</span>
-                  <span className="text-xs bg-[#101010]/10 text-[#101010] px-2.5 py-0.5 rounded-full border border-[#101010]/20 font-mono font-semibold uppercase">
+                  <span className="text-[10px] uppercase font-mono tracking-widest text-faint">PIPELINE DE MARKETING</span>
+                  <span className="text-black">•</span>
+                  <span className="text-xs bg-black/10 text-black px-2.5 py-0.5 rounded-full border border-black/20 font-mono font-semibold uppercase">
                     {selectedCard.tag}
                   </span>
                 </div>
                 <button 
                   onClick={() => setSelectedCard(null)}
-                  className="p-1.5 rounded-lg bg-[#F3F5FB] border border-[#ECECEC] text-[#6B7280] hover:text-[#111111] transition-colors"
+                  className="p-1.5 rounded-lg bg-sink border border-line text-muted hover:text-ink transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -467,23 +467,23 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
               <div className="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1">
                 {/* Title and Base Description */}
                 <div>
-                  <h3 className="text-lg font-extrabold text-[#111111] leading-tight">{selectedCard.title}</h3>
-                  <p className="text-xs text-[#6B7280] mt-1.5 leading-relaxed">{selectedCard.desc}</p>
+                  <h3 className="text-lg font-extrabold text-ink leading-tight">{selectedCard.title}</h3>
+                  <p className="text-xs text-muted mt-1.5 leading-relaxed">{selectedCard.desc}</p>
                 </div>
 
                 {/* Agent Assignee Card */}
-                <div className="bg-[#F3F5FB] border border-[#ECECEC] rounded-xl p-4 flex items-center justify-between">
+                <div className="bg-sink border border-line rounded-xl p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3.5">
                     <PixelAvatar agentId={selectedCard.assigneeId} size="md" />
                     <div>
-                      <span className="text-[9px] uppercase tracking-wider text-[#9CA3AF] font-mono block">Agente Responsable</span>
-                      <h4 className="text-sm font-bold text-[#111111] mt-0.5">{selectedCard.assigneeName}</h4>
-                      <p className="text-xs text-[#6B7280]">{selectedCard.assigneeRole}</p>
+                      <span className="text-[9px] uppercase tracking-wider text-faint font-mono block">Agente Responsable</span>
+                      <h4 className="text-sm font-bold text-ink mt-0.5">{selectedCard.assigneeName}</h4>
+                      <p className="text-xs text-muted">{selectedCard.assigneeRole}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-[9px] uppercase tracking-wider text-[#9CA3AF] font-mono block">Estado Operacional</span>
-                    <span className="inline-block mt-1.5 text-xs font-mono px-3 py-1 rounded bg-[#101010]/10 text-[#101010] border border-[#101010]/20 font-bold uppercase">
+                    <span className="text-[9px] uppercase tracking-wider text-faint font-mono block">Estado Operacional</span>
+                    <span className="inline-block mt-1.5 text-xs font-mono px-3 py-1 rounded bg-black/10 text-black border border-black/20 font-bold uppercase">
                       {selectedCard.status}
                     </span>
                   </div>
@@ -491,36 +491,36 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
 
                 {/* Deep Conversion Strategy */}
                 <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-[#111111] uppercase tracking-wider font-mono flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-[#101010]" /> Estrategia de Conversión Profunda
+                  <h4 className="text-xs font-bold text-ink uppercase tracking-wider font-mono flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-black" /> Estrategia de Conversión Profunda
                   </h4>
-                  <div className="bg-[#F3F5FB]/40 border border-[#ECECEC] rounded-xl p-4 text-xs text-[#6B7280] leading-relaxed space-y-2">
+                  <div className="bg-sink/40 border border-line rounded-xl p-4 text-xs text-muted leading-relaxed space-y-2">
                     <p>{selectedCard.strategy}</p>
                   </div>
                 </div>
 
                 {/* Growth Hack Callout */}
-                <div className="bg-[#101010]/5 border border-[#101010]/20 rounded-xl p-4 space-y-1.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#101010] uppercase font-mono">
+                <div className="bg-black/5 border border-black/20 rounded-xl p-4 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-black uppercase font-mono">
                     <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Growth Hack de Agencia
                   </div>
-                  <p className="text-xs text-[#6B7280] leading-relaxed">
+                  <p className="text-xs text-muted leading-relaxed">
                     {selectedCard.growthHack}
                   </p>
                 </div>
 
                 {/* Checklist Section */}
                 <div className="space-y-2.5">
-                  <h4 className="text-xs font-bold text-[#111111] uppercase tracking-wider font-mono flex items-center gap-1.5">
-                    <CheckSquare className="w-3.5 h-3.5 text-[#101010]" /> Checklist de Implementación de Marketing
+                  <h4 className="text-xs font-bold text-ink uppercase tracking-wider font-mono flex items-center gap-1.5">
+                    <CheckSquare className="w-3.5 h-3.5 text-black" /> Checklist de Implementación de Marketing
                   </h4>
                   <div className="space-y-2">
                     {selectedCard.checklist.map((item, i) => (
-                      <div key={i} className="flex items-start gap-2.5 bg-[#F3F5FB]/60 p-3 rounded-lg border border-[#ECECEC]">
-                        <div className="mt-0.5 p-0.5 rounded-full bg-[#101010]/10 text-[#101010] border border-[#101010]/20">
+                      <div key={i} className="flex items-start gap-2.5 bg-sink/60 p-3 rounded-lg border border-line">
+                        <div className="mt-0.5 p-0.5 rounded-full bg-black/10 text-black border border-black/20">
                           <Check className="w-3 h-3 font-extrabold" />
                         </div>
-                        <span className="text-xs text-[#6B7280] leading-normal">{item}</span>
+                        <span className="text-xs text-muted leading-normal">{item}</span>
                       </div>
                     ))}
                   </div>
@@ -528,10 +528,10 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
               </div>
 
               {/* Footer */}
-              <div className="p-4 border-t border-[#ECECEC] bg-[#F3F5FB] flex items-center justify-end">
+              <div className="p-4 border-t border-line bg-sink flex items-center justify-end">
                 <button
                   onClick={() => setSelectedCard(null)}
-                  className="bg-[#101010] hover:bg-[#232323] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all duration-300 uppercase font-mono"
+                  className="bg-black hover:bg-sidebar text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all duration-300 uppercase font-mono"
                 >
                   Entendido, cerrar
                 </button>

@@ -47,7 +47,7 @@ export default function App() {
   const current = TABS.find((t) => t.id === activeTab)!;
 
   return (
-    <div className="min-h-screen bg-[#f7f8fc] text-[#111111] font-sans selection:bg-[#4f6ef7]/20">
+    <div className="min-h-screen bg-canvas text-ink font-sans selection:bg-accent/20">
       <Sidebar items={TABS} activeTab={activeTab} onSelect={setActiveTab} />
 
       <div className="md:pl-[84px]">
@@ -64,7 +64,7 @@ export default function App() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`shrink-0 flex items-center gap-1.5 px-3.5 h-9 rounded-full text-[13px] font-medium transition ${
-                    active ? "bg-[#101010] text-white" : "bg-white text-[#6b7280] shadow-card"
+                    active ? "bg-black text-white" : "bg-white text-muted shadow-card"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -89,8 +89,8 @@ export default function App() {
                 ) : (
                   <Suspense
                     fallback={
-                      <div className="flex items-center justify-center h-64 text-[#6b7280] gap-2 text-sm bg-white rounded-[22px] shadow-card">
-                        <RefreshCw className="w-4 h-4 animate-spin text-[#4f6ef7]" />
+                      <div className="flex items-center justify-center h-64 text-muted gap-2 text-sm bg-white rounded-card shadow-card">
+                        <RefreshCw className="w-4 h-4 animate-spin text-accent" />
                         <span>Cargando módulo...</span>
                       </div>
                     }
@@ -111,7 +111,7 @@ export default function App() {
             </AnimatePresence>
           </main>
 
-          <footer className="text-[12px] text-[#9ca3af] px-1 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <footer className="text-[12px] text-faint px-1 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
             <p>© 2026 AdTeam AI · Agencia autónoma de marketing con agentes de IA.</p>
             <span>Full-Stack Express + React</span>
           </footer>

@@ -69,7 +69,7 @@ export const AvatarGroup: React.FC<AvatarGroupProps> = ({ people, max = 4, size 
       </div>
       {extra > 0 && (
         <span
-          className={`${sizeMap[size]} -ml-2 rounded-full ring-2 ring-white bg-[#101010] text-white flex items-center justify-center font-semibold`}
+          className={`${sizeMap[size]} -ml-2 rounded-full ring-2 ring-white bg-black text-white flex items-center justify-center font-semibold`}
         >
           +{extra}
         </span>

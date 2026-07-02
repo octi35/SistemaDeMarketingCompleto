@@ -235,17 +235,17 @@ export const AutopilotEngine: React.FC = () => {
     <div className="space-y-6" id="autopilot-engine-root">
       
       {/* Intro section */}
-      <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6">
+      <div className="bg-surface border border-line rounded-2xl p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-[#101010]/10 text-[#101010] border border-[#101010]/20 text-lg">
+            <div className="p-2.5 rounded-lg bg-black/10 text-black border border-black/20 text-lg">
               🚀
             </div>
             <div>
-              <h2 className="text-base font-semibold text-[#111111]">
+              <h2 className="text-base font-semibold text-ink">
                 Piloto Automático: Motor Autónomo Colectivo
               </h2>
-              <p className="text-xs text-[#6B7280] mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Une la potencia de los 6 agentes en un solo flujo inteligente. Diseña y programa toda tu campaña de marketing en 1 clic.
               </p>
             </div>
@@ -255,41 +255,41 @@ export const AutopilotEngine: React.FC = () => {
         {/* Setup Parameters Panel */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider block">¿Qué producto o servicio vendes?</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider block">¿Qué producto o servicio vendes?</label>
             <input
               type="text"
               value={product}
               onChange={(e) => setProduct(e.target.value)}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#111111] focus:outline-none"
+              className="w-full bg-sink rounded-input p-3 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
               placeholder="Ej: Curso online de inglés, SaaS de facturación, etc."
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider block">¿Cuál es tu audiencia ideal (ICP)?</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider block">¿Cuál es tu audiencia ideal (ICP)?</label>
             <input
               type="text"
               value={audience}
               onChange={(e) => setAudience(e.target.value)}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#111111] focus:outline-none"
+              className="w-full bg-sink rounded-input p-3 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
               placeholder="Ej: Emprendedores digitales de 25 a 45 años..."
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider block">¿Cuál es tu oferta irresistible o gancho comercial?</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider block">¿Cuál es tu oferta irresistible o gancho comercial?</label>
             <input
               type="text"
               value={offer}
               onChange={(e) => setOffer(e.target.value)}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#111111] focus:outline-none"
+              className="w-full bg-sink rounded-input p-3 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
               placeholder="Ej: 20% de descuento en la primera compra + checklist gratis..."
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider block">Objetivo Principal de la Campaña</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider block">Objetivo Principal de la Campaña</label>
             <select
               value={objective}
               onChange={(e) => setObjective(e.target.value)}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#6B7280] focus:outline-none"
+              className="w-full bg-sink rounded-input p-3 text-xs text-muted outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
             >
               <option value="Generar Leads Cualificados (Registro)">Generar Leads Cualificados (Registros / Suscriptores)</option>
               <option value="Ventas Directas de Conversión">Ventas Directas (Conversión / Compra)</option>
@@ -300,14 +300,14 @@ export const AutopilotEngine: React.FC = () => {
         </div>
 
         {/* Launch controls */}
-        <div className="flex items-center justify-between border-t border-[#ECECEC] pt-5">
-          <div className="text-[11px] text-[#6B7280]">
-            ⚡ Orquestará el trabajo coordinado de <span className="text-[#111111] font-semibold">Santi, Lauti, Cami, Sofi, Facu y Mateo</span>.
+        <div className="flex items-center justify-between border-t border-line pt-5">
+          <div className="text-[11px] text-muted">
+            ⚡ Orquestará el trabajo coordinado de <span className="text-ink font-semibold">Santi, Lauti, Cami, Sofi, Facu y Mateo</span>.
           </div>
           <button
             onClick={launchAutopilot}
             disabled={loading}
-            className="bg-[#101010] text-white hover:bg-[#232323] transition-colors py-3 px-6 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-[#101010]/10 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            className="bg-black text-white hover:bg-sidebar transition-colors py-3 px-6 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-[#101010]/10 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           >
             {loading ? (
               <>
@@ -329,7 +329,7 @@ export const AutopilotEngine: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Agent status boxes */}
           <div className="lg:col-span-6 space-y-3">
-            <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-widest">Estado de los Agentes</h3>
+            <h3 className="text-xs font-semibold text-muted uppercase tracking-widest">Estado de los Agentes</h3>
             
             <div className="space-y-2.5">
               {agentSteps.map((step, idx) => {
@@ -340,20 +340,20 @@ export const AutopilotEngine: React.FC = () => {
                     key={idx}
                     className={`border rounded-xl p-3.5 transition-all duration-300 flex items-start gap-3.5 ${
                       isCurrent 
-                        ? "border-[#101010] bg-[#F3F5FB] shadow-md shadow-[#101010]/5" 
+                        ? "border-black bg-sink shadow-md shadow-[#101010]/5" 
                         : isPassed 
                           ? "border-emerald-500/20 bg-emerald-500/5 opacity-70"
-                          : "border-[#ECECEC] bg-[#FFFFFF] opacity-40"
+                          : "border-line bg-surface opacity-40"
                     }`}
                   >
                     <div className="text-xl shrink-0 mt-0.5">{step.avatar}</div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <h4 className="text-xs font-semibold text-[#111111]">{step.agent}</h4>
+                        <h4 className="text-xs font-semibold text-ink">{step.agent}</h4>
                         {isPassed && <span className="text-[10px] text-emerald-400 font-mono font-bold">COMPLETADO</span>}
-                        {isCurrent && <span className="text-[10px] text-[#101010] font-mono font-bold animate-pulse">TRABAJANDO...</span>}
+                        {isCurrent && <span className="text-[10px] text-black font-mono font-bold animate-pulse">TRABAJANDO...</span>}
                       </div>
-                      <p className="text-[11px] text-[#6B7280] mt-1 line-clamp-1">{step.action}</p>
+                      <p className="text-[11px] text-muted mt-1 line-clamp-1">{step.action}</p>
                     </div>
                   </div>
                 );
@@ -362,13 +362,13 @@ export const AutopilotEngine: React.FC = () => {
           </div>
 
           {/* Mastermind terminal logs */}
-          <div className="lg:col-span-6 flex flex-col h-full min-h-[380px] bg-[#F3F5FB] border border-[#ECECEC] rounded-2xl p-4 overflow-hidden">
-            <div className="flex items-center justify-between border-b border-[#ECECEC] pb-3 mb-3">
+          <div className="lg:col-span-6 flex flex-col h-full min-h-[380px] bg-sink border border-line rounded-2xl p-4 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-line pb-3 mb-3">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
-                <span className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider font-mono">Consola Mastermind AI</span>
+                <span className="text-xs font-semibold text-muted uppercase tracking-wider font-mono">Consola Mastermind AI</span>
               </div>
-              <span className="text-[10px] text-[#9CA3AF] font-mono">STABLE PORT: 3000</span>
+              <span className="text-[10px] text-faint font-mono">STABLE PORT: 3000</span>
             </div>
             
             <div className="flex-1 overflow-y-auto font-mono text-[10px] text-zinc-300 space-y-1.5 pr-2 select-text custom-scrollbar">
@@ -376,8 +376,8 @@ export const AutopilotEngine: React.FC = () => {
                 let colorClass = "text-zinc-400";
                 if (log.startsWith("[SISTEMA]")) colorClass = "text-lime-400 font-bold";
                 if (log.startsWith(">>")) colorClass = "text-blue-400 italic pl-3";
-                if (log.startsWith("[LOGS]")) colorClass = "text-[#6B7280] pl-3";
-                if (log.startsWith("[AGENTE AUTÓNOMO]")) colorClass = "text-[#101010] font-semibold";
+                if (log.startsWith("[LOGS]")) colorClass = "text-muted pl-3";
+                if (log.startsWith("[AGENTE AUTÓNOMO]")) colorClass = "text-black font-semibold";
                 return (
                   <div key={idx} className={`${colorClass} leading-relaxed`}>
                     {log}
@@ -395,12 +395,12 @@ export const AutopilotEngine: React.FC = () => {
           
           {/* Tabs selector */}
           <div className="lg:col-span-3 flex flex-col gap-2">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-[#9CA3AF] block pl-1">CAMPAÑA GENERADA</span>
-            <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-3.5 space-y-1.5">
+            <span className="text-[10px] uppercase font-bold tracking-widest text-faint block pl-1">CAMPAÑA GENERADA</span>
+            <div className="bg-surface border border-line rounded-2xl p-3.5 space-y-1.5">
               <button
                 onClick={() => setActiveDeliverableTab("strategy")}
                 className={`w-full text-left p-2.5 rounded-xl text-xs flex items-center gap-2.5 transition ${
-                  activeDeliverableTab === "strategy" ? "bg-[#F3F5FB] text-[#101010] font-semibold" : "text-[#6B7280] hover:text-[#111111]"
+                  activeDeliverableTab === "strategy" ? "bg-sink text-black font-semibold" : "text-muted hover:text-ink"
                 }`}
               >
                 <TrendingUp className="w-4 h-4 shrink-0" />
@@ -409,7 +409,7 @@ export const AutopilotEngine: React.FC = () => {
               <button
                 onClick={() => setActiveDeliverableTab("copys")}
                 className={`w-full text-left p-2.5 rounded-xl text-xs flex items-center gap-2.5 transition ${
-                  activeDeliverableTab === "copys" ? "bg-[#F3F5FB] text-[#101010] font-semibold" : "text-[#6B7280] hover:text-[#111111]"
+                  activeDeliverableTab === "copys" ? "bg-sink text-black font-semibold" : "text-muted hover:text-ink"
                 }`}
               >
                 <FileText className="w-4 h-4 shrink-0" />
@@ -418,7 +418,7 @@ export const AutopilotEngine: React.FC = () => {
               <button
                 onClick={() => setActiveDeliverableTab("carousel")}
                 className={`w-full text-left p-2.5 rounded-xl text-xs flex items-center gap-2.5 transition ${
-                  activeDeliverableTab === "carousel" ? "bg-[#F3F5FB] text-[#101010] font-semibold" : "text-[#6B7280] hover:text-[#111111]"
+                  activeDeliverableTab === "carousel" ? "bg-sink text-black font-semibold" : "text-muted hover:text-ink"
                 }`}
               >
                 <Layers className="w-4 h-4 shrink-0" />
@@ -427,7 +427,7 @@ export const AutopilotEngine: React.FC = () => {
               <button
                 onClick={() => setActiveDeliverableTab("landing")}
                 className={`w-full text-left p-2.5 rounded-xl text-xs flex items-center gap-2.5 transition ${
-                  activeDeliverableTab === "landing" ? "bg-[#F3F5FB] text-[#101010] font-semibold" : "text-[#6B7280] hover:text-[#111111]"
+                  activeDeliverableTab === "landing" ? "bg-sink text-black font-semibold" : "text-muted hover:text-ink"
                 }`}
               >
                 <Layout className="w-4 h-4 shrink-0" />
@@ -436,7 +436,7 @@ export const AutopilotEngine: React.FC = () => {
               <button
                 onClick={() => setActiveDeliverableTab("leadmagnet")}
                 className={`w-full text-left p-2.5 rounded-xl text-xs flex items-center gap-2.5 transition ${
-                  activeDeliverableTab === "leadmagnet" ? "bg-[#F3F5FB] text-[#101010] font-semibold" : "text-[#6B7280] hover:text-[#111111]"
+                  activeDeliverableTab === "leadmagnet" ? "bg-sink text-black font-semibold" : "text-muted hover:text-ink"
                 }`}
               >
                 <BookOpen className="w-4 h-4 shrink-0" />
@@ -444,8 +444,8 @@ export const AutopilotEngine: React.FC = () => {
               </button>
               <button
                 onClick={() => setActiveDeliverableTab("publish")}
-                className={`w-full text-left p-2.5 rounded-xl text-xs flex items-center gap-2.5 transition border border-dashed border-[#101010]/20 bg-[#101010]/5 ${
-                  activeDeliverableTab === "publish" ? "bg-[#101010]/10 text-[#101010] font-semibold" : "text-[#101010]/80 hover:text-[#111111]"
+                className={`w-full text-left p-2.5 rounded-xl text-xs flex items-center gap-2.5 transition border border-dashed border-black/20 bg-black/5 ${
+                  activeDeliverableTab === "publish" ? "bg-black/10 text-black font-semibold" : "text-black/80 hover:text-ink"
                 }`}
               >
                 <Share2 className="w-4 h-4 shrink-0 animate-pulse" />
@@ -453,7 +453,7 @@ export const AutopilotEngine: React.FC = () => {
               </button>
             </div>
 
-            <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-xl p-4 space-y-2">
+            <div className="bg-surface border border-line rounded-xl p-4 space-y-2">
               <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider block">Estadísticas Previstas (Mateo)</span>
               <div className="flex justify-between text-xs py-1">
                 <span className="text-zinc-400">Tasa CTR Estimada</span>
@@ -471,43 +471,43 @@ export const AutopilotEngine: React.FC = () => {
           </div>
 
           {/* Deliverables details view */}
-          <div className="lg:col-span-9 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6 min-h-[460px] flex flex-col justify-between">
+          <div className="lg:col-span-9 bg-surface border border-line rounded-2xl p-6 min-h-[460px] flex flex-col justify-between">
             <div>
               
               {/* Tab 1: Strategy */}
               {activeDeliverableTab === "strategy" && (
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] uppercase tracking-widest text-[#9CA3AF] font-bold block">Deliverable 1 • Santi</span>
-                    <h3 className="text-lg font-bold text-[#111111] mt-1">Estrategia de Campaña Publicitaria</h3>
-                    <p className="text-xs text-[#6B7280] mt-0.5">Visión comercial del producto, propuesta y distribución de canales recomendada.</p>
+                    <span className="text-[10px] uppercase tracking-widest text-faint font-bold block">Deliverable 1 • Santi</span>
+                    <h3 className="text-lg font-bold text-ink mt-1">Estrategia de Campaña Publicitaria</h3>
+                    <p className="text-xs text-muted mt-0.5">Visión comercial del producto, propuesta y distribución de canales recomendada.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-[#F3F5FB] border border-[#E3E5EA] rounded-xl p-4 space-y-1">
+                    <div className="bg-sink rounded-xl p-4 space-y-1">
                       <span className="text-[10px] text-zinc-500 uppercase font-mono font-bold">Nombre de la Campaña</span>
-                      <p className="text-sm font-semibold text-[#111111]">{result.strategy.campaignName}</p>
+                      <p className="text-sm font-semibold text-ink">{result.strategy.campaignName}</p>
                     </div>
-                    <div className="bg-[#F3F5FB] border border-[#E3E5EA] rounded-xl p-4 space-y-1">
+                    <div className="bg-sink rounded-xl p-4 space-y-1">
                       <span className="text-[10px] text-zinc-500 uppercase font-mono font-bold">Audiencia Re-Perfilada</span>
-                      <p className="text-sm font-semibold text-[#111111]">{result.strategy.targetAudience}</p>
+                      <p className="text-sm font-semibold text-ink">{result.strategy.targetAudience}</p>
                     </div>
                   </div>
 
-                  <div className="bg-[#F3F5FB] border border-[#E3E5EA] rounded-xl p-4 space-y-3">
+                  <div className="bg-sink rounded-xl p-4 space-y-3">
                     <span className="text-[10px] text-zinc-500 uppercase font-mono font-bold block">Ángulos de Enfoque Psicológico</span>
                     <div className="space-y-2">
                       {result.strategy.marketingAngles.map((angle, index) => (
                         <div key={index} className="flex gap-2.5 text-xs text-zinc-300 items-start leading-relaxed">
-                          <span className="text-[#101010] font-mono font-bold mt-0.5">0{index + 1}.</span>
+                          <span className="text-black font-mono font-bold mt-0.5">0{index + 1}.</span>
                           <p>{angle}</p>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="bg-lime-400/5 border border-[#101010]/20 rounded-xl p-4 space-y-1">
-                    <span className="text-[10px] text-[#101010] uppercase font-mono font-bold">Recomendación de Presupuesto y Canales</span>
+                  <div className="bg-lime-400/5 border border-black/20 rounded-xl p-4 space-y-1">
+                    <span className="text-[10px] text-black uppercase font-mono font-bold">Recomendación de Presupuesto y Canales</span>
                     <p className="text-xs text-zinc-300 leading-relaxed font-sans">{result.strategy.distributionRecommendation}</p>
                   </div>
                 </div>
@@ -517,23 +517,23 @@ export const AutopilotEngine: React.FC = () => {
               {activeDeliverableTab === "copys" && (
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] uppercase tracking-widest text-[#9CA3AF] font-bold block">Deliverable 2 • Lauti & Mateo</span>
-                    <h3 className="text-lg font-bold text-[#111111] mt-1">Copys Persuasivos de Anuncio (A/B Test)</h3>
-                    <p className="text-xs text-[#6B7280] mt-0.5">Versiones redactadas listas para copiar, acompañadas de estimaciones de tasa de clics.</p>
+                    <span className="text-[10px] uppercase tracking-widest text-faint font-bold block">Deliverable 2 • Lauti & Mateo</span>
+                    <h3 className="text-lg font-bold text-ink mt-1">Copys Persuasivos de Anuncio (A/B Test)</h3>
+                    <p className="text-xs text-muted mt-0.5">Versiones redactadas listas para copiar, acompañadas de estimaciones de tasa de clics.</p>
                   </div>
 
                   <div className="space-y-4">
                     {result.copys.map((copy, idx) => (
-                      <div key={idx} className="bg-[#F3F5FB] border border-[#E3E5EA] rounded-xl p-4 space-y-3 relative overflow-hidden">
+                      <div key={idx} className="bg-sink rounded-xl p-4 space-y-3 relative overflow-hidden">
                         
                         {/* Copy tag metadata */}
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E3E5EA]/60 pb-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/60 pb-2">
                           <span className="text-[10px] bg-[#efeee7] text-zinc-300 px-2 py-0.5 rounded font-mono font-bold">VAR {idx + 1} - {copy.targetBuyerEmotion}</span>
                           <div className="flex items-center gap-3">
                             <span className="text-[10px] text-zinc-500 font-mono">Tasa CTR Prevista: <strong className="text-lime-400">{copy.estimatedCtr}</strong></span>
                             <button
                               onClick={() => handleCopy(`${copy.hook}\n\n${copy.body}\n\n${copy.cta}`, `copy-option-${idx}`)}
-                              className="text-zinc-500 hover:text-[#111111] transition-colors flex items-center gap-1 text-[11px]"
+                              className="text-zinc-500 hover:text-ink transition-colors flex items-center gap-1 text-[11px]"
                             >
                               {copiedState[`copy-option-${idx}`] ? (
                                 <>
@@ -551,14 +551,14 @@ export const AutopilotEngine: React.FC = () => {
                         </div>
 
                         {/* Copy main content */}
-                        <div className="text-xs space-y-2 font-sans text-zinc-200 select-text leading-relaxed bg-[#F3F5FB] p-3 rounded-lg border border-[#ECECEC]">
-                          <p className="font-bold text-[#101010]">{copy.hook}</p>
+                        <div className="text-xs space-y-2 font-sans text-zinc-200 select-text leading-relaxed bg-sink p-3 rounded-lg border border-line">
+                          <p className="font-bold text-black">{copy.hook}</p>
                           <p>{copy.body}</p>
                           <p className="text-zinc-400 italic">{copy.cta}</p>
                         </div>
 
                         {/* Expert commentary */}
-                        <div className="text-[11px] text-zinc-400 italic bg-[#F3F5FB]/40 p-2.5 rounded-lg border border-[#ECECEC] flex items-start gap-2">
+                        <div className="text-[11px] text-zinc-400 italic bg-sink/40 p-2.5 rounded-lg border border-line flex items-start gap-2">
                           <span className="text-xs mt-0.5">💡</span>
                           <p>{copy.commentary}</p>
                         </div>
@@ -573,16 +573,16 @@ export const AutopilotEngine: React.FC = () => {
               {activeDeliverableTab === "carousel" && (
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] uppercase tracking-widest text-[#9CA3AF] font-bold block">Deliverable 3 • Cami</span>
-                    <h3 className="text-lg font-bold text-[#111111] mt-1">Estructura Visual de Carrusel</h3>
-                    <p className="text-xs text-[#6B7280] mt-0.5">Guión técnico y concepto de imagen para tus publicaciones deslizables de Instagram y LinkedIn.</p>
+                    <span className="text-[10px] uppercase tracking-widest text-faint font-bold block">Deliverable 3 • Cami</span>
+                    <h3 className="text-lg font-bold text-ink mt-1">Estructura Visual de Carrusel</h3>
+                    <p className="text-xs text-muted mt-0.5">Guión técnico y concepto de imagen para tus publicaciones deslizables de Instagram y LinkedIn.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5">
                     {result.carousel.map((slide, idx) => (
                       <div 
                         key={idx} 
-                        className="rounded-xl border border-[#ECECEC] p-3.5 flex flex-col justify-between h-[230px] shadow-lg text-zinc-100 relative group overflow-hidden"
+                        className="rounded-xl border border-line p-3.5 flex flex-col justify-between h-[230px] shadow-lg text-zinc-100 relative group overflow-hidden"
                         style={{
                           background: `linear-gradient(135deg, ${slide.bgGradientStart || "#FFFFFF"} 0%, ${slide.bgGradientEnd || "#ECECEC"} 100%)`
                         }}
@@ -592,13 +592,13 @@ export const AutopilotEngine: React.FC = () => {
                         </div>
 
                         <div className="space-y-1.5 z-10">
-                          <div className="font-mono text-[9px] bg-white/10 w-fit px-1.5 py-0.5 rounded uppercase tracking-wider text-[#111111]">Slide {slide.slideNumber}</div>
-                          <h4 className="text-xs font-bold leading-tight group-hover:text-[#101010] transition-colors">{slide.title}</h4>
+                          <div className="font-mono text-[9px] bg-white/10 w-fit px-1.5 py-0.5 rounded uppercase tracking-wider text-ink">Slide {slide.slideNumber}</div>
+                          <h4 className="text-xs font-bold leading-tight group-hover:text-black transition-colors">{slide.title}</h4>
                           <p className="text-[10px] opacity-75 line-clamp-3 leading-relaxed">{slide.body}</p>
                         </div>
 
                         <div className="bg-black/40 border border-white/5 rounded p-2 z-10">
-                          <span className="text-[8px] uppercase tracking-wider font-bold block text-[#101010]">Sugerencia Visual:</span>
+                          <span className="text-[8px] uppercase tracking-wider font-bold block text-black">Sugerencia Visual:</span>
                           <p className="text-[9px] opacity-80 leading-normal line-clamp-2 italic">{slide.visualIdea}</p>
                         </div>
                       </div>
@@ -612,17 +612,17 @@ export const AutopilotEngine: React.FC = () => {
                 <div className="space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <span className="text-[10px] uppercase tracking-widest text-[#9CA3AF] font-bold block">Deliverable 4 • Sofi</span>
-                      <h3 className="text-lg font-bold text-[#111111] mt-1">Landing Page Altamente Persuasiva</h3>
-                      <p className="text-xs text-[#6B7280] mt-0.5">Diseño y textos estructurados para maximizar el registro de visitas.</p>
+                      <span className="text-[10px] uppercase tracking-widest text-faint font-bold block">Deliverable 4 • Sofi</span>
+                      <h3 className="text-lg font-bold text-ink mt-1">Landing Page Altamente Persuasiva</h3>
+                      <p className="text-xs text-muted mt-0.5">Diseño y textos estructurados para maximizar el registro de visitas.</p>
                     </div>
 
                     <div className="flex items-center gap-2 self-start sm:self-center">
-                      <div className="bg-[#F3F5FB] border border-[#E3E5EA] rounded-lg p-1 flex">
+                      <div className="bg-sink rounded-lg p-1 flex">
                         <button
                           onClick={() => setPreviewMode("visual")}
                           className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition flex items-center gap-1.5 ${
-                            previewMode === "visual" ? "bg-[#101010] text-white" : "text-zinc-400 hover:text-[#111111]"
+                            previewMode === "visual" ? "bg-black text-white" : "text-zinc-400 hover:text-ink"
                           }`}
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -631,7 +631,7 @@ export const AutopilotEngine: React.FC = () => {
                         <button
                           onClick={() => setPreviewMode("code")}
                           className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition flex items-center gap-1.5 ${
-                            previewMode === "code" ? "bg-[#101010] text-white" : "text-zinc-400 hover:text-[#111111]"
+                            previewMode === "code" ? "bg-black text-white" : "text-zinc-400 hover:text-ink"
                           }`}
                         >
                           <Code className="w-3.5 h-3.5" />
@@ -641,7 +641,7 @@ export const AutopilotEngine: React.FC = () => {
 
                       <button
                         onClick={() => handleCopy(result.landingPage.rawHtml, "raw-html-copy")}
-                        className="bg-[#efeee7] border border-[#E3E5EA] text-[#111111] hover:bg-[#ECECEC] transition py-2 px-3.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0"
+                        className="bg-[#efeee7] border border-line text-ink hover:bg-[#ECECEC] transition py-2 px-3.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0"
                       >
                         {copiedState["raw-html-copy"] ? (
                           <>
@@ -659,8 +659,8 @@ export const AutopilotEngine: React.FC = () => {
                   </div>
 
                   {previewMode === "visual" ? (
-                    <div className="border border-[#ECECEC] rounded-xl overflow-hidden bg-black h-[420px] relative flex flex-col shadow-2xl">
-                      <div className="bg-[#F3F5FB] border-b border-[#ECECEC] px-4 py-2 flex items-center justify-between">
+                    <div className="border border-line rounded-xl overflow-hidden bg-black h-[420px] relative flex flex-col shadow-2xl">
+                      <div className="bg-sink border-b border-line px-4 py-2 flex items-center justify-between">
                         <div className="flex gap-1.5">
                           <span className="w-3 h-3 rounded-full bg-red-500/80"></span>
                           <span className="w-3 h-3 rounded-full bg-yellow-500/80"></span>
@@ -695,7 +695,7 @@ export const AutopilotEngine: React.FC = () => {
                       />
                     </div>
                   ) : (
-                    <pre className="bg-[#F3F5FB] border border-[#ECECEC] rounded-xl p-5 font-mono text-[10px] text-[#6B7280] leading-relaxed whitespace-pre-wrap select-text h-[420px] overflow-y-auto custom-scrollbar">
+                    <pre className="bg-sink border border-line rounded-xl p-5 font-mono text-[10px] text-muted leading-relaxed whitespace-pre-wrap select-text h-[420px] overflow-y-auto custom-scrollbar">
                       {result.landingPage.rawHtml}
                     </pre>
                   )}
@@ -706,15 +706,15 @@ export const AutopilotEngine: React.FC = () => {
               {activeDeliverableTab === "leadmagnet" && (
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] uppercase tracking-widest text-[#9CA3AF] font-bold block">Deliverable 5 • Facu</span>
-                    <h3 className="text-lg font-bold text-[#111111] mt-1">Manual de Captación (Ebook Lead Magnet)</h3>
-                    <p className="text-xs text-[#6B7280] mt-0.5">Estructura para la descarga automática que tus leads recibirán al dejar sus datos.</p>
+                    <span className="text-[10px] uppercase tracking-widest text-faint font-bold block">Deliverable 5 • Facu</span>
+                    <h3 className="text-lg font-bold text-ink mt-1">Manual de Captación (Ebook Lead Magnet)</h3>
+                    <p className="text-xs text-muted mt-0.5">Estructura para la descarga automática que tus leads recibirán al dejar sus datos.</p>
                   </div>
 
-                  <div className="bg-[#F3F5FB] border border-[#E3E5EA] rounded-xl p-5 space-y-4">
-                    <div className="border-b border-[#E3E5EA] pb-3">
+                  <div className="bg-sink rounded-xl p-5 space-y-4">
+                    <div className="border-b border-line pb-3">
                       <span className="text-[9px] bg-lime-400/10 text-lime-400 border border-lime-400/20 px-2 py-0.5 rounded font-mono font-bold uppercase">Título Oficial del Ebook</span>
-                      <h4 className="text-sm font-bold text-[#111111] mt-2 font-sans select-text leading-tight">{result.leadMagnet.title}</h4>
+                      <h4 className="text-sm font-bold text-ink mt-2 font-sans select-text leading-tight">{result.leadMagnet.title}</h4>
                     </div>
 
                     <div className="space-y-1">
@@ -727,10 +727,10 @@ export const AutopilotEngine: React.FC = () => {
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         {result.leadMagnet.chapters.map((ch, index) => (
-                          <div key={index} className="bg-black/40 border border-[#ECECEC] rounded-lg p-3.5 space-y-1.5 flex flex-col justify-between">
+                          <div key={index} className="bg-black/40 border border-line rounded-lg p-3.5 space-y-1.5 flex flex-col justify-between">
                             <div>
-                              <span className="font-mono text-[10px] text-[#101010] font-bold uppercase">Capítulo {ch.chapterNumber}</span>
-                              <h5 className="text-xs font-bold text-[#111111] mt-1 leading-snug">{ch.chapterTitle}</h5>
+                              <span className="font-mono text-[10px] text-black font-bold uppercase">Capítulo {ch.chapterNumber}</span>
+                              <h5 className="text-xs font-bold text-ink mt-1 leading-snug">{ch.chapterTitle}</h5>
                             </div>
                             <p className="text-[10px] text-zinc-400 leading-relaxed italic mt-1">{ch.chapterBrief}</p>
                           </div>
@@ -745,18 +745,18 @@ export const AutopilotEngine: React.FC = () => {
               {activeDeliverableTab === "publish" && (
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] uppercase tracking-widest text-[#9CA3AF] font-bold block">Conexión en Vivo</span>
-                    <h3 className="text-lg font-bold text-[#111111] mt-1">Publicación Directa en Canales Sociales</h3>
-                    <p className="text-xs text-[#6B7280] mt-0.5">Sube tus copys y creativos directamente a tus cuentas de LinkedIn, Facebook e Instagram en un solo clic.</p>
+                    <span className="text-[10px] uppercase tracking-widest text-faint font-bold block">Conexión en Vivo</span>
+                    <h3 className="text-lg font-bold text-ink mt-1">Publicación Directa en Canales Sociales</h3>
+                    <p className="text-xs text-muted mt-0.5">Sube tus copys y creativos directamente a tus cuentas de LinkedIn, Facebook e Instagram en un solo clic.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     
                     {/* LinkedIn post console card */}
-                    <div className="bg-[#F3F5FB] border border-[#E3E5EA] rounded-xl p-4 flex flex-col justify-between space-y-4">
+                    <div className="bg-sink rounded-xl p-4 flex flex-col justify-between space-y-4">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#111111] flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-ink flex items-center gap-1.5">
                             <Linkedin className="w-4 h-4 text-[#0077B5] fill-[#0077B5]" />
                             LinkedIn Post
                           </span>
@@ -791,10 +791,10 @@ export const AutopilotEngine: React.FC = () => {
                     </div>
 
                     {/* Facebook Feed Card */}
-                    <div className="bg-[#F3F5FB] border border-[#E3E5EA] rounded-xl p-4 flex flex-col justify-between space-y-4">
+                    <div className="bg-sink rounded-xl p-4 flex flex-col justify-between space-y-4">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#111111] flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-ink flex items-center gap-1.5">
                             <Facebook className="w-4 h-4 text-[#1877F2] fill-[#1877F2]" />
                             Página de Facebook
                           </span>
@@ -829,10 +829,10 @@ export const AutopilotEngine: React.FC = () => {
                     </div>
 
                     {/* Instagram Business Feed Card */}
-                    <div className="bg-[#F3F5FB] border border-[#E3E5EA] rounded-xl p-4 flex flex-col justify-between space-y-4">
+                    <div className="bg-sink rounded-xl p-4 flex flex-col justify-between space-y-4">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-[#111111] flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-ink flex items-center gap-1.5">
                             <Instagram className="w-4 h-4 text-[#E1306C]" />
                             Instagram Business
                           </span>
@@ -869,10 +869,10 @@ export const AutopilotEngine: React.FC = () => {
                   </div>
 
                   {/* Cloud integrations reminder */}
-                  <div className="bg-[#F3F5FB] border border-[#ECECEC] rounded-xl p-4 text-xs text-zinc-400 space-y-2.5 leading-relaxed">
+                  <div className="bg-sink border border-line rounded-xl p-4 text-xs text-zinc-400 space-y-2.5 leading-relaxed">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-500 block">☁ Sincronización Avanzada Adicional</span>
                     <p>
-                      Toda esta estructura de campaña también se puede exportar automáticamente como un reporte en formato PDF/Documento de Google en tu cuenta de <span className="text-[#111111] font-semibold">Google Drive</span>, o enviarse directamente por correo para aprobación mediante el panel de <span className="text-[#101010] font-semibold">"Integración Nube"</span>.
+                      Toda esta estructura de campaña también se puede exportar automáticamente como un reporte en formato PDF/Documento de Google en tu cuenta de <span className="text-ink font-semibold">Google Drive</span>, o enviarse directamente por correo para aprobación mediante el panel de <span className="text-black font-semibold">"Integración Nube"</span>.
                     </p>
                   </div>
                 </div>
@@ -881,12 +881,12 @@ export const AutopilotEngine: React.FC = () => {
             </div>
 
             {/* Bottom Actions of Tab Card */}
-            <div className="border-t border-[#ECECEC] pt-4 mt-6 flex items-center justify-between">
-              <span className="text-[10px] text-[#9CA3AF] font-mono uppercase">Campaign Engine • v1.4</span>
+            <div className="border-t border-line pt-4 mt-6 flex items-center justify-between">
+              <span className="text-[10px] text-faint font-mono uppercase">Campaign Engine • v1.4</span>
               
               <button
                 onClick={launchAutopilot}
-                className="bg-transparent text-zinc-400 hover:text-[#111111] hover:bg-[#efeee7] transition py-2 px-3.5 rounded-xl text-xs flex items-center gap-1.5"
+                className="bg-transparent text-zinc-400 hover:text-ink hover:bg-[#efeee7] transition py-2 px-3.5 rounded-xl text-xs flex items-center gap-1.5"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Generar otra variación</span>

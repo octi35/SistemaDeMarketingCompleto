@@ -20,12 +20,12 @@ export interface ButtonProps {
 }
 
 const variants: Record<Variant, string> = {
-  primary: "bg-[#101010] text-white hover:bg-[#232323]",
-  accent: "bg-[#4f6ef7] text-white hover:brightness-110",
-  yellow: "bg-[#ffd84d] text-[#101010] hover:brightness-[1.04]",
-  secondary: "bg-[#f3f5fb] text-[#111111] hover:bg-[#eaedf6]",
-  outline: "bg-white text-[#111111] ring-1 ring-inset ring-[#ececec] hover:bg-[#f7f8fc]",
-  ghost: "bg-transparent text-[#6b7280] hover:bg-[#f3f5fb] hover:text-[#111111]",
+  primary: "bg-black text-white hover:bg-sidebar",
+  accent: "bg-accent text-white hover:brightness-110",
+  yellow: "bg-yellow text-black hover:brightness-[1.04]",
+  secondary: "bg-sink text-ink hover:bg-[#eaedf6]",
+  outline: "bg-white text-ink ring-1 ring-inset ring-line hover:bg-canvas",
+  ghost: "bg-transparent text-muted hover:bg-sink hover:text-ink",
 };
 
 const sizes: Record<Size, string> = {

@@ -141,12 +141,6 @@ export const CarouselDesigner: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    generateCarousel(false);
-    loadProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // ---- Saved projects (server persistence) ----
   const loadProjects = async () => {
     try {
@@ -156,6 +150,12 @@ export const CarouselDesigner: React.FC = () => {
       /* persistence is optional; ignore if unavailable */
     }
   };
+
+  useEffect(() => {
+    generateCarousel(false);
+    loadProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const saveCurrentCarousel = async () => {
     if (slides.length === 0) return;
@@ -484,23 +484,23 @@ export const CarouselDesigner: React.FC = () => {
     <div className="space-y-6" id="carousel-designer-root">
 
       {/* Header controls card */}
-      <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6">
+      <div className="bg-surface border border-line rounded-2xl p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-start gap-3">
-            <div className="p-2.5 rounded-lg bg-[#101010]/10 text-[#101010] border border-[#101010]/20">
+            <div className="p-2.5 rounded-lg bg-black/10 text-black border border-black/20">
               🎠
             </div>
             <div>
-              <h2 className="text-base font-semibold text-[#111111] flex items-center gap-1.5">
+              <h2 className="text-base font-semibold text-ink flex items-center gap-1.5">
                 Diseñador de Carruseles con IA + Nano Banana 🍌
               </h2>
-              <p className="text-xs text-[#6B7280] mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Genera carruseles persuasivos a partir de un prompt. La IA escribe los slides y Nano Banana crea las imágenes de fondo reales.
               </p>
             </div>
           </div>
           {isDemo && (
-            <span className="bg-[#F3F5FB] text-[#101010] text-[11px] px-3 py-1.5 rounded-lg border border-[#E3E5EA] font-mono flex items-center gap-1.5 shrink-0 self-start md:self-center">
+            <span className="bg-sink text-black text-[11px] px-3 py-1.5 rounded-lg font-mono flex items-center gap-1.5 shrink-0 self-start md:self-center">
               <Sparkles className="w-3.5 h-3.5 animate-spin" />
               Modo Demostración Activo (Sin Llave)
             </span>
@@ -510,21 +510,21 @@ export const CarouselDesigner: React.FC = () => {
         {/* Input variables */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-4">
           <div className="space-y-1.5 md:col-span-2">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider">Tema / Prompt del Carrusel</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider">Tema / Prompt del Carrusel</label>
             <input
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#111111] focus:outline-none"
+              className="w-full bg-sink rounded-input p-3 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
               placeholder="Ej: 5 Errores fatales de SEO..."
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider">Nº Diapositivas</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider">Nº Diapositivas</label>
             <select
               value={slideCount}
               onChange={(e) => setSlideCount(Number(e.target.value))}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#6B7280] focus:outline-none"
+              className="w-full bg-sink rounded-input p-3 text-xs text-muted outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
             >
               <option value="3">3 Slides (Corto)</option>
               <option value="5">5 Slides (Estándar)</option>
@@ -533,35 +533,35 @@ export const CarouselDesigner: React.FC = () => {
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider">Canal Destino</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider">Canal Destino</label>
             <select
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#6B7280] focus:outline-none"
+              className="w-full bg-sink rounded-input p-3 text-xs text-muted outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
             >
               <option value="Instagram">Instagram (Carrusel)</option>
               <option value="LinkedIn">LinkedIn (PDF)</option>
             </select>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider">Tono de Voz</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider">Tono de Voz</label>
             <input
               type="text"
               value={tone}
               onChange={(e) => setTone(e.target.value)}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#111111] focus:outline-none"
+              className="w-full bg-sink rounded-input p-3 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
               placeholder="Ej: Persuasivo"
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider">Motor IA (texto)</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider">Motor IA (texto)</label>
             <select
               value={engine}
               onChange={(e) => setEngine(e.target.value)}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#101010] focus:outline-none font-semibold"
+              className="w-full bg-sink rounded-input p-3 text-xs text-black outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20 font-semibold"
             >
-              <option value="gemini" className="text-[#6B7280]">Gemini 2.5 Flash</option>
-              <option value="claude" className="text-[#101010]">Claude 3.5 Haiku ⚡</option>
+              <option value="gemini" className="text-muted">Gemini 2.5 Flash</option>
+              <option value="claude" className="text-black">Claude 3.5 Haiku ⚡</option>
             </select>
           </div>
         </div>
@@ -569,30 +569,30 @@ export const CarouselDesigner: React.FC = () => {
         {/* Nano Banana visual controls */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
           <div className="space-y-1.5 md:col-span-3">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider flex items-center gap-1.5">
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider flex items-center gap-1.5">
               <ImageIcon className="w-3 h-3 text-[#FFD84D]" /> Estilo Visual para las imágenes (Nano Banana) — opcional
             </label>
             <input
               type="text"
               value={imagePrompt}
               onChange={(e) => setImagePrompt(e.target.value)}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#FFD84D] rounded-lg p-3 text-xs text-[#111111] focus:outline-none"
+              className="w-full bg-sink focus:border-[#FFD84D] rounded-lg p-3 text-xs text-ink focus:outline-none"
               placeholder="Ej: fotografía cinematográfica, tonos neón, minimalista, 3D render..."
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider">Modelo de imagen</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider">Modelo de imagen</label>
             <select
               value={imageModel}
               onChange={(e) => setImageModel(e.target.value as "standard" | "pro")}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#FFD84D] rounded-lg p-3 text-xs text-[#FFD84D] focus:outline-none font-semibold"
+              className="w-full bg-sink focus:border-[#FFD84D] rounded-lg p-3 text-xs text-[#FFD84D] focus:outline-none font-semibold"
             >
-              <option value="standard" className="text-[#6B7280]">Nano Banana 🍌</option>
+              <option value="standard" className="text-muted">Nano Banana 🍌</option>
               <option value="pro" className="text-[#FFD84D]">Nano Banana Pro ✨</option>
             </select>
           </div>
           <div className="space-y-1.5 md:col-span-2 flex items-end">
-            <label className="flex items-center gap-2 bg-[#F3F5FB] border border-[#E3E5EA] rounded-lg px-3 py-3 text-xs text-[#6B7280] cursor-pointer w-full">
+            <label className="flex items-center gap-2 bg-sink rounded-lg px-3 py-3 text-xs text-muted cursor-pointer w-full">
               <input
                 type="checkbox"
                 checked={autoImages}
@@ -609,15 +609,15 @@ export const CarouselDesigner: React.FC = () => {
           <input ref={refInputRef} type="file" accept="image/*" className="hidden" onChange={handleReferenceUpload} />
           <button
             onClick={() => refInputRef.current?.click()}
-            className="bg-[#F3F5FB] border border-[#E3E5EA] hover:border-[#FFD84D]/50 text-[#6B7280] hover:text-[#111111] text-[11px] px-3 py-2 rounded-lg flex items-center gap-2 transition"
+            className="bg-sink hover:border-[#FFD84D]/50 text-muted hover:text-ink text-[11px] px-3 py-2 rounded-lg flex items-center gap-2 transition"
           >
             <Paperclip className="w-3.5 h-3.5 text-[#FFD84D]" />
             <span>{referenceImage ? "Cambiar imagen de referencia" : "Subir imagen de referencia (logo/producto)"}</span>
           </button>
           {referenceImage && (
             <div className="flex items-center gap-2">
-              <img src={referenceImage} alt="referencia" className="w-9 h-9 rounded object-cover border border-[#E3E5EA]" />
-              <button onClick={() => setReferenceImage(null)} className="text-[#9CA3AF] hover:text-red-400 transition" title="Quitar referencia">
+              <img src={referenceImage} alt="referencia" className="w-9 h-9 rounded object-cover border border-line" />
+              <button onClick={() => setReferenceImage(null)} className="text-faint hover:text-red-400 transition" title="Quitar referencia">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -628,7 +628,7 @@ export const CarouselDesigner: React.FC = () => {
           <button
             onClick={() => generateCarousel(autoImages)}
             disabled={loading || generatingImages}
-            className="flex-1 bg-[#101010] hover:bg-[#232323] disabled:opacity-50 text-white font-bold px-6 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider"
+            className="flex-1 bg-black hover:bg-sidebar disabled:opacity-50 text-white font-bold px-6 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider"
             id="btn-generate-carousel"
           >
             {loading ? (
@@ -647,7 +647,7 @@ export const CarouselDesigner: React.FC = () => {
           <button
             onClick={() => generateAllImages()}
             disabled={slides.length === 0 || loading || generatingImages}
-            className="bg-[#FFD84D] hover:bg-[#F5C93A] disabled:opacity-50 text-black font-bold px-6 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider"
+            className="bg-yellow hover:bg-[#F5C93A] disabled:opacity-50 text-black font-bold px-6 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider"
             id="btn-generate-carousel-images"
           >
             {generatingImages ? (
@@ -669,17 +669,17 @@ export const CarouselDesigner: React.FC = () => {
           <button
             onClick={saveCurrentCarousel}
             disabled={slides.length === 0 || savingProject}
-            className="bg-[#F3F5FB] border border-[#E3E5EA] hover:border-[#101010]/50 text-[#6B7280] hover:text-[#111111] text-[11px] px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50"
+            className="bg-sink hover:border-black/50 text-muted hover:text-ink text-[11px] px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50"
           >
-            {savingProject ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5 text-[#101010]" />}
+            {savingProject ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5 text-black" />}
             <span>Guardar carrusel</span>
           </button>
           <div className="flex items-center gap-2 flex-1">
-            <FolderOpen className="w-3.5 h-3.5 text-[#9CA3AF] shrink-0" />
+            <FolderOpen className="w-3.5 h-3.5 text-faint shrink-0" />
             <select
               defaultValue=""
               onChange={(e) => loadProject(e.target.value)}
-              className="flex-1 bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg px-3 py-2 text-[11px] text-[#6B7280] focus:outline-none"
+              className="flex-1 bg-sink rounded-input px-3 py-2 text-[11px] text-muted outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
             >
               <option value="">{savedProjects.length ? "Cargar carrusel guardado..." : "No hay carruseles guardados"}</option>
               {savedProjects.map((p) => (
@@ -707,19 +707,19 @@ export const CarouselDesigner: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
           {/* LEFT side: Visual Slide editor layout (takes 7 cols) */}
-          <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6 flex flex-col justify-between min-h-[650px]">
+          <div className="lg:col-span-7 bg-surface border border-line rounded-2xl p-6 flex flex-col justify-between min-h-[650px]">
 
-            <div className="flex items-center justify-between border-b border-[#ECECEC] pb-3 mb-4">
-              <span className="text-xs font-semibold text-[#6B7280] font-mono">
+            <div className="flex items-center justify-between border-b border-line pb-3 mb-4">
+              <span className="text-xs font-semibold text-muted font-mono">
                 DIAPOSITIVA ACTIVA: {currentSlideIndex + 1} de {slides.length}
               </span>
-              <div className="flex items-center gap-1.5 bg-[#F3F5FB] border border-[#E3E5EA] px-2 py-1 rounded text-[11px] text-[#101010] font-mono">
+              <div className="flex items-center gap-1.5 bg-sink px-2 py-1 rounded text-[11px] text-black font-mono">
                 <span>Vía Cami & Lauti</span>
               </div>
             </div>
 
             <div
-              className="flex-1 rounded-2xl p-8 relative flex flex-col justify-between border border-[#ECECEC] shadow-inner overflow-hidden select-none"
+              className="flex-1 rounded-2xl p-8 relative flex flex-col justify-between border border-line shadow-inner overflow-hidden select-none"
               style={{
                 background: `linear-gradient(135deg, ${activeSlide.bgGradientStart}, ${activeSlide.bgGradientEnd})`,
                 color: activeSlide.imageUrl ? "#ffffff" : activeSlide.textColor,
@@ -735,7 +735,7 @@ export const CarouselDesigner: React.FC = () => {
 
               {activeSlide.imageLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-20">
-                  <div className="flex flex-col items-center gap-2 text-[#111111]">
+                  <div className="flex flex-col items-center gap-2 text-ink">
                     <RefreshCw className="w-6 h-6 animate-spin text-[#FFD84D]" />
                     <span className="text-xs font-mono">Nano Banana 🍌 generando imagen...</span>
                   </div>
@@ -771,11 +771,11 @@ export const CarouselDesigner: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between mt-6 bg-[#F3F5FB] p-3 rounded-xl border border-[#ECECEC]">
+            <div className="flex items-center justify-between mt-6 bg-sink p-3 rounded-xl border border-line">
               <button
                 disabled={currentSlideIndex === 0}
                 onClick={() => setCurrentSlideIndex(currentSlideIndex - 1)}
-                className="p-2 bg-[#F3F5FB] hover:bg-[#E3E5EA] disabled:opacity-30 rounded-lg text-[#6B7280] border border-[#E3E5EA] transition"
+                className="p-2 bg-sink hover:bg-[#eaedf6] disabled:opacity-30 rounded-lg text-muted transition"
                 aria-label="Diapositiva anterior"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -787,7 +787,7 @@ export const CarouselDesigner: React.FC = () => {
                     key={idx}
                     onClick={() => setCurrentSlideIndex(idx)}
                     className={`w-2.5 h-2.5 rounded-full shrink-0 transition-colors ${
-                      idx === currentSlideIndex ? "bg-[#101010]" : "bg-[#ECECEC] hover:bg-[#E3E5EA]"
+                      idx === currentSlideIndex ? "bg-black" : "bg-[#ECECEC] hover:bg-[#eaedf6]"
                     }`}
                     aria-label={`Ir a diapositiva ${idx + 1}`}
                   />
@@ -797,7 +797,7 @@ export const CarouselDesigner: React.FC = () => {
               <button
                 disabled={currentSlideIndex === slides.length - 1}
                 onClick={() => setCurrentSlideIndex(currentSlideIndex + 1)}
-                className="p-2 bg-[#F3F5FB] hover:bg-[#E3E5EA] disabled:opacity-30 rounded-lg text-[#6B7280] border border-[#E3E5EA] transition"
+                className="p-2 bg-sink hover:bg-[#eaedf6] disabled:opacity-30 rounded-lg text-muted transition"
                 aria-label="Diapositiva siguiente"
               >
                 <ArrowRight className="w-4 h-4" />
@@ -806,15 +806,15 @@ export const CarouselDesigner: React.FC = () => {
           </div>
 
           {/* RIGHT side: Customizer side panel (takes 5 cols) */}
-          <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6 flex flex-col justify-between min-h-[650px] overflow-y-auto custom-scrollbar">
+          <div className="lg:col-span-5 bg-surface border border-line rounded-2xl p-6 flex flex-col justify-between min-h-[650px] overflow-y-auto custom-scrollbar">
 
             <div className="space-y-4">
-              <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-[#ECECEC]">
-                <Palette className="w-4 h-4 text-[#101010]" /> Editor y Paletas de Color
+              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-line">
+                <Palette className="w-4 h-4 text-black" /> Editor y Paletas de Color
               </h3>
 
               {/* Nano Banana per-slide controls */}
-              <div className="space-y-2 bg-[#FFD84D]/5 border border-[#FFD84D]/20 rounded-lg p-3">
+              <div className="space-y-2 bg-yellow/5 border border-[#FFD84D]/20 rounded-lg p-3">
                 <label className="text-[10px] font-semibold text-[#FFD84D] font-mono uppercase flex items-center gap-1.5">
                   <ImageIcon className="w-3 h-3" /> Imagen de fondo (Nano Banana)
                 </label>
@@ -822,7 +822,7 @@ export const CarouselDesigner: React.FC = () => {
                   <button
                     onClick={() => generateSlideImage(currentSlideIndex)}
                     disabled={activeSlide.imageLoading || generatingImages}
-                    className="flex-1 bg-[#FFD84D] hover:bg-[#F5C93A] disabled:opacity-50 text-black font-bold text-[11px] px-3 py-2 rounded flex items-center justify-center gap-1.5 transition"
+                    className="flex-1 bg-yellow hover:bg-[#F5C93A] disabled:opacity-50 text-black font-bold text-[11px] px-3 py-2 rounded flex items-center justify-center gap-1.5 transition"
                   >
                     {activeSlide.imageLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
                     <span>{activeSlide.imageUrl ? "Regenerar 🍌" : "Generar imagen 🍌"}</span>
@@ -830,31 +830,31 @@ export const CarouselDesigner: React.FC = () => {
                   {activeSlide.imageUrl && (
                     <button
                       onClick={() => removeSlideImage(currentSlideIndex)}
-                      className="bg-[#F3F5FB] hover:bg-[#E3E5EA] text-[#6B7280] border border-[#E3E5EA] px-3 py-2 rounded flex items-center justify-center transition"
+                      className="bg-sink hover:bg-[#eaedf6] text-muted px-3 py-2 rounded flex items-center justify-center transition"
                       title="Quitar imagen"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
-                <p className="text-[10px] text-[#6B7280] leading-snug">
+                <p className="text-[10px] text-muted leading-snug">
                   Se genera con el modelo de imágenes de Gemini ({imageModel === "pro" ? "Nano Banana Pro" : "Nano Banana"}) usando el concepto visual del slide y tu estilo.
                 </p>
               </div>
 
               {/* Theme selectors */}
               <div className="space-y-2">
-                <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Aplicar Paleta Predefinida</label>
+                <label className="text-[10px] font-semibold text-faint font-mono uppercase">Aplicar Paleta Predefinida</label>
                 <div className="grid grid-cols-2 gap-2">
                   {colorThemes.map((theme) => (
                     <button
                       key={theme.name}
                       onClick={() => handleApplyTheme(theme)}
-                      className="flex items-center gap-2 p-2 bg-[#F3F5FB] hover:bg-[#E3E5EA] rounded border border-[#ECECEC] text-left text-xs text-[#6B7280] transition"
+                      className="flex items-center gap-2 p-2 bg-sink hover:bg-[#eaedf6] rounded border border-line text-left text-xs text-muted transition"
                     >
                       <div className="flex shrink-0 -space-x-1.5">
-                        <div className="w-3.5 h-3.5 rounded-full border border-[#ECECEC]" style={{ backgroundColor: theme.bgStart }} />
-                        <div className="w-3.5 h-3.5 rounded-full border border-[#ECECEC]" style={{ backgroundColor: theme.accent }} />
+                        <div className="w-3.5 h-3.5 rounded-full border border-line" style={{ backgroundColor: theme.bgStart }} />
+                        <div className="w-3.5 h-3.5 rounded-full border border-line" style={{ backgroundColor: theme.accent }} />
                       </div>
                       <span className="truncate">{theme.name}</span>
                     </button>
@@ -865,59 +865,59 @@ export const CarouselDesigner: React.FC = () => {
               {/* Live inputs for active slide */}
               <div className="space-y-3 pt-2">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Título de la diapositiva</label>
+                  <label className="text-[10px] font-semibold text-faint font-mono uppercase">Título de la diapositiva</label>
                   <input
                     type="text"
                     value={activeSlide.title}
                     onChange={(e) => handleEditActiveSlide("title", e.target.value)}
-                    className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded px-2.5 py-1.5 text-xs text-[#111111] focus:outline-none"
+                    className="w-full bg-sink rounded-input px-2.5 py-1.5 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Mensaje de la diapositiva</label>
+                  <label className="text-[10px] font-semibold text-faint font-mono uppercase">Mensaje de la diapositiva</label>
                   <textarea
                     value={activeSlide.body}
                     onChange={(e) => handleEditActiveSlide("body", e.target.value)}
-                    className="w-full h-20 bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded px-2.5 py-1.5 text-xs text-[#111111] focus:outline-none resize-none"
+                    className="w-full h-20 bg-sink rounded-input px-2.5 py-1.5 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20 resize-none"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Concepto Visual / Prompt de imagen</label>
+                  <label className="text-[10px] font-semibold text-faint font-mono uppercase">Concepto Visual / Prompt de imagen</label>
                   <input
                     type="text"
                     value={activeSlide.visualIdea}
                     onChange={(e) => handleEditActiveSlide("visualIdea", e.target.value)}
-                    className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded px-2.5 py-1.5 text-xs text-[#111111] focus:outline-none"
+                    className="w-full bg-sink rounded-input px-2.5 py-1.5 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
                   <div>
-                    <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono block mb-1">Color Inicio</label>
-                    <div className="flex items-center gap-1 bg-[#F3F5FB] border border-[#ECECEC] rounded px-2 py-1">
+                    <label className="text-[10px] font-semibold text-faint font-mono block mb-1">Color Inicio</label>
+                    <div className="flex items-center gap-1 bg-sink border border-line rounded px-2 py-1">
                       <input
                         type="color"
                         value={activeSlide.bgGradientStart}
                         onChange={(e) => handleEditActiveSlide("bgGradientStart", e.target.value)}
-                        className="w-5 h-5 rounded border border-[#E3E5EA] bg-transparent cursor-pointer shrink-0"
+                        className="w-5 h-5 rounded border border-line bg-transparent cursor-pointer shrink-0"
                         aria-label="Color de inicio del degradado"
                       />
-                      <span className="font-mono text-[10px] text-[#6B7280] uppercase select-all">{activeSlide.bgGradientStart}</span>
+                      <span className="font-mono text-[10px] text-muted uppercase select-all">{activeSlide.bgGradientStart}</span>
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono block mb-1">Color Destacado</label>
-                    <div className="flex items-center gap-1 bg-[#F3F5FB] border border-[#ECECEC] rounded px-2 py-1">
+                    <label className="text-[10px] font-semibold text-faint font-mono block mb-1">Color Destacado</label>
+                    <div className="flex items-center gap-1 bg-sink border border-line rounded px-2 py-1">
                       <input
                         type="color"
                         value={activeSlide.accentColor}
                         onChange={(e) => handleEditActiveSlide("accentColor", e.target.value)}
-                        className="w-5 h-5 rounded border border-[#E3E5EA] bg-transparent cursor-pointer shrink-0"
+                        className="w-5 h-5 rounded border border-line bg-transparent cursor-pointer shrink-0"
                         aria-label="Color destacado"
                       />
-                      <span className="font-mono text-[10px] text-[#6B7280] uppercase select-all">{activeSlide.accentColor}</span>
+                      <span className="font-mono text-[10px] text-muted uppercase select-all">{activeSlide.accentColor}</span>
                     </div>
                   </div>
                 </div>
@@ -925,19 +925,19 @@ export const CarouselDesigner: React.FC = () => {
             </div>
 
             {/* Action panel */}
-            <div className="border-t border-[#ECECEC] pt-4 mt-4 space-y-3">
+            <div className="border-t border-line pt-4 mt-4 space-y-3">
               <button
                 onClick={() => downloadSlidePNG(activeSlide)}
-                className="w-full bg-[#F3F5FB] border border-[#E3E5EA] hover:bg-[#E3E5EA] text-[#111111] font-semibold text-xs px-4 py-2.5 rounded flex items-center justify-center gap-2 transition"
+                className="w-full bg-sink hover:bg-[#eaedf6] text-ink font-semibold text-xs px-4 py-2.5 rounded flex items-center justify-center gap-2 transition"
               >
-                <Download className="w-4 h-4 text-[#101010]" />
+                <Download className="w-4 h-4 text-black" />
                 <span>Descargar Slide Actual (PNG)</span>
               </button>
 
               <button
                 onClick={downloadAllAsZip}
                 disabled={zipping}
-                className="w-full bg-[#101010] hover:bg-[#232323] active:bg-[#232323] disabled:opacity-50 text-white font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition"
+                className="w-full bg-black hover:bg-sidebar active:bg-sidebar disabled:opacity-50 text-white font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition"
                 id="btn-download-carousel-all"
               >
                 {zipping ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -961,19 +961,19 @@ export const CarouselDesigner: React.FC = () => {
                 disabled={uploading || uploaded}
                 className={`w-full font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition border ${
                   uploaded
-                    ? "bg-[#101010]/10 border-[#101010]/30 text-[#101010]"
-                    : "bg-[#F3F5FB] hover:bg-[#E3E5EA] text-[#111111] border-[#E3E5EA]"
+                    ? "bg-black/10 border-black/30 text-black"
+                    : "bg-sink hover:bg-[#eaedf6] text-ink border-line"
                 }`}
                 id="btn-carousel-api-direct"
               >
                 {uploading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-[#101010]" />
+                    <RefreshCw className="w-4 h-4 animate-spin text-black" />
                     <span>Preparando para {platform}...</span>
                   </>
                 ) : uploaded ? (
                   <>
-                    <Check className="w-4 h-4 text-[#101010]" />
+                    <Check className="w-4 h-4 text-black" />
                     <span>Listo para publicar en {platform}</span>
                   </>
                 ) : (
@@ -995,15 +995,15 @@ export const CarouselDesigner: React.FC = () => {
           onClick={() => !publishingIG && setShowPublishConfirm(false)}
         >
           <div
-            className="bg-[#FFFFFF] border border-[#E3E5EA] rounded-2xl p-6 max-w-md w-full"
+            className="bg-surface border border-line rounded-2xl p-6 max-w-md w-full"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-[#111111] flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-ink flex items-center gap-2">
                 <Instagram className="w-4 h-4 text-pink-400" /> Publicar carrusel en Instagram
               </h3>
               {!publishingIG && (
-                <button onClick={() => setShowPublishConfirm(false)} className="text-[#9CA3AF] hover:text-[#111111]" aria-label="Cerrar">
+                <button onClick={() => setShowPublishConfirm(false)} className="text-faint hover:text-ink" aria-label="Cerrar">
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -1011,13 +1011,13 @@ export const CarouselDesigner: React.FC = () => {
 
             {publishingIG ? (
               <div className="flex flex-col items-center gap-3 py-8">
-                <RefreshCw className="w-7 h-7 animate-spin text-[#101010]" />
-                <span className="text-xs text-[#6B7280]">{publishStep || "Publicando..."}</span>
+                <RefreshCw className="w-7 h-7 animate-spin text-black" />
+                <span className="text-xs text-muted">{publishStep || "Publicando..."}</span>
               </div>
             ) : (
               <>
-                <p className="text-xs text-[#6B7280] leading-relaxed mb-4">
-                  Se publicará un carrusel de <strong className="text-[#111111]">{Math.min(slides.length, 10)} imágenes</strong> en tu cuenta de Instagram Business conectada. El texto de cada slide ya va incrustado en la imagen y el tema se usa como descripción.
+                <p className="text-xs text-muted leading-relaxed mb-4">
+                  Se publicará un carrusel de <strong className="text-ink">{Math.min(slides.length, 10)} imágenes</strong> en tu cuenta de Instagram Business conectada. El texto de cada slide ya va incrustado en la imagen y el tema se usa como descripción.
                 </p>
                 {!getStored(STORAGE_KEYS.metaIgAccountId) && (
                   <p className="text-[11px] text-amber-400 mb-3 leading-relaxed">
@@ -1027,7 +1027,7 @@ export const CarouselDesigner: React.FC = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowPublishConfirm(false)}
-                    className="flex-1 bg-[#F3F5FB] border border-[#E3E5EA] text-[#6B7280] text-xs py-2.5 rounded-lg hover:text-[#111111] transition"
+                    className="flex-1 bg-sink text-muted text-xs py-2.5 rounded-lg hover:text-ink transition"
                   >
                     Cancelar
                   </button>

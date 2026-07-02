@@ -24,7 +24,7 @@ export const Input: React.FC<InputProps> = ({
 }) => (
   <div className={`relative ${className}`}>
     {Icon && (
-      <Icon className="w-4 h-4 text-[#9ca3af] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+      <Icon className="w-4 h-4 text-faint absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
     )}
     <input
       id={id}
@@ -33,8 +33,8 @@ export const Input: React.FC<InputProps> = ({
       disabled={disabled}
       onChange={(e) => onChange?.(e.target.value)}
       placeholder={placeholder}
-      className={`w-full h-[46px] rounded-[14px] bg-[#f3f5fb] text-sm text-[#111111] placeholder:text-[#9ca3af]
-        outline-none transition focus:bg-[#eef1fe] focus:ring-2 focus:ring-[#4f6ef7]/20
+      className={`w-full h-[46px] rounded-input bg-sink text-sm text-ink placeholder:text-faint
+        outline-none transition focus:bg-accent-soft focus:ring-2 focus:ring-accent/20
         ${Icon ? "pl-11 pr-4" : "px-4"}`}
     />
   </div>
@@ -56,7 +56,7 @@ export const Textarea: React.FC<TextareaProps> = ({ value, onChange, placeholder
     value={value}
     onChange={(e) => onChange?.(e.target.value)}
     placeholder={placeholder}
-    className={`w-full rounded-[14px] bg-[#f3f5fb] text-sm text-[#111111] placeholder:text-[#9ca3af] p-4 resize-none
-      outline-none transition focus:bg-[#eef1fe] focus:ring-2 focus:ring-[#4f6ef7]/20 ${className}`}
+    className={`w-full rounded-input bg-sink text-sm text-ink placeholder:text-faint p-4 resize-none
+      outline-none transition focus:bg-accent-soft focus:ring-2 focus:ring-accent/20 ${className}`}
   />
 );

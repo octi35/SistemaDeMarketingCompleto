@@ -23,7 +23,7 @@ interface Recommendation {
 }
 
 const ACTION_STYLE: Record<Recommendation["action"], { label: string; cls: string; icon: React.ReactNode }> = {
-  repeat: { label: "Repetir", cls: "text-[#101010] border-[#101010]/30 bg-[#101010]/5", icon: <TrendingUp className="w-3.5 h-3.5" /> },
+  repeat: { label: "Repetir", cls: "text-black border-black/30 bg-black/5", icon: <TrendingUp className="w-3.5 h-3.5" /> },
   kill: { label: "Matar", cls: "text-red-400 border-red-500/30 bg-red-500/5", icon: <TrendingDown className="w-3.5 h-3.5" /> },
   tweak: { label: "Ajustar", cls: "text-amber-400 border-amber-500/30 bg-amber-500/5", icon: <Wrench className="w-3.5 h-3.5" /> },
 };
@@ -82,15 +82,15 @@ export const RealMetricsPanel: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#ECECEC] pb-3">
+    <div className="bg-surface border border-line rounded-2xl p-5 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3">
         <div className="flex items-center gap-2">
-          <span className="p-1.5 rounded bg-[#101010]/10 border border-[#101010]/20">
-            <BarChart3 className="w-4 h-4 text-[#101010]" />
+          <span className="p-1.5 rounded bg-black/10 border border-black/20">
+            <BarChart3 className="w-4 h-4 text-black" />
           </span>
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#111111]">Métricas reales de Instagram</h3>
-            <p className="text-[10px] text-[#6B7280]">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink">Métricas reales de Instagram</h3>
+            <p className="text-[10px] text-muted">
               {connected ? "Cuenta conectada — datos en vivo vía Graph API." : "Conecta tu Instagram para ver datos reales."}
             </p>
           </div>
@@ -99,7 +99,7 @@ export const RealMetricsPanel: React.FC = () => {
           <button
             onClick={loadMetrics}
             disabled={loading}
-            className="bg-[#F3F5FB] border border-[#E3E5EA] hover:text-[#111111] text-[#6B7280] text-[11px] px-3 py-2 rounded-lg flex items-center gap-2 transition disabled:opacity-50"
+            className="bg-sink hover:text-ink text-muted text-[11px] px-3 py-2 rounded-lg flex items-center gap-2 transition disabled:opacity-50"
           >
             {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
             <span>Cargar métricas</span>
@@ -107,7 +107,7 @@ export const RealMetricsPanel: React.FC = () => {
           <button
             onClick={analyze}
             disabled={analyzing || media.length === 0}
-            className="bg-[#101010] hover:bg-[#232323] disabled:opacity-50 text-white font-bold text-[11px] px-3 py-2 rounded-lg flex items-center gap-2 transition"
+            className="bg-black hover:bg-sidebar disabled:opacity-50 text-white font-bold text-[11px] px-3 py-2 rounded-lg flex items-center gap-2 transition"
           >
             {analyzing ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
             <span>¿Qué mejorar? (IA)</span>
@@ -116,19 +116,19 @@ export const RealMetricsPanel: React.FC = () => {
       </div>
 
       {publishedPosts.length > 0 && (
-        <div className="bg-[#F3F5FB] border border-[#ECECEC] rounded-lg p-3">
+        <div className="bg-sink border border-line rounded-lg p-3">
           <div className="flex items-center gap-2 mb-2">
-            <Send className="w-3.5 h-3.5 text-[#101010]" />
-            <span className="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-mono">
+            <Send className="w-3.5 h-3.5 text-black" />
+            <span className="text-[10px] uppercase tracking-wider text-faint font-mono">
               Publicado desde AdTeam ({publishedPosts.length})
             </span>
           </div>
           <div className="space-y-1 max-h-28 overflow-y-auto custom-scrollbar">
             {publishedPosts.slice(0, 8).map((p) => (
-              <div key={p.id} className="flex items-center justify-between text-[11px] text-[#6B7280]">
-                <span className="uppercase font-mono text-[9px] text-[#101010] w-16 shrink-0">{p.network}</span>
+              <div key={p.id} className="flex items-center justify-between text-[11px] text-muted">
+                <span className="uppercase font-mono text-[9px] text-black w-16 shrink-0">{p.network}</span>
                 <span className="truncate flex-1 px-2">{p.caption || p.postId}</span>
-                <span className="text-[9px] text-[#9CA3AF] shrink-0">{(p.createdAt || "").slice(0, 10)}</span>
+                <span className="text-[9px] text-faint shrink-0">{(p.createdAt || "").slice(0, 10)}</span>
               </div>
             ))}
           </div>
@@ -138,13 +138,13 @@ export const RealMetricsPanel: React.FC = () => {
       {media.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {media.map((m) => (
-            <div key={m.id} className="bg-[#F3F5FB] border border-[#ECECEC] rounded-lg p-3 flex items-center justify-between gap-3">
-              <p className="text-[11px] text-[#111111] line-clamp-2 flex-1">{m.caption || "(sin texto)"}</p>
-              <div className="flex items-center gap-3 text-[11px] text-[#6B7280] shrink-0">
+            <div key={m.id} className="bg-sink border border-line rounded-lg p-3 flex items-center justify-between gap-3">
+              <p className="text-[11px] text-ink line-clamp-2 flex-1">{m.caption || "(sin texto)"}</p>
+              <div className="flex items-center gap-3 text-[11px] text-muted shrink-0">
                 <span className="flex items-center gap-1"><Heart className="w-3 h-3 text-pink-400" />{m.likes}</span>
                 <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3 text-blue-400" />{m.comments}</span>
                 {m.permalink && (
-                  <a href={m.permalink} target="_blank" rel="noreferrer" className="text-[#9CA3AF] hover:text-[#101010]">
+                  <a href={m.permalink} target="_blank" rel="noreferrer" className="text-faint hover:text-black">
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
@@ -157,8 +157,8 @@ export const RealMetricsPanel: React.FC = () => {
       {recommendations.length > 0 && (
         <div className="space-y-2 pt-1">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-mono">Recomendaciones de Mateo (IA)</span>
-            {isMockReco && <span className="text-[9px] text-[#101010] font-mono">(demo)</span>}
+            <span className="text-[10px] uppercase tracking-wider text-faint font-mono">Recomendaciones de Mateo (IA)</span>
+            {isMockReco && <span className="text-[9px] text-black font-mono">(demo)</span>}
           </div>
           {recommendations.map((r, i) => (
             <div key={i} className={`border rounded-lg p-3 ${ACTION_STYLE[r.action]?.cls || ""}`}>
@@ -166,17 +166,17 @@ export const RealMetricsPanel: React.FC = () => {
                 <span className="flex items-center gap-1 text-[10px] font-bold uppercase">
                   {ACTION_STYLE[r.action]?.icon} {ACTION_STYLE[r.action]?.label || r.action}
                 </span>
-                <span className="text-[9px] text-[#6B7280] font-mono">· prioridad {r.priority}</span>
+                <span className="text-[9px] text-muted font-mono">· prioridad {r.priority}</span>
               </div>
-              <p className="text-xs font-semibold text-[#111111]">{r.title}</p>
-              <p className="text-[11px] text-[#6B7280] mt-0.5 leading-relaxed">{r.reason}</p>
+              <p className="text-xs font-semibold text-ink">{r.title}</p>
+              <p className="text-[11px] text-muted mt-0.5 leading-relaxed">{r.reason}</p>
             </div>
           ))}
         </div>
       )}
 
       {!connected && media.length === 0 && (
-        <p className="text-[11px] text-[#6B7280] leading-relaxed">
+        <p className="text-[11px] text-muted leading-relaxed">
           Aún no hay datos reales. Conecta tu cuenta de Instagram Business en la pestaña "Gestor de Contenido" y vuelve aquí.
           También puedes pedir recomendaciones de la IA con datos de ejemplo pulsando "¿Qué mejorar?".
         </p>

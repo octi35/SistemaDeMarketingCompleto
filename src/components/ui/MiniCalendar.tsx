@@ -4,10 +4,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 type Tone = "accent" | "yellow" | "sky" | "dark";
 
 const toneStyle: Record<Tone, string> = {
-  accent: "bg-[#4f6ef7] text-white",
-  yellow: "bg-[#ffd84d] text-[#3a2e05]",
+  accent: "bg-accent text-white",
+  yellow: "bg-yellow text-[#3a2e05]",
   sky: "bg-[#8fd4f8] text-[#0f2a3d]",
-  dark: "bg-[#101010] text-white",
+  dark: "bg-black text-white",
 };
 
 export interface MiniCalendarProps {
@@ -40,12 +40,12 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
   return (
     <div className={className}>
       <div className="flex items-center justify-between mb-4">
-        <span className="text-sm font-semibold text-[#111111]">{monthLabel}</span>
+        <span className="text-sm font-semibold text-ink">{monthLabel}</span>
         <div className="flex items-center gap-1">
-          <button className="w-7 h-7 rounded-full hover:bg-[#f3f5fb] flex items-center justify-center text-[#9ca3af] transition">
+          <button className="w-7 h-7 rounded-full hover:bg-sink flex items-center justify-center text-faint transition">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <button className="w-7 h-7 rounded-full hover:bg-[#f3f5fb] flex items-center justify-center text-[#9ca3af] transition">
+          <button className="w-7 h-7 rounded-full hover:bg-sink flex items-center justify-center text-faint transition">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -53,7 +53,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
 
       <div className="grid grid-cols-7 gap-y-2 text-center">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="text-[11px] font-medium text-[#9ca3af]">
+          <div key={d} className="text-[11px] font-medium text-faint">
             {d}
           </div>
         ))}
@@ -65,7 +65,7 @@ export const MiniCalendar: React.FC<MiniCalendarProps> = ({
             <div key={day} className="flex items-center justify-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-medium transition
-                  ${tone ? toneStyle[tone] : isToday ? "ring-1 ring-[#4f6ef7] text-[#4f6ef7]" : "text-[#6b7280] hover:bg-[#f3f5fb]"}`}
+                  ${tone ? toneStyle[tone] : isToday ? "ring-1 ring-accent text-accent" : "text-muted hover:bg-sink"}`}
               >
                 {day}
               </div>

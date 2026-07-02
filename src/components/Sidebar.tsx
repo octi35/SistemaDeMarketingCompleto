@@ -37,12 +37,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ items, activeTab, onSelect }) 
       <motion.div
         animate={{ boxShadow: open ? "0 24px 60px rgba(0,0,0,0.30)" : "0 0px 0px rgba(0,0,0,0)" }}
         transition={{ duration: 0.28 }}
-        className="h-full bg-[#232323] rounded-[26px] flex flex-col py-5 overflow-hidden"
+        className="h-full bg-sidebar rounded-[26px] flex flex-col py-5 overflow-hidden"
       >
         {/* Brand */}
         <div className="flex items-center px-3 shrink-0">
           <span className="w-11 h-11 grid place-items-center shrink-0">
-            <span className="w-10 h-10 rounded-2xl bg-[#4f6ef7] flex items-center justify-center">
+            <span className="w-10 h-10 rounded-2xl bg-accent flex items-center justify-center">
               <span className="w-4 h-4 rounded-[5px] bg-white rotate-45" />
             </span>
           </span>
@@ -67,7 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ items, activeTab, onSelect }) 
                 {active && (
                   <motion.span
                     layoutId="sidebar-active"
-                    className="absolute inset-0 rounded-2xl bg-[#4f6ef7]"
+                    className="absolute inset-0 rounded-2xl bg-accent"
                     transition={{ type: "spring", stiffness: 400, damping: 34 }}
                   />
                 )}

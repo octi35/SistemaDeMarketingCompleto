@@ -4,11 +4,11 @@ import { motion } from "motion/react";
 type Tone = "accent" | "yellow" | "green" | "sky" | "dark";
 
 const barTone: Record<Tone, string> = {
-  accent: "bg-[#4f6ef7]",
-  yellow: "bg-[#ffd84d]",
+  accent: "bg-accent",
+  yellow: "bg-yellow",
   green: "bg-[#7dd87d]",
   sky: "bg-[#8fd4f8]",
-  dark: "bg-[#101010]",
+  dark: "bg-black",
 };
 
 export interface ProgressProps {
@@ -18,7 +18,7 @@ export interface ProgressProps {
 }
 
 export const Progress: React.FC<ProgressProps> = ({ value, tone = "accent", className = "" }) => (
-  <div className={`w-full h-2 rounded-full bg-[#f3f5fb] overflow-hidden ${className}`}>
+  <div className={`w-full h-2 rounded-full bg-sink overflow-hidden ${className}`}>
     <motion.div
       className={`h-full rounded-full ${barTone[tone]}`}
       initial={{ width: 0 }}

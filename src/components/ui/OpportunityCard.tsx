@@ -14,11 +14,11 @@ interface ToneStyle {
 }
 
 const toneStyles: Record<Tone, ToneStyle> = {
-  blue: { bg: "bg-[#4f6ef7]", title: "text-white", meta: "text-white/70", amount: "text-white", btn: "bg-white/15 text-white hover:bg-white/25" },
+  blue: { bg: "bg-accent", title: "text-white", meta: "text-white/70", amount: "text-white", btn: "bg-white/15 text-white hover:bg-white/25" },
   sky: { bg: "bg-[#8fd4f8]", title: "text-[#0f2a3d]", meta: "text-[#0f2a3d]/60", amount: "text-[#0f2a3d]", btn: "bg-[#0f2a3d]/10 text-[#0f2a3d] hover:bg-[#0f2a3d]/20" },
-  yellow: { bg: "bg-[#ffd84d]", title: "text-[#3a2e05]", meta: "text-[#3a2e05]/60", amount: "text-[#3a2e05]", btn: "bg-[#3a2e05]/10 text-[#3a2e05] hover:bg-[#3a2e05]/20" },
-  dark: { bg: "bg-[#101010]", title: "text-white", meta: "text-white/55", amount: "text-white", btn: "bg-white/15 text-white hover:bg-white/25" },
-  white: { bg: "bg-white shadow-card", title: "text-[#111111]", meta: "text-[#9ca3af]", amount: "text-[#111111]", btn: "bg-[#f3f5fb] text-[#6b7280] hover:bg-[#eaedf6]" },
+  yellow: { bg: "bg-yellow", title: "text-[#3a2e05]", meta: "text-[#3a2e05]/60", amount: "text-[#3a2e05]", btn: "bg-[#3a2e05]/10 text-[#3a2e05] hover:bg-[#3a2e05]/20" },
+  dark: { bg: "bg-black", title: "text-white", meta: "text-white/55", amount: "text-white", btn: "bg-white/15 text-white hover:bg-white/25" },
+  white: { bg: "bg-white shadow-card", title: "text-ink", meta: "text-faint", amount: "text-ink", btn: "bg-sink text-muted hover:bg-[#eaedf6]" },
 };
 
 export interface OpportunityCardProps {
@@ -46,7 +46,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
       onClick={onClick}
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className={`${s.bg} rounded-[22px] p-5 flex flex-col justify-between min-h-[168px] cursor-pointer`}
+      className={`${s.bg} rounded-card p-5 flex flex-col justify-between min-h-[168px] cursor-pointer`}
     >
       <div className="flex items-start justify-between">
         <span className={`text-[12px] font-medium ${s.meta}`}>{date}</span>

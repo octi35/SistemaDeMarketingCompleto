@@ -42,12 +42,12 @@ export const TeamSpotlight: React.FC<TeamSpotlightProps> = ({ onNavigate }) => {
             className="flex flex-col items-center"
           >
             <PixelAvatar agentId={agent.id} size="lg" />
-            <h3 className="mt-3 text-[17px] font-semibold text-[#111111] tracking-tight">{agent.name}</h3>
-            <span className="mt-1 inline-flex items-center gap-1.5 text-[12px] font-medium text-[#4f6ef7] bg-[#eef1fe] px-2.5 py-1 rounded-full">
+            <h3 className="mt-3 text-[17px] font-semibold text-ink tracking-tight">{agent.name}</h3>
+            <span className="mt-1 inline-flex items-center gap-1.5 text-[12px] font-medium text-accent bg-accent-soft px-2.5 py-1 rounded-full">
               {getAgentIcon(agent.id)}
               {agent.role}
             </span>
-            <p className="text-[13px] text-[#6b7280] mt-3 leading-relaxed max-w-[260px] line-clamp-3">
+            <p className="text-[13px] text-muted mt-3 leading-relaxed max-w-[260px] line-clamp-3">
               {agent.description}
             </p>
           </motion.div>
@@ -65,7 +65,7 @@ export const TeamSpotlight: React.FC<TeamSpotlightProps> = ({ onNavigate }) => {
       </div>
 
       {/* Character picker */}
-      <div className="mt-5 pt-5 border-t border-[#ececec]">
+      <div className="mt-5 pt-5 border-t border-line">
         <div className="grid grid-cols-6 gap-2">
           {AGENTS.map((a) => {
             const active = a.id === selected;
@@ -77,7 +77,7 @@ export const TeamSpotlight: React.FC<TeamSpotlightProps> = ({ onNavigate }) => {
                 whileHover={{ y: -2 }}
                 title={`${a.name} · ${a.role}`}
                 className={`relative flex items-center justify-center rounded-xl p-1 transition ${
-                  active ? "ring-2 ring-[#4f6ef7] ring-offset-2 ring-offset-white" : "opacity-70 hover:opacity-100"
+                  active ? "ring-2 ring-accent ring-offset-2 ring-offset-white" : "opacity-70 hover:opacity-100"
                 }`}
               >
                 <PixelAvatar agentId={a.id} size="sm" />

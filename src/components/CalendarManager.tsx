@@ -139,23 +139,23 @@ export const CalendarManager: React.FC = () => {
   return (
     <div className="space-y-6" id="calendar-manager-root">
       {/* Search and control section */}
-      <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6">
+      <div className="bg-surface border border-line rounded-2xl p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-start gap-3">
-            <div className="p-2.5 rounded-lg bg-[#101010]/10 text-[#101010] border border-[#101010]/20">
+            <div className="p-2.5 rounded-lg bg-black/10 text-black border border-black/20">
               📅
             </div>
             <div>
-              <h2 className="text-base font-semibold text-[#111111]">
+              <h2 className="text-base font-semibold text-ink">
                 Planificador de Calendarios Mensuales Personalizados
               </h2>
-              <p className="text-xs text-[#6B7280] mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 Cami idea los ángulos del contenido y Facu lo agenda y programa en las plataformas correspondientes.
               </p>
             </div>
           </div>
           {isDemo && (
-            <span className="bg-[#F3F5FB] text-[#101010] text-[11px] px-3 py-1.5 rounded-lg border border-[#E3E5EA] font-mono flex items-center gap-1.5 shrink-0 self-start md:self-center">
+            <span className="bg-sink text-black text-[11px] px-3 py-1.5 rounded-lg font-mono flex items-center gap-1.5 shrink-0 self-start md:self-center">
               <Sparkles className="w-3.5 h-3.5 animate-spin" />
               Modo Demostración Activo (Sin Llave)
             </span>
@@ -165,22 +165,22 @@ export const CalendarManager: React.FC = () => {
         {/* Input variables */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="space-y-1.5 col-span-1">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider">Nicho o Modelo de Negocio</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider">Nicho o Modelo de Negocio</label>
             <input
               type="text"
               value={niche}
               onChange={(e) => setNiche(e.target.value)}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#111111] focus:outline-none"
+              className="w-full bg-sink rounded-input p-3 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
               placeholder="Ej: Fitness Coaching, SaaS, Agencia..."
             />
           </div>
           <div className="space-y-1.5 col-span-2">
-            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider">Temas Principales a Tratar en el Contenido</label>
+            <label className="text-[10px] font-semibold text-faint uppercase tracking-wider">Temas Principales a Tratar en el Contenido</label>
             <input
               type="text"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#111111] focus:outline-none"
+              className="w-full bg-sink rounded-input p-3 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
               placeholder="Ej: Estrategia de embudos de ventas, hacks de productividad..."
             />
           </div>
@@ -190,7 +190,7 @@ export const CalendarManager: React.FC = () => {
           <button
             onClick={generateCalendar}
             disabled={loading}
-            className="bg-[#101010] hover:bg-[#232323] active:bg-[#232323] disabled:opacity-50 text-white font-bold px-6 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider"
+            className="bg-black hover:bg-sidebar active:bg-sidebar disabled:opacity-50 text-white font-bold px-6 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider"
             id="btn-generate-calendar"
           >
             {loading ? (
@@ -208,9 +208,9 @@ export const CalendarManager: React.FC = () => {
           <button
             onClick={saveCalendarPlan}
             disabled={calendar.length === 0 || savingPlan}
-            className="bg-[#F3F5FB] border border-[#E3E5EA] hover:border-[#101010]/50 text-[#6B7280] hover:text-[#111111] font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider disabled:opacity-50"
+            className="bg-sink hover:border-black/50 text-muted hover:text-ink font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider disabled:opacity-50"
           >
-            {savingPlan ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-[#101010]" />}
+            {savingPlan ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-black" />}
             <span>Guardar plan</span>
           </button>
         </div>
@@ -221,13 +221,13 @@ export const CalendarManager: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* LEFT: 30 Day calendar grid (takes 7 cols) */}
-          <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#ECECEC] pb-3">
-              <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">
+          <div className="lg:col-span-7 bg-surface border border-line rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider">
                 Calendario de Contenido: Vista Mensual
               </h3>
               <div className="flex gap-2">
-                <span className="flex items-center gap-1.5 text-[10px] text-[#101010] bg-[#101010]/10 px-2 py-0.5 rounded font-mono font-semibold">
+                <span className="flex items-center gap-1.5 text-[10px] text-black bg-black/10 px-2 py-0.5 rounded font-mono font-semibold">
                   <span>●</span> 30 Días
                 </span>
               </div>
@@ -239,7 +239,7 @@ export const CalendarManager: React.FC = () => {
                 const isActive = activeItem?.day === item.day;
                 
                 // Color mapping based on platform
-                let platColor = "bg-[#F3F5FB] border-[#ECECEC] text-[#6B7280] hover:border-[#E3E5EA]";
+                let platColor = "bg-sink border-line text-muted hover:border-line";
                 if (item.platform.includes("Carousel")) {
                   platColor = "bg-rose-950/20 border-rose-500/20 text-rose-300 hover:border-rose-500/40";
                 } else if (item.platform.includes("Ads")) {
@@ -255,7 +255,7 @@ export const CalendarManager: React.FC = () => {
                     key={item.day}
                     onClick={() => setActiveItem(item)}
                     className={`p-2 rounded-lg border text-left flex flex-col justify-between h-20 transition relative group ${
-                      isActive ? "ring-2 ring-[#101010] border-transparent bg-[#F3F5FB]" : platColor
+                      isActive ? "ring-2 ring-[#101010] border-transparent bg-sink" : platColor
                     }`}
                     id={`btn-calendar-day-${item.day}`}
                   >
@@ -276,7 +276,7 @@ export const CalendarManager: React.FC = () => {
             </div>
 
             {/* Helper legend */}
-            <div className="flex items-center gap-4 text-[10px] font-mono text-[#9CA3AF] border-t border-[#ECECEC] pt-3 flex-wrap">
+            <div className="flex items-center gap-4 text-[10px] font-mono text-faint border-t border-line pt-3 flex-wrap">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Publicado</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-400" /> Programado / Cola</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-600" /> Borrador</span>
@@ -286,16 +286,16 @@ export const CalendarManager: React.FC = () => {
           {/* RIGHT: Detailed Day inspector / Edit panel (takes 5 cols) */}
           <div className="lg:col-span-5">
             {activeItem ? (
-              <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6 shadow-lg space-y-5">
+              <div className="bg-surface border border-line rounded-2xl p-6 shadow-lg space-y-5">
                 
                 {/* Header title */}
-                <div className="flex items-start justify-between gap-4 border-b border-[#ECECEC] pb-4">
+                <div className="flex items-start justify-between gap-4 border-b border-line pb-4">
                   <div>
-                    <span className="text-xs font-semibold text-[#101010] font-mono">INSPECCIÓN: DÍA {activeItem.day}</span>
-                    <h3 className="text-sm font-semibold text-[#111111] mt-1">{activeItem.title}</h3>
+                    <span className="text-xs font-semibold text-black font-mono">INSPECCIÓN: DÍA {activeItem.day}</span>
+                    <h3 className="text-sm font-semibold text-ink mt-1">{activeItem.title}</h3>
                   </div>
                   <span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
-                    editingStatus === "Publicado" ? "bg-emerald-500/15 text-emerald-400" : editingStatus === "Programado" ? "bg-blue-500/15 text-blue-400" : "bg-[#F3F5FB] text-slate-500"
+                    editingStatus === "Publicado" ? "bg-emerald-500/15 text-emerald-400" : editingStatus === "Programado" ? "bg-blue-500/15 text-blue-400" : "bg-sink text-slate-500"
                   }`}>
                     {editingStatus}
                   </span>
@@ -304,22 +304,22 @@ export const CalendarManager: React.FC = () => {
                 {/* Edit Form */}
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Título de la publicación</label>
+                    <label className="text-[10px] font-semibold text-faint font-mono uppercase">Título de la publicación</label>
                     <input
                       type="text"
                       value={editingTitle}
                       onChange={(e) => setEditingTitle(e.target.value)}
-                      className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded p-2 text-xs text-[#111111] focus:outline-none"
+                      className="w-full bg-sink rounded-input p-2 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Plataforma</label>
+                      <label className="text-[10px] font-semibold text-faint font-mono uppercase">Plataforma</label>
                       <select
                         value={editingPlatform}
                         onChange={(e) => setEditingPlatform(e.target.value)}
-                        className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded p-2 text-xs text-[#111111] focus:outline-none"
+                        className="w-full bg-sink rounded-input p-2 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
                       >
                         <option value="Instagram Carousel">Instagram Carousel</option>
                         <option value="Meta Ads Banner">Meta Ads Banner</option>
@@ -330,21 +330,21 @@ export const CalendarManager: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Hora Programada</label>
-                      <div className="flex items-center gap-1.5 bg-[#F3F5FB] border border-[#E3E5EA] rounded px-2.5 py-1 text-xs text-[#6B7280]">
-                        <Clock className="w-3.5 h-3.5 text-[#9CA3AF]" />
+                      <label className="text-[10px] font-semibold text-faint font-mono uppercase">Hora Programada</label>
+                      <div className="flex items-center gap-1.5 bg-sink rounded px-2.5 py-1 text-xs text-muted">
+                        <Clock className="w-3.5 h-3.5 text-faint" />
                         <input
                           type="text"
                           value={editingTime}
                           onChange={(e) => setEditingTime(e.target.value)}
-                          className="w-full bg-transparent border-none text-xs focus:outline-none focus:ring-0 text-[#111111] font-mono"
+                          className="w-full bg-transparent border-none text-xs focus:outline-none focus:ring-0 text-ink font-mono"
                         />
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Estado de la Publicación</label>
+                    <label className="text-[10px] font-semibold text-faint font-mono uppercase">Estado de la Publicación</label>
                     <div className="grid grid-cols-3 gap-2">
                       {["Borrador", "Programado", "Publicado"].map((st) => (
                         <button
@@ -352,8 +352,8 @@ export const CalendarManager: React.FC = () => {
                           onClick={() => setEditingStatus(st as any)}
                           className={`py-1.5 px-2 text-xs rounded border transition font-semibold ${
                             editingStatus === st
-                              ? "bg-[#F3F5FB] border-[#101010] text-[#101010]"
-                              : "bg-[#F3F5FB] border-[#E3E5EA] text-[#9CA3AF] hover:text-[#111111]"
+                              ? "bg-sink border-black text-black"
+                              : "bg-sink border-line text-faint hover:text-ink"
                           }`}
                         >
                           {st}
@@ -363,20 +363,20 @@ export const CalendarManager: React.FC = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Guión / Copy Final</label>
+                    <label className="text-[10px] font-semibold text-faint font-mono uppercase">Guión / Copy Final</label>
                     <textarea
                       value={editingCopy}
                       onChange={(e) => setEditingCopy(e.target.value)}
-                      className="w-full h-32 bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded p-2.5 text-xs text-[#111111] focus:outline-none resize-none leading-relaxed"
+                      className="w-full h-32 bg-sink rounded-input p-2.5 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20 resize-none leading-relaxed"
                     />
                   </div>
                 </div>
 
                 {/* Save and sync buttons */}
-                <div className="pt-3 border-t border-[#ECECEC] space-y-2">
+                <div className="pt-3 border-t border-line space-y-2">
                   <button
                     onClick={handleSaveItemEdit}
-                    className="w-full bg-[#F3F5FB] hover:bg-[#E3E5EA] text-[#111111] font-semibold text-xs px-4 py-2.5 rounded border border-[#E3E5EA] flex items-center justify-center gap-2 transition"
+                    className="w-full bg-sink hover:bg-[#eaedf6] text-ink font-semibold text-xs px-4 py-2.5 rounded flex items-center justify-center gap-2 transition"
                     id="btn-calendar-save-edit"
                   >
                     <span>Guardar Cambios Locales</span>
@@ -387,8 +387,8 @@ export const CalendarManager: React.FC = () => {
                     disabled={syncing || synced}
                     className={`w-full font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition border ${
                       synced
-                        ? "bg-[#101010]/10 border-[#101010]/30 text-[#101010]"
-                        : "bg-[#101010] hover:bg-[#232323] text-white border-[#101010]"
+                        ? "bg-black/10 border-black/30 text-black"
+                        : "bg-black hover:bg-sidebar text-white border-black"
                     }`}
                     id="btn-google-calendar-sync"
                   >
@@ -399,7 +399,7 @@ export const CalendarManager: React.FC = () => {
                       </>
                     ) : synced ? (
                       <>
-                        <Check className="w-4 h-4 text-[#101010]" />
+                        <Check className="w-4 h-4 text-black" />
                         <span>Sincronizado con Google Calendar</span>
                       </>
                     ) : (
@@ -412,14 +412,14 @@ export const CalendarManager: React.FC = () => {
 
                 {/* API Sync Request Code Logs */}
                 {synced && (
-                  <div className="bg-[#F3F5FB] rounded p-2 border border-[#ECECEC] font-mono text-[9px] text-[#6B7280] space-y-0.5">
+                  <div className="bg-sink rounded p-2 border border-line font-mono text-[9px] text-muted space-y-0.5">
                     <div>POST /calendar/v3/calendars/primary/events/quickAdd HTTP/1.1</div>
                     <div className="text-green-400">HTTP/1.1 200 OK {"{"} "id": "gcal_event_38402", "status": "confirmed" {"}"}</div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-12 text-center text-[#6B7280] text-xs">
+              <div className="bg-surface border border-line rounded-2xl p-12 text-center text-muted text-xs">
                 Selecciona un día del calendario a la izquierda para editar o inspeccionar.
               </div>
             )}

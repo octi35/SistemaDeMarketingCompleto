@@ -139,40 +139,40 @@ export const RealTimeAnalytics: React.FC = () => {
 
       {/* Top statistical summaries bar */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-surface border border-line rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[#9CA3AF] font-mono uppercase tracking-wider block">Meta Ads CTR (7d)</span>
-            <span className="text-2xl font-bold text-[#111111] mt-1 block">5.42%</span>
-            <span className="text-[10px] text-[#101010] font-mono mt-0.5 block flex items-center gap-1">
+            <span className="text-[10px] text-faint font-mono uppercase tracking-wider block">Meta Ads CTR (7d)</span>
+            <span className="text-2xl font-bold text-ink mt-1 block">5.42%</span>
+            <span className="text-[10px] text-black font-mono mt-0.5 block flex items-center gap-1">
               ▲ +16.2% vs. mes anterior
             </span>
           </div>
           <div className="text-2xl opacity-35">📊</div>
         </div>
-        <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-surface border border-line rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[#9CA3AF] font-mono uppercase tracking-wider block">Conversiones Totales (30d)</span>
-            <span className="text-2xl font-bold text-[#111111] mt-1 block">$48,250</span>
-            <span className="text-[10px] text-[#101010] font-mono mt-0.5 block flex items-center gap-1">
+            <span className="text-[10px] text-faint font-mono uppercase tracking-wider block">Conversiones Totales (30d)</span>
+            <span className="text-2xl font-bold text-ink mt-1 block">$48,250</span>
+            <span className="text-[10px] text-black font-mono mt-0.5 block flex items-center gap-1">
               ▲ +39.5% conversión
             </span>
           </div>
           <div className="text-2xl opacity-35">💰</div>
         </div>
-        <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-surface border border-line rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[#9CA3AF] font-mono uppercase tracking-wider block">Mensajes directos filtrados</span>
-            <span className="text-2xl font-bold text-[#111111] mt-1 block">1,204</span>
-            <span className="text-[10px] text-[#101010] font-mono mt-0.5 block flex items-center gap-1">
+            <span className="text-[10px] text-faint font-mono uppercase tracking-wider block">Mensajes directos filtrados</span>
+            <span className="text-2xl font-bold text-ink mt-1 block">1,204</span>
+            <span className="text-[10px] text-black font-mono mt-0.5 block flex items-center gap-1">
               ▲ +88.1% automatizados
             </span>
           </div>
           <div className="text-2xl opacity-35">💬</div>
         </div>
-        <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-surface border border-line rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[#9CA3AF] font-mono uppercase tracking-wider block">Hooks en Prueba Activa</span>
-            <span className="text-2xl font-bold text-[#111111] mt-1 block">482</span>
+            <span className="text-[10px] text-faint font-mono uppercase tracking-wider block">Hooks en Prueba Activa</span>
+            <span className="text-2xl font-bold text-ink mt-1 block">482</span>
             <span className="text-[10px] text-amber-400 font-mono mt-0.5 block flex items-center gap-1">
               ⭐ 17 nuevos esta semana
             </span>
@@ -182,15 +182,15 @@ export const RealTimeAnalytics: React.FC = () => {
       </div>
 
       {/* Calculadora Predictiva de ROAS & ROI (Estrategia Santi) */}
-      <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5" id="predictive-roas-calculator">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-[#ECECEC] mb-5">
+      <div className="bg-surface border border-line rounded-2xl p-5" id="predictive-roas-calculator">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-line mb-5">
           <div>
-            <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
               📊 Simulador Financiero: ROAS & Presupuesto Predictivo (Estrategia Santi)
             </h3>
-            <p className="text-xs text-[#9CA3AF] mt-0.5">Calcula el retorno de tu inversión publicitaria estimando el impacto financiero de tus creativos de conversión.</p>
+            <p className="text-xs text-faint mt-0.5">Calcula el retorno de tu inversión publicitaria estimando el impacto financiero de tus creativos de conversión.</p>
           </div>
-          <span className="bg-[#101010]/10 text-[#101010] text-[10px] px-2.5 py-1 rounded-full border border-[#101010]/20 font-mono font-bold uppercase">
+          <span className="bg-black/10 text-black text-[10px] px-2.5 py-1 rounded-full border border-black/20 font-mono font-bold uppercase">
             Planificación de Campañas
           </span>
         </div>
@@ -202,8 +202,8 @@ export const RealTimeAnalytics: React.FC = () => {
               {/* Presupuesto */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#6B7280]">Inversión Publicitaria Mensual:</span>
-                  <span className="text-[#101010] font-mono font-bold">${budget.toLocaleString()} USD</span>
+                  <span className="text-muted">Inversión Publicitaria Mensual:</span>
+                  <span className="text-black font-mono font-bold">${budget.toLocaleString()} USD</span>
                 </div>
                 <input
                   type="range"
@@ -219,8 +219,8 @@ export const RealTimeAnalytics: React.FC = () => {
               {/* CPC Promedio */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#6B7280]">CPC Promedio Estimado:</span>
-                  <span className="text-[#101010] font-mono font-bold">${cpc.toFixed(2)} USD</span>
+                  <span className="text-muted">CPC Promedio Estimado:</span>
+                  <span className="text-black font-mono font-bold">${cpc.toFixed(2)} USD</span>
                 </div>
                 <input
                   type="range"
@@ -236,8 +236,8 @@ export const RealTimeAnalytics: React.FC = () => {
               {/* CTR Promedio */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#6B7280]">CTR de Creativos (Santi):</span>
-                  <span className="text-[#101010] font-mono font-bold">{ctr.toFixed(2)}%</span>
+                  <span className="text-muted">CTR de Creativos (Santi):</span>
+                  <span className="text-black font-mono font-bold">{ctr.toFixed(2)}%</span>
                 </div>
                 <input
                   type="range"
@@ -253,8 +253,8 @@ export const RealTimeAnalytics: React.FC = () => {
               {/* Tasa de conversión de la landing */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#6B7280]">Tasa de Conversión Web:</span>
-                  <span className="text-[#101010] font-mono font-bold">{convRate.toFixed(2)}%</span>
+                  <span className="text-muted">Tasa de Conversión Web:</span>
+                  <span className="text-black font-mono font-bold">{convRate.toFixed(2)}%</span>
                 </div>
                 <input
                   type="range"
@@ -271,8 +271,8 @@ export const RealTimeAnalytics: React.FC = () => {
             {/* Valor Promedio de Venta (AOV) */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="text-[#6B7280]">Valor Promedio del Ticket (AOV):</span>
-                <span className="text-[#101010] font-mono font-bold">${aov.toLocaleString()} USD</span>
+                <span className="text-muted">Valor Promedio del Ticket (AOV):</span>
+                <span className="text-black font-mono font-bold">${aov.toLocaleString()} USD</span>
               </div>
               <input
                 type="range"
@@ -287,38 +287,38 @@ export const RealTimeAnalytics: React.FC = () => {
           </div>
 
           {/* Results breakdown panel */}
-          <div className="lg:col-span-5 bg-[#F3F5FB] border border-[#ECECEC] rounded-xl p-4 flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-5 bg-sink border border-line rounded-xl p-4 flex flex-col justify-between space-y-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs pb-2 border-b border-[#ECECEC]">
-                <span className="text-[#6B7280]">Tráfico Estimado (Clics):</span>
-                <span className="font-mono text-[#111111] font-bold">{Math.floor(estimatedClicks).toLocaleString()}</span>
+              <div className="flex justify-between items-center text-xs pb-2 border-b border-line">
+                <span className="text-muted">Tráfico Estimado (Clics):</span>
+                <span className="font-mono text-ink font-bold">{Math.floor(estimatedClicks).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center text-xs pb-2 border-b border-[#ECECEC]">
-                <span className="text-[#6B7280]">Ventas Totales:</span>
-                <span className="font-mono text-[#111111] font-bold">{Math.floor(estimatedSales).toLocaleString()}</span>
+              <div className="flex justify-between items-center text-xs pb-2 border-b border-line">
+                <span className="text-muted">Ventas Totales:</span>
+                <span className="font-mono text-ink font-bold">{Math.floor(estimatedSales).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center text-xs pb-2 border-b border-[#ECECEC]">
-                <span className="text-[#6B7280]">Costo Adquisición (CAC):</span>
-                <span className="font-mono text-[#111111] font-bold">${cac.toFixed(2)} USD</span>
+              <div className="flex justify-between items-center text-xs pb-2 border-b border-line">
+                <span className="text-muted">Costo Adquisición (CAC):</span>
+                <span className="font-mono text-ink font-bold">${cac.toFixed(2)} USD</span>
               </div>
               <div className="flex justify-between items-center text-xs pt-1">
-                <span className="text-[#6B7280]">Facturación Estimada:</span>
-                <span className="font-mono text-[#101010] font-bold text-lg">${Math.floor(revenue).toLocaleString()} USD</span>
+                <span className="text-muted">Facturación Estimada:</span>
+                <span className="font-mono text-black font-bold text-lg">${Math.floor(revenue).toLocaleString()} USD</span>
               </div>
             </div>
 
             {/* ROAS Speedometer/Metrics Display */}
-            <div className="bg-[#FFFFFF] p-3 rounded-lg border border-[#ECECEC] space-y-2">
+            <div className="bg-surface p-3 rounded-lg border border-line space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] text-[#9CA3AF] uppercase font-mono tracking-wider">RETORNO ESTIMADO (ROAS):</span>
+                <span className="text-[10px] text-faint uppercase font-mono tracking-wider">RETORNO ESTIMADO (ROAS):</span>
                 <span className={`text-sm font-mono font-bold px-2 py-0.5 rounded ${
-                  roas >= 3.0 ? "bg-[#101010]/10 text-[#101010]" : roas >= 1.5 ? "bg-amber-400/10 text-amber-400" : "bg-rose-500/10 text-rose-400"
+                  roas >= 3.0 ? "bg-black/10 text-black" : roas >= 1.5 ? "bg-amber-400/10 text-amber-400" : "bg-rose-500/10 text-rose-400"
                 }`}>
                   {roas.toFixed(2)}x
                 </span>
               </div>
-              <div className="text-[11px] leading-relaxed text-[#6B7280]">
-                <strong className="text-[#111111]">Consejo de Santi:</strong> {roasAdvice}
+              <div className="text-[11px] leading-relaxed text-muted">
+                <strong className="text-ink">Consejo de Santi:</strong> {roasAdvice}
               </div>
             </div>
           </div>
@@ -329,13 +329,13 @@ export const RealTimeAnalytics: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Chart 1: Daily CTR progression (takes 8 cols) */}
-        <div className="lg:col-span-8 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-3 border-b border-[#ECECEC] mb-4">
+        <div className="lg:col-span-8 bg-surface border border-line rounded-2xl p-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-3 border-b border-line mb-4">
             <div>
-              <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-[#101010]" /> Rendimiento de Clics por Plataforma (CTR %)
+              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-black" /> Rendimiento de Clics por Plataforma (CTR %)
               </h3>
-              <p className="text-xs text-[#9CA3AF] mt-0.5">Analítica diaria recopilada por Mateo del píxel de conversión.</p>
+              <p className="text-xs text-faint mt-0.5">Analítica diaria recopilada por Mateo del píxel de conversión.</p>
             </div>
             
             {/* Download/Email summary buttons */}
@@ -344,12 +344,12 @@ export const RealTimeAnalytics: React.FC = () => {
               disabled={sendingEmail || emailSent}
               className={`text-[11px] px-3 py-1.5 rounded-full border font-semibold flex items-center gap-1.5 transition ${
                 emailSent
-                  ? "bg-[#101010]/10 border-[#101010]/30 text-[#101010]"
-                  : "bg-[#F3F5FB] hover:bg-[#E3E5EA] border-[#E3E5EA] text-[#111111]"
+                  ? "bg-black/10 border-black/30 text-black"
+                  : "bg-sink hover:bg-[#eaedf6] border-line text-ink"
               }`}
               id="btn-analytics-email-report"
             >
-              <Mail className="w-3.5 h-3.5 text-[#101010]" />
+              <Mail className="w-3.5 h-3.5 text-black" />
               {sendingEmail ? "Enviando Reporte..." : emailSent ? "Reporte Enviado" : "Enviar Reporte al Email"}
             </button>
           </div>
@@ -385,11 +385,11 @@ export const RealTimeAnalytics: React.FC = () => {
         </div>
 
         {/* Chart 2: Conversions Funnel (takes 4 cols) */}
-        <div className="lg:col-span-4 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5">
-          <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pb-3 border-b border-[#ECECEC] mb-4">
+        <div className="lg:col-span-4 bg-surface border border-line rounded-2xl p-5">
+          <h3 className="text-xs font-semibold text-muted uppercase tracking-wider pb-3 border-b border-line mb-4">
             Embudo de Tráfico y Conversiones (Mateo & Facu)
           </h3>
-          <p className="text-xs text-[#9CA3AF] -mt-2 mb-4 leading-relaxed">Pérdida de fricción en campañas integradas.</p>
+          <p className="text-xs text-faint -mt-2 mb-4 leading-relaxed">Pérdida de fricción en campañas integradas.</p>
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -407,7 +407,7 @@ export const RealTimeAnalytics: React.FC = () => {
             </ResponsiveContainer>
           </div>
 
-          <div className="bg-[#F3F5FB] p-2.5 rounded-lg border border-[#ECECEC] mt-4 text-[10px] text-[#6B7280] font-mono leading-relaxed">
+          <div className="bg-sink p-2.5 rounded-lg border border-line mt-4 text-[10px] text-muted font-mono leading-relaxed">
             🚀 <strong>Tasa de Conversión global:</strong> 7.38% desde clic a venta, un 2% arriba tras la optimización de copys de Santi.
           </div>
         </div>
@@ -417,19 +417,19 @@ export const RealTimeAnalytics: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Mateo's vault (takes 7 cols) */}
-        <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-3 border-b border-[#ECECEC]">
+        <div className="lg:col-span-7 bg-surface border border-line rounded-2xl p-5 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-3 border-b border-line">
             <div>
-              <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
                 🔒 Hook Vault: Reporte de Desempeño Diario
               </h3>
-              <p className="text-xs text-[#9CA3AF] mt-0.5">La directiva literal de Mateo: Repetir el contenido ganador, matar el perdedor.</p>
+              <p className="text-xs text-faint mt-0.5">La directiva literal de Mateo: Repetir el contenido ganador, matar el perdedor.</p>
             </div>
 
             <select
               value={platformFilter}
               onChange={(e) => setPlatformFilter(e.target.value)}
-              className="bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded text-xs px-2.5 py-1.5 text-[#6B7280] focus:outline-none"
+              className="bg-sink rounded-input text-xs px-2.5 py-1.5 text-muted outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
             >
               <option value="all">Todas las plataformas</option>
               <option value="meta">Meta Ads</option>
@@ -443,18 +443,18 @@ export const RealTimeAnalytics: React.FC = () => {
             {filteredHooks.map((h) => {
               const isRepeat = h.status === "REPETIR";
               return (
-                <div key={h.id} className="bg-[#F3F5FB] rounded-xl p-3.5 border border-[#ECECEC] flex gap-3 relative overflow-hidden group">
-                  <div className={`w-1 absolute left-0 top-0 h-full ${isRepeat ? "bg-[#101010]" : "bg-rose-500"}`} />
+                <div key={h.id} className="bg-sink rounded-xl p-3.5 border border-line flex gap-3 relative overflow-hidden group">
+                  <div className={`w-1 absolute left-0 top-0 h-full ${isRepeat ? "bg-black" : "bg-rose-500"}`} />
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] text-[#9CA3AF] font-mono uppercase">{h.platform}</span>
+                      <span className="text-[10px] text-faint font-mono uppercase">{h.platform}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold flex items-center gap-1 ${
-                        isRepeat ? "bg-[#101010]/10 text-[#101010]" : "bg-rose-500/10 text-rose-400"
+                        isRepeat ? "bg-black/10 text-black" : "bg-rose-500/10 text-rose-400"
                       }`}>
                         {isRepeat ? (
                           <>
-                            <RotateCcw className="w-3 h-3 text-[#101010]" />
+                            <RotateCcw className="w-3 h-3 text-black" />
                             <span>REPETIR / ESCALAR</span>
                           </>
                         ) : (
@@ -466,19 +466,19 @@ export const RealTimeAnalytics: React.FC = () => {
                       </span>
                     </div>
 
-                    <p className="text-xs font-semibold text-[#111111] mt-2">
+                    <p className="text-xs font-semibold text-ink mt-2">
                       "{h.hook}"
                     </p>
-                    <p className="text-[11px] text-[#6B7280] mt-1.5 leading-relaxed bg-[#F3F5FB] p-2 rounded border border-[#E3E5EA]">
-                      <span className="text-[#101010] font-mono font-bold">Mateo:</span> {h.reason}
+                    <p className="text-[11px] text-muted mt-1.5 leading-relaxed bg-sink p-2 rounded">
+                      <span className="text-black font-mono font-bold">Mateo:</span> {h.reason}
                     </p>
                   </div>
                   
                   {/* CTR display on right */}
-                  <div className="flex flex-col justify-center items-end text-right shrink-0 font-mono border-l border-[#ECECEC] pl-3">
-                    <span className="text-[10px] text-[#9CA3AF] uppercase font-semibold">CTR</span>
-                    <span className={`text-sm font-bold ${isRepeat ? "text-[#101010]" : "text-rose-400"}`}>{h.ctr}%</span>
-                    <span className="text-[10px] text-[#6B7280] mt-0.5">{h.conversions} leads</span>
+                  <div className="flex flex-col justify-center items-end text-right shrink-0 font-mono border-l border-line pl-3">
+                    <span className="text-[10px] text-faint uppercase font-semibold">CTR</span>
+                    <span className={`text-sm font-bold ${isRepeat ? "text-black" : "text-rose-400"}`}>{h.ctr}%</span>
+                    <span className="text-[10px] text-muted mt-0.5">{h.conversions} leads</span>
                   </div>
                 </div>
               );
@@ -487,34 +487,34 @@ export const RealTimeAnalytics: React.FC = () => {
         </div>
 
         {/* Facu's DM Funnels auditor (takes 5 cols) */}
-        <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5 space-y-4">
-          <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pb-3 border-b border-[#ECECEC]">
+        <div className="lg:col-span-5 bg-surface border border-line rounded-2xl p-5 space-y-4">
+          <h3 className="text-xs font-semibold text-muted uppercase tracking-wider pb-3 border-b border-line">
             🤖 Auditoría de Embudos DM (Por Facu)
           </h3>
-          <p className="text-xs text-[#9CA3AF] -mt-2">Automatización de mensajes directos e interacciones directas en Meta/IG.</p>
+          <p className="text-xs text-faint -mt-2">Automatización de mensajes directos e interacciones directas en Meta/IG.</p>
 
           <div className="space-y-3">
             {dmAutomations.map((dm, idx) => (
-              <div key={idx} className="bg-[#F3F5FB] border border-[#ECECEC] rounded-xl p-3.5 space-y-2">
+              <div key={idx} className="bg-sink border border-line rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#101010] font-mono">Disparador #{idx + 1}</span>
-                  <span className="flex items-center gap-1 text-[10px] bg-[#101010]/10 text-[#101010] px-2 py-0.5 rounded font-mono font-semibold">
-                    <ShieldCheck className="w-3 h-3 text-[#101010]" /> Activa
+                  <span className="text-xs font-bold text-black font-mono">Disparador #{idx + 1}</span>
+                  <span className="flex items-center gap-1 text-[10px] bg-black/10 text-black px-2 py-0.5 rounded font-mono font-semibold">
+                    <ShieldCheck className="w-3 h-3 text-black" /> Activa
                   </span>
                 </div>
                 
                 <div className="text-xs">
-                  <span className="text-[#9CA3AF] font-semibold">Trigger:</span> <strong className="text-[#111111]">{dm.trigger}</strong>
+                  <span className="text-faint font-semibold">Trigger:</span> <strong className="text-ink">{dm.trigger}</strong>
                 </div>
 
-                <div className="text-xs leading-relaxed bg-[#F3F5FB] p-2 rounded border border-[#E3E5EA] text-[#6B7280]">
-                  <span className="text-[#9CA3AF] font-semibold font-mono text-[10px] block mb-0.5">Acción Automática:</span>
+                <div className="text-xs leading-relaxed bg-sink p-2 rounded text-muted">
+                  <span className="text-faint font-semibold font-mono text-[10px] block mb-0.5">Acción Automática:</span>
                   {dm.response}
                 </div>
 
-                <div className="flex items-center justify-between pt-1 border-t border-[#ECECEC] text-[11px] font-mono">
-                  <span className="text-[#9CA3AF]">Ejecuciones: <strong className="text-[#6B7280]">{dm.executions}</strong></span>
-                  <span className="text-[#9CA3AF]">Conversión: <strong className="text-[#101010]">{dm.conversion}</strong></span>
+                <div className="flex items-center justify-between pt-1 border-t border-line text-[11px] font-mono">
+                  <span className="text-faint">Ejecuciones: <strong className="text-muted">{dm.executions}</strong></span>
+                  <span className="text-faint">Conversión: <strong className="text-black">{dm.conversion}</strong></span>
                 </div>
               </div>
             ))}
