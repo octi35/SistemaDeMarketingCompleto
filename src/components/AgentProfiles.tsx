@@ -154,7 +154,7 @@ export const PixelAvatar: React.FC<PixelAvatarProps> = ({ agentId, size = "md" }
 
   // Standardized custom pixel-art representation inside styled borders
   return (
-    <div className={`relative flex items-center justify-center rounded-xl overflow-hidden font-mono select-none shrink-0 border border-[#222224] bg-[#1A1A1C] ${sizeClasses[size]}`}>
+    <div className={`relative flex items-center justify-center rounded-xl overflow-hidden font-mono select-none shrink-0 border border-[#ECECEC] bg-[#F3F5FB] ${sizeClasses[size]}`}>
       {/* Background color of agent */}
       <div className={`absolute inset-0 opacity-25 ${agent.avatarColor}`} />
       
@@ -162,7 +162,7 @@ export const PixelAvatar: React.FC<PixelAvatarProps> = ({ agentId, size = "md" }
       <span className="relative z-10 filter drop-shadow">{agent.avatarEmoji}</span>
       
       {/* Bottom badge with initials */}
-      <span className="absolute bottom-0 inset-x-0 text-center bg-[#0A0A0B]/90 text-[9px] text-[#88888E] py-0.5 tracking-wider font-semibold border-t border-[#222224]">
+      <span className="absolute bottom-0 inset-x-0 text-center bg-[#F3F5FB]/90 text-[9px] text-[#6B7280] py-0.5 tracking-wider font-semibold border-t border-[#ECECEC]">
         {agent.avatarText}
       </span>
     </div>
@@ -175,7 +175,7 @@ export const AgentProfilesList: React.FC = () => {
       {AGENTS.map((agent) => (
         <div 
           key={agent.id} 
-          className="bg-[#141416] border border-[#222224] rounded-2xl p-5 hover:border-[#2A2A2C] transition relative overflow-hidden group"
+          className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5 hover:border-[#E3E5EA] transition relative overflow-hidden group"
           id={`agent-card-${agent.id}`}
         >
           {/* Accent light overlay */}
@@ -185,35 +185,35 @@ export const AgentProfilesList: React.FC = () => {
             <PixelAvatar agentId={agent.id} size="md" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="p-1 rounded bg-[#1A1A1C] text-[#E5E5E7] border border-[#222224]">
+                <span className="p-1 rounded bg-[#F3F5FB] text-[#111111] border border-[#ECECEC]">
                   {getAgentIcon(agent.id)}
                 </span>
-                <h3 className="text-sm font-semibold text-white truncate">{agent.name}</h3>
+                <h3 className="text-sm font-semibold text-[#111111] truncate">{agent.name}</h3>
               </div>
-              <p className="text-[10px] font-bold text-[#D1FF26] mt-1.5 uppercase tracking-wider">{agent.role}</p>
+              <p className="text-[10px] font-bold text-[#101010] mt-1.5 uppercase tracking-wider">{agent.role}</p>
             </div>
           </div>
 
-          <p className="text-xs text-[#88888E] mt-4 leading-relaxed">{agent.description}</p>
+          <p className="text-xs text-[#6B7280] mt-4 leading-relaxed">{agent.description}</p>
           
-          <div className="mt-5 border-t border-[#222224] pt-4">
-            <h4 className="text-[10px] font-semibold text-[#66666E] uppercase tracking-wider mb-2">Responsabilidades:</h4>
+          <div className="mt-5 border-t border-[#ECECEC] pt-4">
+            <h4 className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider mb-2">Responsabilidades:</h4>
             <ul className="space-y-1.5">
               {agent.features.map((feature, i) => (
-                <li key={i} className="text-xs text-[#E5E5E7] flex items-start gap-2">
-                  <span className="text-[#D1FF26] shrink-0 mt-0.5">✔</span>
+                <li key={i} className="text-xs text-[#111111] flex items-start gap-2">
+                  <span className="text-[#101010] shrink-0 mt-0.5">✔</span>
                   <span>{feature}</span>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="mt-4 bg-[#0A0A0B] rounded-lg p-2.5 border border-[#222224] flex flex-wrap gap-2 text-[10px] text-[#88888E] font-mono">
-            <span className="text-[#D1FF26]/80 font-semibold">Vibe:</span>
+          <div className="mt-4 bg-[#F3F5FB] rounded-lg p-2.5 border border-[#ECECEC] flex flex-wrap gap-2 text-[10px] text-[#6B7280] font-mono">
+            <span className="text-[#101010]/80 font-semibold">Vibe:</span>
             <span>{agent.visualVibe.hair}</span>
-            <span className="text-[#222224]">•</span>
+            <span className="text-[#ECECEC]">•</span>
             <span>{agent.visualVibe.clothing}</span>
-            <span className="text-[#222224]">•</span>
+            <span className="text-[#ECECEC]">•</span>
             <span>{agent.visualVibe.accessory}</span>
           </div>
         </div>

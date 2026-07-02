@@ -139,40 +139,40 @@ export const RealTimeAnalytics: React.FC = () => {
 
       {/* Top statistical summaries bar */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[#141416] border border-[#222224] rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[#66666E] font-mono uppercase tracking-wider block">Meta Ads CTR (7d)</span>
-            <span className="text-2xl font-bold text-white mt-1 block">5.42%</span>
-            <span className="text-[10px] text-[#D1FF26] font-mono mt-0.5 block flex items-center gap-1">
+            <span className="text-[10px] text-[#9CA3AF] font-mono uppercase tracking-wider block">Meta Ads CTR (7d)</span>
+            <span className="text-2xl font-bold text-[#111111] mt-1 block">5.42%</span>
+            <span className="text-[10px] text-[#101010] font-mono mt-0.5 block flex items-center gap-1">
               ▲ +16.2% vs. mes anterior
             </span>
           </div>
           <div className="text-2xl opacity-35">📊</div>
         </div>
-        <div className="bg-[#141416] border border-[#222224] rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[#66666E] font-mono uppercase tracking-wider block">Conversiones Totales (30d)</span>
-            <span className="text-2xl font-bold text-white mt-1 block">$48,250</span>
-            <span className="text-[10px] text-[#D1FF26] font-mono mt-0.5 block flex items-center gap-1">
+            <span className="text-[10px] text-[#9CA3AF] font-mono uppercase tracking-wider block">Conversiones Totales (30d)</span>
+            <span className="text-2xl font-bold text-[#111111] mt-1 block">$48,250</span>
+            <span className="text-[10px] text-[#101010] font-mono mt-0.5 block flex items-center gap-1">
               ▲ +39.5% conversión
             </span>
           </div>
           <div className="text-2xl opacity-35">💰</div>
         </div>
-        <div className="bg-[#141416] border border-[#222224] rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[#66666E] font-mono uppercase tracking-wider block">Mensajes directos filtrados</span>
-            <span className="text-2xl font-bold text-white mt-1 block">1,204</span>
-            <span className="text-[10px] text-[#D1FF26] font-mono mt-0.5 block flex items-center gap-1">
+            <span className="text-[10px] text-[#9CA3AF] font-mono uppercase tracking-wider block">Mensajes directos filtrados</span>
+            <span className="text-2xl font-bold text-[#111111] mt-1 block">1,204</span>
+            <span className="text-[10px] text-[#101010] font-mono mt-0.5 block flex items-center gap-1">
               ▲ +88.1% automatizados
             </span>
           </div>
           <div className="text-2xl opacity-35">💬</div>
         </div>
-        <div className="bg-[#141416] border border-[#222224] rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-[#66666E] font-mono uppercase tracking-wider block">Hooks en Prueba Activa</span>
-            <span className="text-2xl font-bold text-white mt-1 block">482</span>
+            <span className="text-[10px] text-[#9CA3AF] font-mono uppercase tracking-wider block">Hooks en Prueba Activa</span>
+            <span className="text-2xl font-bold text-[#111111] mt-1 block">482</span>
             <span className="text-[10px] text-amber-400 font-mono mt-0.5 block flex items-center gap-1">
               ⭐ 17 nuevos esta semana
             </span>
@@ -182,15 +182,15 @@ export const RealTimeAnalytics: React.FC = () => {
       </div>
 
       {/* Calculadora Predictiva de ROAS & ROI (Estrategia Santi) */}
-      <div className="bg-[#141416] border border-[#222224] rounded-2xl p-5" id="predictive-roas-calculator">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-[#222224] mb-5">
+      <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5" id="predictive-roas-calculator">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-[#ECECEC] mb-5">
           <div>
-            <h3 className="text-xs font-semibold text-[#88888E] uppercase tracking-wider flex items-center gap-2">
+            <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider flex items-center gap-2">
               📊 Simulador Financiero: ROAS & Presupuesto Predictivo (Estrategia Santi)
             </h3>
-            <p className="text-xs text-[#66666E] mt-0.5">Calcula el retorno de tu inversión publicitaria estimando el impacto financiero de tus creativos de conversión.</p>
+            <p className="text-xs text-[#9CA3AF] mt-0.5">Calcula el retorno de tu inversión publicitaria estimando el impacto financiero de tus creativos de conversión.</p>
           </div>
-          <span className="bg-[#D1FF26]/10 text-[#D1FF26] text-[10px] px-2.5 py-1 rounded-full border border-[#D1FF26]/20 font-mono font-bold uppercase">
+          <span className="bg-[#101010]/10 text-[#101010] text-[10px] px-2.5 py-1 rounded-full border border-[#101010]/20 font-mono font-bold uppercase">
             Planificación de Campañas
           </span>
         </div>
@@ -202,8 +202,8 @@ export const RealTimeAnalytics: React.FC = () => {
               {/* Presupuesto */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#88888E]">Inversión Publicitaria Mensual:</span>
-                  <span className="text-[#D1FF26] font-mono font-bold">${budget.toLocaleString()} USD</span>
+                  <span className="text-[#6B7280]">Inversión Publicitaria Mensual:</span>
+                  <span className="text-[#101010] font-mono font-bold">${budget.toLocaleString()} USD</span>
                 </div>
                 <input
                   type="range"
@@ -212,15 +212,15 @@ export const RealTimeAnalytics: React.FC = () => {
                   step="100"
                   value={budget}
                   onChange={(e) => setBudget(Number(e.target.value))}
-                  className="w-full accent-[#D1FF26]"
+                  className="w-full accent-[#101010]"
                 />
               </div>
 
               {/* CPC Promedio */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#88888E]">CPC Promedio Estimado:</span>
-                  <span className="text-[#D1FF26] font-mono font-bold">${cpc.toFixed(2)} USD</span>
+                  <span className="text-[#6B7280]">CPC Promedio Estimado:</span>
+                  <span className="text-[#101010] font-mono font-bold">${cpc.toFixed(2)} USD</span>
                 </div>
                 <input
                   type="range"
@@ -229,15 +229,15 @@ export const RealTimeAnalytics: React.FC = () => {
                   step="0.05"
                   value={cpc}
                   onChange={(e) => setCpc(Number(e.target.value))}
-                  className="w-full accent-[#D1FF26]"
+                  className="w-full accent-[#101010]"
                 />
               </div>
 
               {/* CTR Promedio */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#88888E]">CTR de Creativos (Santi):</span>
-                  <span className="text-[#D1FF26] font-mono font-bold">{ctr.toFixed(2)}%</span>
+                  <span className="text-[#6B7280]">CTR de Creativos (Santi):</span>
+                  <span className="text-[#101010] font-mono font-bold">{ctr.toFixed(2)}%</span>
                 </div>
                 <input
                   type="range"
@@ -246,15 +246,15 @@ export const RealTimeAnalytics: React.FC = () => {
                   step="0.1"
                   value={ctr}
                   onChange={(e) => setCtr(Number(e.target.value))}
-                  className="w-full accent-[#D1FF26]"
+                  className="w-full accent-[#101010]"
                 />
               </div>
 
               {/* Tasa de conversión de la landing */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
-                  <span className="text-[#88888E]">Tasa de Conversión Web:</span>
-                  <span className="text-[#D1FF26] font-mono font-bold">{convRate.toFixed(2)}%</span>
+                  <span className="text-[#6B7280]">Tasa de Conversión Web:</span>
+                  <span className="text-[#101010] font-mono font-bold">{convRate.toFixed(2)}%</span>
                 </div>
                 <input
                   type="range"
@@ -263,7 +263,7 @@ export const RealTimeAnalytics: React.FC = () => {
                   step="0.1"
                   value={convRate}
                   onChange={(e) => setConvRate(Number(e.target.value))}
-                  className="w-full accent-[#D1FF26]"
+                  className="w-full accent-[#101010]"
                 />
               </div>
             </div>
@@ -271,8 +271,8 @@ export const RealTimeAnalytics: React.FC = () => {
             {/* Valor Promedio de Venta (AOV) */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="text-[#88888E]">Valor Promedio del Ticket (AOV):</span>
-                <span className="text-[#D1FF26] font-mono font-bold">${aov.toLocaleString()} USD</span>
+                <span className="text-[#6B7280]">Valor Promedio del Ticket (AOV):</span>
+                <span className="text-[#101010] font-mono font-bold">${aov.toLocaleString()} USD</span>
               </div>
               <input
                 type="range"
@@ -281,44 +281,44 @@ export const RealTimeAnalytics: React.FC = () => {
                 step="5"
                 value={aov}
                 onChange={(e) => setAov(Number(e.target.value))}
-                className="w-full accent-[#D1FF26]"
+                className="w-full accent-[#101010]"
               />
             </div>
           </div>
 
           {/* Results breakdown panel */}
-          <div className="lg:col-span-5 bg-[#0A0A0B] border border-[#222224] rounded-xl p-4 flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-5 bg-[#F3F5FB] border border-[#ECECEC] rounded-xl p-4 flex flex-col justify-between space-y-4">
             <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs pb-2 border-b border-[#222224]">
-                <span className="text-[#88888E]">Tráfico Estimado (Clics):</span>
-                <span className="font-mono text-white font-bold">{Math.floor(estimatedClicks).toLocaleString()}</span>
+              <div className="flex justify-between items-center text-xs pb-2 border-b border-[#ECECEC]">
+                <span className="text-[#6B7280]">Tráfico Estimado (Clics):</span>
+                <span className="font-mono text-[#111111] font-bold">{Math.floor(estimatedClicks).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center text-xs pb-2 border-b border-[#222224]">
-                <span className="text-[#88888E]">Ventas Totales:</span>
-                <span className="font-mono text-white font-bold">{Math.floor(estimatedSales).toLocaleString()}</span>
+              <div className="flex justify-between items-center text-xs pb-2 border-b border-[#ECECEC]">
+                <span className="text-[#6B7280]">Ventas Totales:</span>
+                <span className="font-mono text-[#111111] font-bold">{Math.floor(estimatedSales).toLocaleString()}</span>
               </div>
-              <div className="flex justify-between items-center text-xs pb-2 border-b border-[#222224]">
-                <span className="text-[#88888E]">Costo Adquisición (CAC):</span>
-                <span className="font-mono text-white font-bold">${cac.toFixed(2)} USD</span>
+              <div className="flex justify-between items-center text-xs pb-2 border-b border-[#ECECEC]">
+                <span className="text-[#6B7280]">Costo Adquisición (CAC):</span>
+                <span className="font-mono text-[#111111] font-bold">${cac.toFixed(2)} USD</span>
               </div>
               <div className="flex justify-between items-center text-xs pt-1">
-                <span className="text-[#88888E]">Facturación Estimada:</span>
-                <span className="font-mono text-[#D1FF26] font-bold text-lg">${Math.floor(revenue).toLocaleString()} USD</span>
+                <span className="text-[#6B7280]">Facturación Estimada:</span>
+                <span className="font-mono text-[#101010] font-bold text-lg">${Math.floor(revenue).toLocaleString()} USD</span>
               </div>
             </div>
 
             {/* ROAS Speedometer/Metrics Display */}
-            <div className="bg-[#141416] p-3 rounded-lg border border-[#222224] space-y-2">
+            <div className="bg-[#FFFFFF] p-3 rounded-lg border border-[#ECECEC] space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] text-[#66666E] uppercase font-mono tracking-wider">RETORNO ESTIMADO (ROAS):</span>
+                <span className="text-[10px] text-[#9CA3AF] uppercase font-mono tracking-wider">RETORNO ESTIMADO (ROAS):</span>
                 <span className={`text-sm font-mono font-bold px-2 py-0.5 rounded ${
-                  roas >= 3.0 ? "bg-[#D1FF26]/10 text-[#D1FF26]" : roas >= 1.5 ? "bg-amber-400/10 text-amber-400" : "bg-rose-500/10 text-rose-400"
+                  roas >= 3.0 ? "bg-[#101010]/10 text-[#101010]" : roas >= 1.5 ? "bg-amber-400/10 text-amber-400" : "bg-rose-500/10 text-rose-400"
                 }`}>
                   {roas.toFixed(2)}x
                 </span>
               </div>
-              <div className="text-[11px] leading-relaxed text-[#88888E]">
-                <strong className="text-white">Consejo de Santi:</strong> {roasAdvice}
+              <div className="text-[11px] leading-relaxed text-[#6B7280]">
+                <strong className="text-[#111111]">Consejo de Santi:</strong> {roasAdvice}
               </div>
             </div>
           </div>
@@ -329,13 +329,13 @@ export const RealTimeAnalytics: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Chart 1: Daily CTR progression (takes 8 cols) */}
-        <div className="lg:col-span-8 bg-[#141416] border border-[#222224] rounded-2xl p-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-3 border-b border-[#222224] mb-4">
+        <div className="lg:col-span-8 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-3 border-b border-[#ECECEC] mb-4">
             <div>
-              <h3 className="text-xs font-semibold text-[#88888E] uppercase tracking-wider flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-[#D1FF26]" /> Rendimiento de Clics por Plataforma (CTR %)
+              <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-[#101010]" /> Rendimiento de Clics por Plataforma (CTR %)
               </h3>
-              <p className="text-xs text-[#66666E] mt-0.5">Analítica diaria recopilada por Mateo del píxel de conversión.</p>
+              <p className="text-xs text-[#9CA3AF] mt-0.5">Analítica diaria recopilada por Mateo del píxel de conversión.</p>
             </div>
             
             {/* Download/Email summary buttons */}
@@ -344,12 +344,12 @@ export const RealTimeAnalytics: React.FC = () => {
               disabled={sendingEmail || emailSent}
               className={`text-[11px] px-3 py-1.5 rounded-full border font-semibold flex items-center gap-1.5 transition ${
                 emailSent
-                  ? "bg-[#D1FF26]/10 border-[#D1FF26]/30 text-[#D1FF26]"
-                  : "bg-[#1A1A1C] hover:bg-[#2A2A2C] border-[#2A2A2C] text-white"
+                  ? "bg-[#101010]/10 border-[#101010]/30 text-[#101010]"
+                  : "bg-[#F3F5FB] hover:bg-[#E3E5EA] border-[#E3E5EA] text-[#111111]"
               }`}
               id="btn-analytics-email-report"
             >
-              <Mail className="w-3.5 h-3.5 text-[#D1FF26]" />
+              <Mail className="w-3.5 h-3.5 text-[#101010]" />
               {sendingEmail ? "Enviando Reporte..." : emailSent ? "Reporte Enviado" : "Enviar Reporte al Email"}
             </button>
           </div>
@@ -367,47 +367,47 @@ export const RealTimeAnalytics: React.FC = () => {
                     <stop offset="95%" stopColor="#ec4899" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorLI" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#D1FF26" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#D1FF26" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#101010" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#101010" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222224" />
-                <XAxis dataKey="name" stroke="#66666E" style={{ fontSize: 10, fontFamily: "monospace" }} />
-                <YAxis stroke="#66666E" style={{ fontSize: 10, fontFamily: "monospace" }} />
-                <Tooltip contentStyle={{ backgroundColor: "#0A0A0B", borderColor: "#222224", borderRadius: 8, color: "#E5E5E7" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#ECECEC" />
+                <XAxis dataKey="name" stroke="#9CA3AF" style={{ fontSize: 10, fontFamily: "monospace" }} />
+                <YAxis stroke="#9CA3AF" style={{ fontSize: 10, fontFamily: "monospace" }} />
+                <Tooltip contentStyle={{ backgroundColor: "#F3F5FB", borderColor: "#ECECEC", borderRadius: 8, color: "#111111" }} />
                 <Legend style={{ fontSize: 11, fontFamily: "monospace" }} />
                 <Area type="monotone" dataKey="MetaAds" stroke="#3b82f6" fillOpacity={1} fill="url(#colorMeta)" strokeWidth={2} />
                 <Area type="monotone" dataKey="IG" stroke="#ec4899" fillOpacity={1} fill="url(#colorIG)" strokeWidth={2} />
-                <Area type="monotone" dataKey="LinkedIn" stroke="#D1FF26" fillOpacity={1} fill="url(#colorLI)" strokeWidth={2} />
+                <Area type="monotone" dataKey="LinkedIn" stroke="#101010" fillOpacity={1} fill="url(#colorLI)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 2: Conversions Funnel (takes 4 cols) */}
-        <div className="lg:col-span-4 bg-[#141416] border border-[#222224] rounded-2xl p-5">
-          <h3 className="text-xs font-semibold text-[#88888E] uppercase tracking-wider pb-3 border-b border-[#222224] mb-4">
+        <div className="lg:col-span-4 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5">
+          <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pb-3 border-b border-[#ECECEC] mb-4">
             Embudo de Tráfico y Conversiones (Mateo & Facu)
           </h3>
-          <p className="text-xs text-[#66666E] -mt-2 mb-4 leading-relaxed">Pérdida de fricción en campañas integradas.</p>
+          <p className="text-xs text-[#9CA3AF] -mt-2 mb-4 leading-relaxed">Pérdida de fricción en campañas integradas.</p>
 
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={funnelData} layout="vertical" margin={{ left: -10, right: 10, top: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222224" />
-                <XAxis type="number" stroke="#66666E" hide />
-                <YAxis dataKey="stage" type="category" stroke="#66666E" style={{ fontSize: 10, fontWeight: "500" }} />
-                <Tooltip contentStyle={{ backgroundColor: "#0A0A0B", borderColor: "#222224", color: "#E5E5E7" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#ECECEC" />
+                <XAxis type="number" stroke="#9CA3AF" hide />
+                <YAxis dataKey="stage" type="category" stroke="#9CA3AF" style={{ fontSize: 10, fontWeight: "500" }} />
+                <Tooltip contentStyle={{ backgroundColor: "#F3F5FB", borderColor: "#ECECEC", color: "#111111" }} />
                 <Bar dataKey="value" radius={[0, 6, 6, 0]}>
                   {funnelData.map((entry, index) => (
-                    <rect key={index} fill={index === 3 ? "#D1FF26" : entry.fill} />
+                    <rect key={index} fill={index === 3 ? "#101010" : entry.fill} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="bg-[#0A0A0B] p-2.5 rounded-lg border border-[#222224] mt-4 text-[10px] text-[#88888E] font-mono leading-relaxed">
+          <div className="bg-[#F3F5FB] p-2.5 rounded-lg border border-[#ECECEC] mt-4 text-[10px] text-[#6B7280] font-mono leading-relaxed">
             🚀 <strong>Tasa de Conversión global:</strong> 7.38% desde clic a venta, un 2% arriba tras la optimización de copys de Santi.
           </div>
         </div>
@@ -417,19 +417,19 @@ export const RealTimeAnalytics: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Mateo's vault (takes 7 cols) */}
-        <div className="lg:col-span-7 bg-[#141416] border border-[#222224] rounded-2xl p-5 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-3 border-b border-[#222224]">
+        <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-3 border-b border-[#ECECEC]">
             <div>
-              <h3 className="text-xs font-semibold text-[#88888E] uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider flex items-center gap-2">
                 🔒 Hook Vault: Reporte de Desempeño Diario
               </h3>
-              <p className="text-xs text-[#66666E] mt-0.5">La directiva literal de Mateo: Repetir el contenido ganador, matar el perdedor.</p>
+              <p className="text-xs text-[#9CA3AF] mt-0.5">La directiva literal de Mateo: Repetir el contenido ganador, matar el perdedor.</p>
             </div>
 
             <select
               value={platformFilter}
               onChange={(e) => setPlatformFilter(e.target.value)}
-              className="bg-[#1A1A1C] border border-[#2A2A2C] focus:border-[#D1FF26] rounded text-xs px-2.5 py-1.5 text-[#88888E] focus:outline-none"
+              className="bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded text-xs px-2.5 py-1.5 text-[#6B7280] focus:outline-none"
             >
               <option value="all">Todas las plataformas</option>
               <option value="meta">Meta Ads</option>
@@ -443,18 +443,18 @@ export const RealTimeAnalytics: React.FC = () => {
             {filteredHooks.map((h) => {
               const isRepeat = h.status === "REPETIR";
               return (
-                <div key={h.id} className="bg-[#0A0A0B] rounded-xl p-3.5 border border-[#222224] flex gap-3 relative overflow-hidden group">
-                  <div className={`w-1 absolute left-0 top-0 h-full ${isRepeat ? "bg-[#D1FF26]" : "bg-rose-500"}`} />
+                <div key={h.id} className="bg-[#F3F5FB] rounded-xl p-3.5 border border-[#ECECEC] flex gap-3 relative overflow-hidden group">
+                  <div className={`w-1 absolute left-0 top-0 h-full ${isRepeat ? "bg-[#101010]" : "bg-rose-500"}`} />
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] text-[#66666E] font-mono uppercase">{h.platform}</span>
+                      <span className="text-[10px] text-[#9CA3AF] font-mono uppercase">{h.platform}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold flex items-center gap-1 ${
-                        isRepeat ? "bg-[#D1FF26]/10 text-[#D1FF26]" : "bg-rose-500/10 text-rose-400"
+                        isRepeat ? "bg-[#101010]/10 text-[#101010]" : "bg-rose-500/10 text-rose-400"
                       }`}>
                         {isRepeat ? (
                           <>
-                            <RotateCcw className="w-3 h-3 text-[#D1FF26]" />
+                            <RotateCcw className="w-3 h-3 text-[#101010]" />
                             <span>REPETIR / ESCALAR</span>
                           </>
                         ) : (
@@ -466,19 +466,19 @@ export const RealTimeAnalytics: React.FC = () => {
                       </span>
                     </div>
 
-                    <p className="text-xs font-semibold text-white mt-2">
+                    <p className="text-xs font-semibold text-[#111111] mt-2">
                       "{h.hook}"
                     </p>
-                    <p className="text-[11px] text-[#88888E] mt-1.5 leading-relaxed bg-[#1A1A1C] p-2 rounded border border-[#2A2A2C]">
-                      <span className="text-[#D1FF26] font-mono font-bold">Mateo:</span> {h.reason}
+                    <p className="text-[11px] text-[#6B7280] mt-1.5 leading-relaxed bg-[#F3F5FB] p-2 rounded border border-[#E3E5EA]">
+                      <span className="text-[#101010] font-mono font-bold">Mateo:</span> {h.reason}
                     </p>
                   </div>
                   
                   {/* CTR display on right */}
-                  <div className="flex flex-col justify-center items-end text-right shrink-0 font-mono border-l border-[#222224] pl-3">
-                    <span className="text-[10px] text-[#66666E] uppercase font-semibold">CTR</span>
-                    <span className={`text-sm font-bold ${isRepeat ? "text-[#D1FF26]" : "text-rose-400"}`}>{h.ctr}%</span>
-                    <span className="text-[10px] text-[#88888E] mt-0.5">{h.conversions} leads</span>
+                  <div className="flex flex-col justify-center items-end text-right shrink-0 font-mono border-l border-[#ECECEC] pl-3">
+                    <span className="text-[10px] text-[#9CA3AF] uppercase font-semibold">CTR</span>
+                    <span className={`text-sm font-bold ${isRepeat ? "text-[#101010]" : "text-rose-400"}`}>{h.ctr}%</span>
+                    <span className="text-[10px] text-[#6B7280] mt-0.5">{h.conversions} leads</span>
                   </div>
                 </div>
               );
@@ -487,34 +487,34 @@ export const RealTimeAnalytics: React.FC = () => {
         </div>
 
         {/* Facu's DM Funnels auditor (takes 5 cols) */}
-        <div className="lg:col-span-5 bg-[#141416] border border-[#222224] rounded-2xl p-5 space-y-4">
-          <h3 className="text-xs font-semibold text-[#88888E] uppercase tracking-wider pb-3 border-b border-[#222224]">
+        <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-5 space-y-4">
+          <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider pb-3 border-b border-[#ECECEC]">
             🤖 Auditoría de Embudos DM (Por Facu)
           </h3>
-          <p className="text-xs text-[#66666E] -mt-2">Automatización de mensajes directos e interacciones directas en Meta/IG.</p>
+          <p className="text-xs text-[#9CA3AF] -mt-2">Automatización de mensajes directos e interacciones directas en Meta/IG.</p>
 
           <div className="space-y-3">
             {dmAutomations.map((dm, idx) => (
-              <div key={idx} className="bg-[#0A0A0B] border border-[#222224] rounded-xl p-3.5 space-y-2">
+              <div key={idx} className="bg-[#F3F5FB] border border-[#ECECEC] rounded-xl p-3.5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#D1FF26] font-mono">Disparador #{idx + 1}</span>
-                  <span className="flex items-center gap-1 text-[10px] bg-[#D1FF26]/10 text-[#D1FF26] px-2 py-0.5 rounded font-mono font-semibold">
-                    <ShieldCheck className="w-3 h-3 text-[#D1FF26]" /> Activa
+                  <span className="text-xs font-bold text-[#101010] font-mono">Disparador #{idx + 1}</span>
+                  <span className="flex items-center gap-1 text-[10px] bg-[#101010]/10 text-[#101010] px-2 py-0.5 rounded font-mono font-semibold">
+                    <ShieldCheck className="w-3 h-3 text-[#101010]" /> Activa
                   </span>
                 </div>
                 
                 <div className="text-xs">
-                  <span className="text-[#66666E] font-semibold">Trigger:</span> <strong className="text-white">{dm.trigger}</strong>
+                  <span className="text-[#9CA3AF] font-semibold">Trigger:</span> <strong className="text-[#111111]">{dm.trigger}</strong>
                 </div>
 
-                <div className="text-xs leading-relaxed bg-[#1A1A1C] p-2 rounded border border-[#2A2A2C] text-[#88888E]">
-                  <span className="text-[#66666E] font-semibold font-mono text-[10px] block mb-0.5">Acción Automática:</span>
+                <div className="text-xs leading-relaxed bg-[#F3F5FB] p-2 rounded border border-[#E3E5EA] text-[#6B7280]">
+                  <span className="text-[#9CA3AF] font-semibold font-mono text-[10px] block mb-0.5">Acción Automática:</span>
                   {dm.response}
                 </div>
 
-                <div className="flex items-center justify-between pt-1 border-t border-[#222224] text-[11px] font-mono">
-                  <span className="text-[#66666E]">Ejecuciones: <strong className="text-[#88888E]">{dm.executions}</strong></span>
-                  <span className="text-[#66666E]">Conversión: <strong className="text-[#D1FF26]">{dm.conversion}</strong></span>
+                <div className="flex items-center justify-between pt-1 border-t border-[#ECECEC] text-[11px] font-mono">
+                  <span className="text-[#9CA3AF]">Ejecuciones: <strong className="text-[#6B7280]">{dm.executions}</strong></span>
+                  <span className="text-[#9CA3AF]">Conversión: <strong className="text-[#101010]">{dm.conversion}</strong></span>
                 </div>
               </div>
             ))}

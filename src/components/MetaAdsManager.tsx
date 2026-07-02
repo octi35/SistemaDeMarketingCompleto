@@ -104,11 +104,11 @@ export const MetaAdsManager: React.FC = () => {
     // Draw Gradient Background
     const gradient = ctx.createLinearGradient(0, 0, 1080, 1080);
     if (creative.angle.includes("PAS")) {
-      gradient.addColorStop(0, "#1e1b4b"); // Deep Indigo
+      gradient.addColorStop(0, "#EEF1F8"); // Deep Indigo
       gradient.addColorStop(1, "#311042"); 
     } else if (creative.angle.includes("AIDA")) {
-      gradient.addColorStop(0, "#0f172a"); // Slate Slate
-      gradient.addColorStop(1, "#1e293b");
+      gradient.addColorStop(0, "#EEF1F8"); // Slate Slate
+      gradient.addColorStop(1, "#ECECEC");
     } else if (creative.angle.includes("Direct")) {
       gradient.addColorStop(0, "#022c22"); // Deep Green
       gradient.addColorStop(1, "#064e3b");
@@ -182,7 +182,7 @@ export const MetaAdsManager: React.FC = () => {
     ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
     ctx.fillRect(80, y, 920, 280);
     
-    ctx.fillStyle = "#cbd5e1"; // Cool Gray Text
+    ctx.fillStyle = "#6B7280"; // Cool Gray Text
     ctx.font = "30px system-ui";
     const bodyWords = editedBodyCopy.split(" ");
     let bodyLine = "";
@@ -252,23 +252,23 @@ export const MetaAdsManager: React.FC = () => {
   return (
     <div className="space-y-6" id="meta-ads-manager-root">
       {/* Search and control section */}
-      <div className="bg-[#141416] border border-[#222224] rounded-2xl p-6">
+      <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg bg-[#D1FF26]/10 text-[#D1FF26] border border-[#D1FF26]/20">
+            <div className="p-2.5 rounded-lg bg-[#101010]/10 text-[#101010] border border-[#101010]/20">
               ⚡
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white flex items-center gap-2">
+              <h2 className="text-base font-semibold text-[#111111] flex items-center gap-2">
                 Generador de 50 Creativos con Santi & Mateo
               </h2>
-              <p className="text-xs text-[#88888E] mt-0.5">
+              <p className="text-xs text-[#6B7280] mt-0.5">
                 Utiliza inteligencia artificial estructurada para generar un conjunto de 50 ganchos de conversión instantáneos.
               </p>
             </div>
           </div>
           {isDemo && (
-            <span className="bg-[#1A1A1C] text-[#D1FF26] text-[11px] px-3 py-1.5 rounded-lg border border-[#2A2A2C] font-mono flex items-center gap-1.5">
+            <span className="bg-[#F3F5FB] text-[#101010] text-[11px] px-3 py-1.5 rounded-lg border border-[#E3E5EA] font-mono flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 animate-spin" />
               Modo Demostración Activo (Sin Llave)
             </span>
@@ -278,33 +278,33 @@ export const MetaAdsManager: React.FC = () => {
         {/* Input parameters */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#66666E] uppercase tracking-wider">Descripción del Negocio</label>
+            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider">Descripción del Negocio</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full h-24 bg-[#1A1A1C] border border-[#2A2A2C] focus:border-[#D1FF26] rounded-lg p-3 text-xs text-white focus:outline-none resize-none"
+              className="w-full h-24 bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#111111] focus:outline-none resize-none"
               placeholder="Ej: Agencia de marketing, tienda e-commerce..."
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#66666E] uppercase tracking-wider">Nicho / Categoría</label>
+            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider">Nicho / Categoría</label>
             <input
               type="text"
               value={niche}
               onChange={(e) => setNiche(e.target.value)}
-              className="w-full bg-[#1A1A1C] border border-[#2A2A2C] focus:border-[#D1FF26] rounded-lg p-3 text-xs text-white focus:outline-none"
+              className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#111111] focus:outline-none"
               placeholder="Ej: Domótica y Tecnología"
             />
-            <div className="text-[11px] text-[#66666E] italic mt-1">
+            <div className="text-[11px] text-[#9CA3AF] italic mt-1">
               Santi usará esto para afinar el tono de la oferta.
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-[10px] font-semibold text-[#66666E] uppercase tracking-wider">Público Objetivo (Buyer Persona)</label>
+            <label className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider">Público Objetivo (Buyer Persona)</label>
             <textarea
               value={audience}
               onChange={(e) => setAudience(e.target.value)}
-              className="w-full h-24 bg-[#1A1A1C] border border-[#2A2A2C] focus:border-[#D1FF26] rounded-lg p-3 text-xs text-white focus:outline-none resize-none"
+              className="w-full h-24 bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-3 text-xs text-[#111111] focus:outline-none resize-none"
               placeholder="Ej: Emprendedores, propietarios..."
             />
           </div>
@@ -313,7 +313,7 @@ export const MetaAdsManager: React.FC = () => {
         <button
           onClick={generateCreatives}
           disabled={loading}
-          className="w-full md:w-auto bg-[#D1FF26] hover:bg-[#c2ed1c] active:bg-[#b3db18] disabled:bg-[#1A1A1C] text-black font-bold px-6 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider"
+          className="w-full md:w-auto bg-[#101010] hover:bg-[#232323] active:bg-[#232323] disabled:bg-[#ECECEC] disabled:text-[#9CA3AF] text-white font-bold px-6 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider"
           id="btn-generate-50"
         >
           {loading ? (
@@ -338,27 +338,27 @@ export const MetaAdsManager: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           {/* LEFT: 50 Creatives list (takes 5 cols) */}
-          <div className="lg:col-span-5 bg-[#141416] border border-[#222224] rounded-2xl p-4 h-[750px] flex flex-col">
+          <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-4 h-[750px] flex flex-col">
             
             {/* Search and filter header */}
             <div className="space-y-3 mb-4">
               <div className="flex items-center gap-2 justify-between">
-                <h3 className="text-xs font-semibold text-[#88888E] uppercase tracking-wider">
+                <h3 className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">
                   Listado de Creativos ({filteredCreatives.length}/50)
                 </h3>
-                <span className="text-xs bg-[#1A1A1C] border border-[#2A2A2C] px-2 py-0.5 rounded text-[#88888E] font-mono">
+                <span className="text-xs bg-[#F3F5FB] border border-[#E3E5EA] px-2 py-0.5 rounded text-[#6B7280] font-mono">
                   Santi & Mateo
                 </span>
               </div>
               
               <div className="relative">
-                <Search className="w-4 h-4 text-[#66666E] absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Buscar por gancho, título o ángulo..."
-                  className="w-full bg-[#1A1A1C] border border-[#2A2A2C] rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-[#D1FF26]"
+                  className="w-full bg-[#F3F5FB] border border-[#E3E5EA] rounded-lg pl-9 pr-3 py-2 text-xs text-[#111111] focus:outline-none focus:border-[#101010]"
                 />
               </div>
 
@@ -367,7 +367,7 @@ export const MetaAdsManager: React.FC = () => {
                 <select
                   value={selectedPlatform}
                   onChange={(e) => setSelectedPlatform(e.target.value)}
-                  className="bg-[#1A1A1C] border border-[#2A2A2C] rounded px-2 py-1.5 text-[#88888E] focus:outline-none"
+                  className="bg-[#F3F5FB] border border-[#E3E5EA] rounded px-2 py-1.5 text-[#6B7280] focus:outline-none"
                 >
                   <option value="all">Plataformas (Todas)</option>
                   <option value="Feed">Facebook Feed</option>
@@ -378,7 +378,7 @@ export const MetaAdsManager: React.FC = () => {
                 <select
                   value={selectedAngle}
                   onChange={(e) => setSelectedAngle(e.target.value)}
-                  className="bg-[#1A1A1C] border border-[#2A2A2C] rounded px-2 py-1.5 text-[#88888E] focus:outline-none"
+                  className="bg-[#F3F5FB] border border-[#E3E5EA] rounded px-2 py-1.5 text-[#6B7280] focus:outline-none"
                 >
                   <option value="all">Ángulo IA (Todos)</option>
                   {anglesList.map((angle) => (
@@ -391,7 +391,7 @@ export const MetaAdsManager: React.FC = () => {
             {/* Scrollable list */}
             <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
               {filteredCreatives.length === 0 ? (
-                <div className="text-center py-12 text-[#66666E] text-xs">
+                <div className="text-center py-12 text-[#9CA3AF] text-xs">
                   Ningún creativo coincide con la búsqueda.
                 </div>
               ) : (
@@ -406,30 +406,30 @@ export const MetaAdsManager: React.FC = () => {
                       onClick={() => setActiveCreative(creative)}
                       className={`w-full text-left p-3 rounded-lg border transition flex items-start gap-3 relative overflow-hidden group ${
                         isActive 
-                          ? "bg-[#1A1A1C] border-[#D1FF26] shadow" 
-                          : "bg-transparent border-[#222224] hover:bg-[#1A1A1C]/50 hover:border-[#2A2A2C]"
+                          ? "bg-[#F3F5FB] border-[#101010] shadow" 
+                          : "bg-transparent border-[#ECECEC] hover:bg-[#F3F5FB]/50 hover:border-[#E3E5EA]"
                       }`}
                       id={`btn-creative-card-${creative.id}`}
                     >
                       {/* Estimated ROI indicator on left edge */}
-                      <div className="h-full w-1 absolute left-0 top-0 bg-[#D1FF26]" />
+                      <div className="h-full w-1 absolute left-0 top-0 bg-[#101010]" />
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] text-[#66666E] font-mono uppercase">{creative.platform}</span>
-                          <span className="text-[10px] text-[#D1FF26] bg-[#D1FF26]/10 px-1.5 py-0.5 rounded font-mono font-semibold">
+                          <span className="text-[10px] text-[#9CA3AF] font-mono uppercase">{creative.platform}</span>
+                          <span className="text-[10px] text-[#101010] bg-[#101010]/10 px-1.5 py-0.5 rounded font-mono font-semibold">
                             CTR Est: {creative.estimatedCtr}%
                           </span>
                         </div>
-                        <h4 className="text-xs font-semibold text-white mt-1 truncate group-hover:text-[#D1FF26] transition-colors">
+                        <h4 className="text-xs font-semibold text-[#111111] mt-1 truncate group-hover:text-[#101010] transition-colors">
                           {creative.headline}
                         </h4>
-                        <p className="text-[11px] text-[#88888E] line-clamp-2 mt-1 leading-relaxed">
+                        <p className="text-[11px] text-[#6B7280] line-clamp-2 mt-1 leading-relaxed">
                           {creative.hook}
                         </p>
                         
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
-                          <span className="text-[9px] bg-[#1A1A1C] border border-[#2A2A2C] px-1.5 py-0.5 rounded text-[#88888E] font-mono">
+                          <span className="text-[9px] bg-[#F3F5FB] border border-[#E3E5EA] px-1.5 py-0.5 rounded text-[#6B7280] font-mono">
                             {creative.angle}
                           </span>
                           {isScheduled && (
@@ -454,22 +454,22 @@ export const MetaAdsManager: React.FC = () => {
           {/* RIGHT: Selected Creative visual previewer & actions (takes 7 cols) */}
           <div className="lg:col-span-7 space-y-6">
             {activeCreative ? (
-              <div className="bg-[#141416] border border-[#222224] rounded-2xl p-6 space-y-6">
+              <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-6 space-y-6">
                 
                 {/* Header card info */}
-                <div className="flex items-start justify-between gap-4 border-b border-[#222224] pb-4">
+                <div className="flex items-start justify-between gap-4 border-b border-[#ECECEC] pb-4">
                   <div>
-                    <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                      <span className="text-[#D1FF26]">⚡</span> {activeCreative.title}
+                    <h3 className="text-base font-semibold text-[#111111] flex items-center gap-2">
+                      <span className="text-[#101010]">⚡</span> {activeCreative.title}
                     </h3>
-                    <p className="text-xs text-[#88888E] mt-1">
-                      Este creativo fue diseñado bajo el marco de copywriting <strong className="text-[#D1FF26]">{activeCreative.angle}</strong> para ser distribuido en <strong className="text-white">{activeCreative.platform}</strong>.
+                    <p className="text-xs text-[#6B7280] mt-1">
+                      Este creativo fue diseñado bajo el marco de copywriting <strong className="text-[#101010]">{activeCreative.angle}</strong> para ser distribuido en <strong className="text-[#111111]">{activeCreative.platform}</strong>.
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0 text-right font-mono">
-                    <span className="text-[10px] text-[#66666E] uppercase tracking-widest font-semibold">PREDICCIÓN MATEO</span>
-                    <span className="text-[#D1FF26] text-sm font-bold">CTR: {activeCreative.estimatedCtr}%</span>
-                    <span className="text-white text-xs">Conv: {activeCreative.estimatedConversionRate}%</span>
+                    <span className="text-[10px] text-[#9CA3AF] uppercase tracking-widest font-semibold">PREDICCIÓN MATEO</span>
+                    <span className="text-[#101010] text-sm font-bold">CTR: {activeCreative.estimatedCtr}%</span>
+                    <span className="text-[#111111] text-xs">Conv: {activeCreative.estimatedConversionRate}%</span>
                   </div>
                 </div>
 
@@ -478,57 +478,57 @@ export const MetaAdsManager: React.FC = () => {
                   
                   {/* Visual mockup panel */}
                   <div className="space-y-3">
-                    <span className="text-xs font-semibold text-[#88888E] uppercase tracking-wider block">Vista Previa de Anuncio</span>
+                    <span className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider block">Vista Previa de Anuncio</span>
                     
                     {/* Mock phone/ad shell */}
-                    <div className="bg-[#0A0A0B] border border-[#222224] rounded-2xl overflow-hidden relative flex flex-col h-[520px]">
+                    <div className="bg-[#F3F5FB] border border-[#ECECEC] rounded-2xl overflow-hidden relative flex flex-col h-[520px]">
                       {/* Meta header */}
-                      <div className="bg-[#141416] px-4 py-3 border-b border-[#222224] flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-[#1A1A1C] border border-[#2A2A2C] flex items-center justify-center text-xs font-bold text-[#D1FF26] font-mono">
+                      <div className="bg-[#FFFFFF] px-4 py-3 border-b border-[#ECECEC] flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-[#F3F5FB] border border-[#E3E5EA] flex items-center justify-center text-xs font-bold text-[#101010] font-mono">
                           AD
                         </div>
                         <div>
                           <div className="flex items-center gap-1.5">
-                            <h4 className="text-xs font-semibold text-white">Mi Cuenta de Meta Ads</h4>
-                            <span className="text-[9px] bg-[#D1FF26]/10 text-[#D1FF26] px-1 rounded font-mono font-bold">Patrocinado</span>
+                            <h4 className="text-xs font-semibold text-[#111111]">Mi Cuenta de Meta Ads</h4>
+                            <span className="text-[9px] bg-[#101010]/10 text-[#101010] px-1 rounded font-mono font-bold">Patrocinado</span>
                           </div>
-                          <p className="text-[10px] text-[#88888E] font-mono mt-0.5">{activeCreative.platform}</p>
+                          <p className="text-[10px] text-[#6B7280] font-mono mt-0.5">{activeCreative.platform}</p>
                         </div>
                       </div>
 
                       {/* Post body */}
-                      <div className="p-3 bg-[#0A0A0B] text-xs text-[#88888E] space-y-2 flex-1 min-h-0 overflow-y-auto select-none custom-scrollbar">
+                      <div className="p-3 bg-[#F3F5FB] text-xs text-[#6B7280] space-y-2 flex-1 min-h-0 overflow-y-auto select-none custom-scrollbar">
                         <p className="leading-relaxed whitespace-pre-wrap">
-                          <span className="text-[#D1FF26] font-bold">{editedHook}</span> {editedBodyCopy}
+                          <span className="text-[#101010] font-bold">{editedHook}</span> {editedBodyCopy}
                         </p>
                         
                         {/* Interactive Banner visual design inside phone */}
-                        <div className="border border-[#222224] rounded-xl p-4 bg-gradient-to-br from-[#1A1A1C] to-[#0F0F10] space-y-3 min-h-[180px] flex flex-col justify-between relative">
+                        <div className="border border-[#ECECEC] rounded-xl p-4 bg-gradient-to-br from-[#F3F5FB] to-[#F3F5FB] space-y-3 min-h-[180px] flex flex-col justify-between relative">
                           <div className="flex justify-between items-start gap-2">
-                            <span className="text-[9px] bg-[#D1FF26] text-black px-1.5 rounded font-mono font-bold tracking-wider">
+                            <span className="text-[9px] bg-[#101010] text-white px-1.5 rounded font-mono font-bold tracking-wider">
                               {activeCreative.angle}
                             </span>
-                            <span className="text-[9px] text-[#66666E] font-mono">1080x1080 PNG</span>
+                            <span className="text-[9px] text-[#9CA3AF] font-mono">1080x1080 PNG</span>
                           </div>
 
-                          <h3 className="text-sm font-semibold text-white text-center leading-tight drop-shadow my-auto">
+                          <h3 className="text-sm font-semibold text-[#111111] text-center leading-tight drop-shadow my-auto">
                             {editedHeadline}
                           </h3>
 
                           {/* Suggested image prompt preview visual */}
-                          <div className="bg-black/40 border border-white/5 p-2 rounded text-[9px] text-[#88888E] font-mono leading-relaxed truncate">
+                          <div className="bg-black/40 border border-white/5 p-2 rounded text-[9px] text-[#6B7280] font-mono leading-relaxed truncate">
                             💡 {activeCreative.imagePrompt}
                           </div>
                         </div>
                       </div>
 
                       {/* Footer CTA */}
-                      <div className="bg-[#141416] border-t border-[#222224] px-4 py-3 flex items-center justify-between">
+                      <div className="bg-[#FFFFFF] border-t border-[#ECECEC] px-4 py-3 flex items-center justify-between">
                         <div>
-                          <h4 className="text-xs font-semibold text-white truncate max-w-[180px]">{editedHeadline}</h4>
-                          <p className="text-[10px] text-[#88888E] truncate max-w-[180px]">adteam.ai/empieza</p>
+                          <h4 className="text-xs font-semibold text-[#111111] truncate max-w-[180px]">{editedHeadline}</h4>
+                          <p className="text-[10px] text-[#6B7280] truncate max-w-[180px]">adteam.ai/empieza</p>
                         </div>
-                        <button className="bg-[#1A1A1C] border border-[#2A2A2C] text-white font-semibold text-[10px] px-3 py-1.5 rounded uppercase tracking-wider select-none shrink-0">
+                        <button className="bg-[#F3F5FB] border border-[#E3E5EA] text-[#111111] font-semibold text-[10px] px-3 py-1.5 rounded uppercase tracking-wider select-none shrink-0">
                           {editedCta}
                         </button>
                       </div>
@@ -538,42 +538,42 @@ export const MetaAdsManager: React.FC = () => {
                   {/* Customizer form */}
                   <div className="space-y-4 flex flex-col justify-between">
                     <div className="space-y-4">
-                      <span className="text-xs font-semibold text-[#88888E] uppercase tracking-wider block">Laboratorio de Personalización</span>
+                      <span className="text-xs font-semibold text-[#6B7280] uppercase tracking-wider block">Laboratorio de Personalización</span>
                       
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold text-[#66666E] font-mono uppercase">Título / Titular de la Imagen</label>
+                        <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Título / Titular de la Imagen</label>
                         <input
                           type="text"
                           value={editedHeadline}
                           onChange={(e) => setEditedHeadline(e.target.value)}
-                          className="w-full bg-[#1A1A1C] border border-[#2A2A2C] focus:border-[#D1FF26] rounded-lg p-2.5 text-xs text-white focus:outline-none"
+                          className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-2.5 text-xs text-[#111111] focus:outline-none"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold text-[#66666E] font-mono uppercase">Gancho de Entrada (Hook)</label>
+                        <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Gancho de Entrada (Hook)</label>
                         <textarea
                           value={editedHook}
                           onChange={(e) => setEditedHook(e.target.value)}
-                          className="w-full h-16 bg-[#1A1A1C] border border-[#2A2A2C] focus:border-[#D1FF26] rounded-lg p-2.5 text-xs text-white focus:outline-none resize-none"
+                          className="w-full h-16 bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-2.5 text-xs text-[#111111] focus:outline-none resize-none"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold text-[#66666E] font-mono uppercase">Cuerpo de Texto Persuasivo</label>
+                        <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Cuerpo de Texto Persuasivo</label>
                         <textarea
                           value={editedBodyCopy}
                           onChange={(e) => setEditedBodyCopy(e.target.value)}
-                          className="w-full h-24 bg-[#1A1A1C] border border-[#2A2A2C] focus:border-[#D1FF26] rounded-lg p-2.5 text-xs text-white focus:outline-none resize-none"
+                          className="w-full h-24 bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-2.5 text-xs text-[#111111] focus:outline-none resize-none"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-semibold text-[#66666E] font-mono uppercase">Etiqueta de Botón CTA</label>
+                        <label className="text-[10px] font-semibold text-[#9CA3AF] font-mono uppercase">Etiqueta de Botón CTA</label>
                         <select
                           value={editedCta}
                           onChange={(e) => setEditedCta(e.target.value)}
-                          className="w-full bg-[#1A1A1C] border border-[#2A2A2C] focus:border-[#D1FF26] rounded-lg p-2 text-xs text-white focus:outline-none"
+                          className="w-full bg-[#F3F5FB] border border-[#E3E5EA] focus:border-[#101010] rounded-lg p-2 text-xs text-[#111111] focus:outline-none"
                         >
                           <option value="Más información">Más información</option>
                           <option value="Comprar ahora">Comprar ahora</option>
@@ -584,24 +584,24 @@ export const MetaAdsManager: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="bg-[#1A1A1C] rounded-lg p-3 border border-[#222224] flex items-start gap-2.5 text-[11px] text-[#88888E]">
-                      <span className="text-[#D1FF26]">🧠</span>
+                    <div className="bg-[#F3F5FB] rounded-lg p-3 border border-[#ECECEC] flex items-start gap-2.5 text-[11px] text-[#6B7280]">
+                      <span className="text-[#101010]">🧠</span>
                       <p>
-                        Santi comenta: <span className="italic text-white">"Hacer pruebas A/B variando el gancho inicial incrementa el CTR hasta en un 40%. Intenta cambiar el gancho de curiosidad por una pregunta directa."</span>
+                        Santi comenta: <span className="italic text-[#111111]">"Hacer pruebas A/B variando el gancho inicial incrementa el CTR hasta en un 40%. Intenta cambiar el gancho de curiosidad por una pregunta directa."</span>
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Output action buttons */}
-                <div className="border-t border-[#222224] pt-5 flex flex-wrap gap-3">
+                <div className="border-t border-[#ECECEC] pt-5 flex flex-wrap gap-3">
                   
                   <button
                     onClick={() => handleDownloadPNG(activeCreative)}
-                    className="flex-1 bg-[#1A1A1C] border border-[#2A2A2C] hover:bg-[#2A2A2C] text-white font-semibold text-xs px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition"
+                    className="flex-1 bg-[#F3F5FB] border border-[#E3E5EA] hover:bg-[#E3E5EA] text-[#111111] font-semibold text-xs px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition"
                     id={`btn-download-png-${activeCreative.id}`}
                   >
-                    <Download className="w-4 h-4 text-[#D1FF26]" />
+                    <Download className="w-4 h-4 text-[#101010]" />
                     <span>Descargar PNG Alta Resolución</span>
                   </button>
 
@@ -610,19 +610,19 @@ export const MetaAdsManager: React.FC = () => {
                     disabled={uploading === activeCreative.id || uploadedList.includes(activeCreative.id)}
                     className={`flex-1 font-semibold text-xs px-4 py-3 rounded-lg border flex items-center justify-center gap-2 transition ${
                       uploadedList.includes(activeCreative.id)
-                        ? "bg-[#D1FF26]/10 border-[#D1FF26]/30 text-[#D1FF26]"
-                        : "bg-[#1A1A1C] border border-[#2A2A2C] hover:bg-[#2A2A2C] text-white"
+                        ? "bg-[#101010]/10 border-[#101010]/30 text-[#101010]"
+                        : "bg-[#F3F5FB] border border-[#E3E5EA] hover:bg-[#E3E5EA] text-[#111111]"
                     }`}
                     id={`btn-upload-api-${activeCreative.id}`}
                   >
                     {uploading === activeCreative.id ? (
                       <>
-                        <RefreshCw className="w-4 h-4 animate-spin text-[#D1FF26]" />
+                        <RefreshCw className="w-4 h-4 animate-spin text-[#101010]" />
                         <span>Sincronizando con Meta Ads Manager...</span>
                       </>
                     ) : uploadedList.includes(activeCreative.id) ? (
                       <>
-                        <Check className="w-4 h-4 text-[#D1FF26]" />
+                        <Check className="w-4 h-4 text-[#101010]" />
                         <span>Cargado con Éxito (API Meta OK)</span>
                       </>
                     ) : (
@@ -639,13 +639,13 @@ export const MetaAdsManager: React.FC = () => {
                     className={`flex-1 font-semibold text-xs px-4 py-3 rounded-lg border flex items-center justify-center gap-2 transition ${
                       scheduledList.includes(activeCreative.id)
                         ? "bg-blue-950/40 border-blue-500/30 text-blue-400"
-                        : "bg-[#D1FF26] hover:bg-[#c2ed1c] text-black border-none"
+                        : "bg-[#101010] hover:bg-[#232323] text-white border-none"
                     }`}
                     id={`btn-schedule-campaign-${activeCreative.id}`}
                   >
                     {scheduling === activeCreative.id ? (
                       <>
-                        <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                        <RefreshCw className="w-4 h-4 animate-spin text-white" />
                         <span>Programando en campañas...</span>
                       </>
                     ) : scheduledList.includes(activeCreative.id) ? (
@@ -655,7 +655,7 @@ export const MetaAdsManager: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        <Calendar className="w-4 h-4 text-black" />
+                        <Calendar className="w-4 h-4 text-white" />
                         <span>Programar Automáticamente</span>
                       </>
                     )}
@@ -664,20 +664,20 @@ export const MetaAdsManager: React.FC = () => {
 
                 {/* API Request Logs display */}
                 {(uploading === activeCreative.id || uploadedList.includes(activeCreative.id)) && (
-                  <div className="bg-[#0A0A0B] rounded-lg p-3 border border-[#222224] font-mono text-[10px] text-[#88888E] space-y-1">
-                    <div className="flex justify-between items-center text-[#66666E] pb-1 border-b border-[#222224]">
+                  <div className="bg-[#F3F5FB] rounded-lg p-3 border border-[#ECECEC] font-mono text-[10px] text-[#6B7280] space-y-1">
+                    <div className="flex justify-between items-center text-[#9CA3AF] pb-1 border-b border-[#ECECEC]">
                       <span>HTTP REQUEST LOG (METADATA API INTEGRATION)</span>
                       <span className="text-green-400">STATUS: 200 OK</span>
                     </div>
-                    <p className="text-white">POST /v17.0/act_28461048620/campaign_creatives HTTP/1.1</p>
+                    <p className="text-[#111111]">POST /v17.0/act_28461048620/campaign_creatives HTTP/1.1</p>
                     <p>Authorization: Bearer EAAXg...yZC</p>
                     <p>Content-Type: application/json</p>
-                    <p className="text-[#D1FF26]/80">{"{"} "name": "{editedHeadline}", "body": "{editedBodyCopy.slice(0, 40)}...", "title": "{editedHeadline}", "call_to_action": "{editedCta}", "status": "ACTIVE" {"}"}</p>
+                    <p className="text-[#101010]/80">{"{"} "name": "{editedHeadline}", "body": "{editedBodyCopy.slice(0, 40)}...", "title": "{editedHeadline}", "call_to_action": "{editedCta}", "status": "ACTIVE" {"}"}</p>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="bg-[#141416] border border-[#222224] rounded-2xl p-12 text-center text-[#88888E]">
+              <div className="bg-[#FFFFFF] border border-[#ECECEC] rounded-2xl p-12 text-center text-[#6B7280]">
                 Selecciona un creativo de la lista para ver su previsualización y herramientas de exportación.
               </div>
             )}

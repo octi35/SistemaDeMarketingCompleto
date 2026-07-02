@@ -3,7 +3,7 @@ import { CheckCircle, AlertCircle, Info, X } from "lucide-react";
 import { toast, ToastItem } from "../../lib/toast";
 
 const STYLES: Record<ToastItem["type"], { border: string; icon: React.ReactNode }> = {
-  success: { border: "border-[#D1FF26]/40", icon: <CheckCircle className="w-4 h-4 text-[#D1FF26]" /> },
+  success: { border: "border-[#101010]/40", icon: <CheckCircle className="w-4 h-4 text-[#101010]" /> },
   error: { border: "border-red-500/40", icon: <AlertCircle className="w-4 h-4 text-red-400" /> },
   info: { border: "border-blue-500/40", icon: <Info className="w-4 h-4 text-blue-400" /> },
 };
@@ -20,14 +20,14 @@ export const Toaster: React.FC = () => {
       {items.map((t) => (
         <div
           key={t.id}
-          className={`bg-[#141416] border ${STYLES[t.type].border} rounded-xl px-4 py-3 shadow-xl shadow-black/40 flex items-start gap-3 animate-fade-in`}
+          className={`bg-[#FFFFFF] border ${STYLES[t.type].border} rounded-xl px-4 py-3 shadow-xl shadow-black/40 flex items-start gap-3 animate-fade-in`}
           role="status"
         >
           <span className="shrink-0 mt-0.5">{STYLES[t.type].icon}</span>
-          <p className="text-xs text-[#E5E5E7] leading-relaxed flex-1">{t.message}</p>
+          <p className="text-xs text-[#111111] leading-relaxed flex-1">{t.message}</p>
           <button
             onClick={() => toast.dismiss(t.id)}
-            className="text-[#66666E] hover:text-white transition shrink-0"
+            className="text-[#9CA3AF] hover:text-[#111111] transition shrink-0"
             aria-label="Cerrar notificación"
           >
             <X className="w-3.5 h-3.5" />
