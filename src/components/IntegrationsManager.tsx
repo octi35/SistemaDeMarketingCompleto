@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "../lib/toast";
+import { apiGet, apiPost } from "../lib/api";
 import {
   Cloud, Folder, FileText, CheckCircle, RefreshCw, Calendar, Mail,
   FileCheck, ArrowUpRight, ArrowRight, ShieldAlert, Key, Globe, 
@@ -496,22 +497,17 @@ export const IntegrationsManager: React.FC = () => {
 
     if (canSendReal) {
       try {
-        const res = await fetch("/api/mail/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            host: smtpHost,
-            port: smtpPort,
-            user: smtpUser,
-            pass: smtpPass,
-            to: recipient,
-            subject: "Informe de Marketing — AdTeam AI",
-            text: "Reporte unificado de campañas generado por AdTeam AI.",
-          }),
+        const data = await apiPost<{ success: boolean; messageId?: string; error?: string }>("/api/mail/send", {
+          host: smtpHost,
+          port: smtpPort,
+          user: smtpUser,
+          pass: smtpPass,
+          to: recipient,
+          subject: "Informe de Marketing — AdTeam AI",
+          text: "Reporte unificado de campañas generado por AdTeam AI.",
         });
-        const data = await res.json();
         setSendingMail(false);
-        if (res.ok && data.success) {
+        if (data.success) {
           setMailSent(true);
           setTerminalLogs(prev => [...prev, `[Mailer] ✔ Correo enviado realmente. ID: ${data.messageId}`]);
           toast.success(`Correo enviado a ${recipient} ✓`);
@@ -565,9 +561,9 @@ export const IntegrationsManager: React.FC = () => {
     try {
       setTerminalLogs(prev => [...prev, `[OAuth] Solicitando URL de autorización para ${provider}...`]);
       const redirectUri = `${window.location.origin}/api/auth/${provider}/callback`;
-      const res = await fetch(`/api/auth/${provider}/url?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`);
-      if (!res.ok) throw new Error("Fallo al obtener la URL del servidor");
-      const data = await res.json();
+      const data = await apiGet<{ url: string }>(
+        `/api/auth/${provider}/url?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}`
+      );
 
       setTerminalLogs(prev => [...prev, `[OAuth] Abriendo ventana flotante para autenticarte directamente en ${provider}...`]);
       const authWindow = window.open(data.url, "oauth_popup", "width=600,height=700");
@@ -656,18 +652,12 @@ export const IntegrationsManager: React.FC = () => {
         : { commentary: testPayload };
 
     try {
-      const response = await fetch("/api/integrations/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider: selectedChannel,
-          token: token || "demo_token",
-          accountId: accountId || "demo_account_id",
-          payload
-        })
+      const resData = await apiPost("/api/integrations/test", {
+        provider: selectedChannel,
+        token: token || "demo_token",
+        accountId: accountId || "demo_account_id",
+        payload,
       });
-
-      const resData = await response.json();
       setTestingConnection(false);
 
       if (resData.success) {

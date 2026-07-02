@@ -30,22 +30,14 @@ export const CalendarManager: React.FC = () => {
     setActiveItem(null);
     setSynced(false);
     try {
-      const response = await fetch("/api/generate-calendar", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "X-Gemini-Key": localStorage.getItem("custom_gemini_api_key") || ""
-        },
-        body: JSON.stringify({ niche, topic }),
-      });
-      const data = await response.json();
+      const data = await apiPost("/api/generate-calendar", { niche, topic });
       if (data.calendar) {
         setCalendar(data.calendar);
         setActiveItem(data.calendar[0]);
         setIsDemo(!!data.isMock);
       }
-    } catch (err) {
-      console.error("Error generating calendar:", err);
+    } catch (err: any) {
+      toast.error(err.message || "No se pudo generar el calendario.");
     } finally {
       setLoading(false);
     }

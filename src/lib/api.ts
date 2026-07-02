@@ -39,9 +39,16 @@ export async function apiPost<T = any>(
   return data as T;
 }
 
-export async function apiGet<T = any>(path: string): Promise<T> {
-  const res = await fetch(path);
+export async function apiGet<T = any>(path: string, opts: { headers?: Record<string, string> } = {}): Promise<T> {
+  const res = await fetch(path, { headers: opts.headers });
   const data = await res.json();
+  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status} en ${path}`);
+  return data as T;
+}
+
+export async function apiDelete<T = any>(path: string): Promise<T> {
+  const res = await fetch(path, { method: "DELETE" });
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error || `HTTP ${res.status} en ${path}`);
   return data as T;
 }

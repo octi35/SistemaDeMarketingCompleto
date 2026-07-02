@@ -66,6 +66,24 @@ describe("serverStore scheduled posts", () => {
     expect(getDuePending("2100-01-01T00:00:00.000Z").some((d) => d.id === post2.id)).toBe(false);
   });
 
+  it("preserves metrics, metricsAuth and pipeline across unrelated writes", async () => {
+    const { saveMetricSnapshots, listMetrics, setMetricsAuth, getMetricsAuth, savePipeline, getPipeline, savePost } =
+      await import("./serverStore");
+
+    saveMetricSnapshots([
+      { postId: "mx1", network: "instagram", ts: new Date().toISOString(), likes: 3, comments: 1, engagement: 4 },
+    ]);
+    setMetricsAuth({ instagram: { tokenRef: "secret_x", igUserId: "ig1", updatedAt: new Date().toISOString() } });
+    savePipeline([{ id: "pc1", title: "Card", status: "En Revisión" }]);
+
+    // An unrelated write must not drop the new store sections.
+    savePost({ network: "facebook", postId: "fb_keep" });
+
+    expect(listMetrics().some((m) => m.postId === "mx1")).toBe(true);
+    expect(getMetricsAuth().instagram?.igUserId).toBe("ig1");
+    expect(getPipeline()?.cards).toHaveLength(1);
+  });
+
   it("keeps only the latest 200 published posts", async () => {
     const { savePost, listPosts } = await import("./serverStore");
     for (let i = 0; i < 205; i++) {

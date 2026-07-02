@@ -1,11 +1,14 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { PixelAvatar } from "./AgentProfiles";
 import { toast } from "../lib/toast";
+import { apiGet, apiPost } from "../lib/api";
 import { Play, Check, RefreshCw, Award, ArrowUpRight, ShieldAlert, FileText, ChevronRight, X, CheckSquare, Layers, Sparkles, Eye } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface CardDetails {
   id: string;
+  /** Column the card lives in (persisted server-side). */
+  column?: string;
   title: string;
   desc: string;
   tag: string;
@@ -24,7 +27,7 @@ export const TeamPipeline: React.FC = () => {
   const [selectedCard, setSelectedCard] = useState<CardDetails | null>(null);
 
   // Kanban pipeline columns & cards matching the agency flow with deep marketing metadata
-  const columns = [
+  const columnDefs = [
     {
       title: "Métricas (Mateo)",
       icon: "📊",
@@ -231,6 +234,41 @@ export const TeamPipeline: React.FC = () => {
       ] as CardDetails[]
     }
   ];
+
+  // ---- Server persistence: the board is stored in /api/pipeline ----
+  const defaultCards: CardDetails[] = columnDefs.flatMap((c) =>
+    c.cards.map((card) => ({ ...card, column: c.title }))
+  );
+  const [cards, setCards] = useState<CardDetails[]>(defaultCards);
+
+  useEffect(() => {
+    apiGet<{ pipeline: { cards: CardDetails[] } | null }>("/api/pipeline")
+      .then((r) => {
+        if (r.pipeline?.cards?.length) setCards(r.pipeline.cards);
+      })
+      .catch(() => {
+        /* server persistence optional; keep defaults */
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const persistCards = (next: CardDetails[]) => {
+    setCards(next);
+    apiPost("/api/pipeline", { cards: next }).catch(() => toast.error("No se pudo guardar el pipeline."));
+  };
+
+  const STATUS_FLOW: CardDetails["status"][] = ["En Revisión", "Listo para Publicar", "Completado"];
+  const advanceStatus = (card: CardDetails) => {
+    const nextStatus = STATUS_FLOW[(STATUS_FLOW.indexOf(card.status) + 1) % STATUS_FLOW.length];
+    persistCards(cards.map((c) => (c.id === card.id ? { ...c, status: nextStatus } : c)));
+    setSelectedCard({ ...card, status: nextStatus });
+    toast.success(`"${card.title}" → ${nextStatus}`);
+  };
+
+  const columns = columnDefs.map((c) => ({
+    ...c,
+    cards: cards.filter((x) => (x.column || c.title) === c.title),
+  }));
 
   const handleCompileSofiReport = () => {
     setCompiling(true);
@@ -486,6 +524,12 @@ Preparado: 30 de Mayo de 2026 • Base analítica: Ventas NUEVAS de alto valor (
                     <span className="inline-block mt-1.5 text-xs font-mono px-3 py-1 rounded bg-black/10 text-black border border-black/20 font-bold uppercase">
                       {selectedCard.status}
                     </span>
+                    <button
+                      onClick={() => advanceStatus(selectedCard)}
+                      className="block ml-auto mt-2 text-[10px] text-accent font-semibold hover:underline"
+                    >
+                      Avanzar estado →
+                    </button>
                   </div>
                 </div>
 

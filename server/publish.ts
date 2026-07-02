@@ -1,6 +1,19 @@
 // Core social publishing functions, shared by the HTTP routes and the
 // scheduler (which calls them directly instead of POSTing to itself).
-import { savePost } from "../serverStore";
+import { savePost, setMetricsAuth } from "../serverStore";
+import { storeSecret } from "./secretStore";
+
+// Remembers (encrypted) the last working credentials per network so the
+// background metrics collector can query the Graph API on its own.
+function rememberMetricsAuth(network: "instagram" | "facebook", accountId: string, token: string): void {
+  try {
+    setMetricsAuth({
+      [network]: { tokenRef: storeSecret(token), [network === "instagram" ? "igUserId" : "pageId"]: accountId, updatedAt: new Date().toISOString() },
+    } as any);
+  } catch {
+    /* non-fatal */
+  }
+}
 
 const GRAPH = "https://graph.facebook.com/v18.0";
 
@@ -54,6 +67,7 @@ export async function publishInstagramPost(args: {
   } catch {
     /* non-fatal */
   }
+  rememberMetricsAuth("instagram", igAccountId, token);
   return { ok: true, status: 200, data: { success: true, result: publishData }, postId: publishData.id };
 }
 
@@ -108,6 +122,7 @@ export async function publishInstagramCarousel(args: {
   } catch {
     /* non-fatal */
   }
+  rememberMetricsAuth("instagram", igAccountId, token);
   return {
     ok: true,
     status: 200,
@@ -171,6 +186,7 @@ export async function publishFacebookPost(args: {
   } catch {
     /* non-fatal */
   }
+  rememberMetricsAuth("facebook", pageId, token);
   return { ok: true, status: 200, data: { success: true, result }, postId };
 }
 

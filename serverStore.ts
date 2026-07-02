@@ -44,11 +44,40 @@ export interface ScheduledPost {
   createdAt: string;
 }
 
+export interface MetricSnapshot {
+  postId: string;
+  network: "instagram" | "facebook" | "linkedin";
+  ts: string; // ISO timestamp of the snapshot
+  likes: number;
+  comments: number;
+  engagement: number;
+}
+
+// Server-side credentials (secret refs, never plaintext) captured on publish
+// so the background metrics job can query the Graph API on its own.
+export interface MetricsAuth {
+  instagram?: { tokenRef: string; igUserId: string; updatedAt: string };
+  facebook?: { tokenRef: string; pageId: string; updatedAt: string };
+}
+
+export interface PipelineCard {
+  id: string;
+  title: string;
+  desc?: string;
+  status: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  [key: string]: any;
+}
+
 interface Store {
   projects: CarouselProject[];
   calendar?: CalendarPlan;
   posts?: PublishedPost[];
   scheduled?: ScheduledPost[];
+  metrics?: MetricSnapshot[];
+  metricsAuth?: MetricsAuth;
+  pipeline?: { cards: PipelineCard[]; updatedAt: string };
 }
 
 function readStore(): Store {
@@ -61,6 +90,9 @@ function readStore(): Store {
       calendar: parsed.calendar,
       posts: Array.isArray(parsed.posts) ? parsed.posts : [],
       scheduled: Array.isArray(parsed.scheduled) ? parsed.scheduled : [],
+      metrics: Array.isArray(parsed.metrics) ? parsed.metrics : [],
+      metricsAuth: parsed.metricsAuth,
+      pipeline: parsed.pipeline,
     };
   } catch (err) {
     console.error("[store] Failed to read store, starting empty:", err);
@@ -213,4 +245,52 @@ export function markScheduled(id: string, patch: Partial<ScheduledPost>): void {
   if (!item) return;
   Object.assign(item, patch);
   writeStore(store);
+}
+
+// ---- Metric snapshots (time series per published post) ----
+const METRICS_CAP = 5000;
+const SNAPSHOT_MIN_INTERVAL_MS = 3 * 60 * 60 * 1000; // skip re-snapshot within 3h
+
+export function saveMetricSnapshots(snaps: MetricSnapshot[]): number {
+  if (!snaps.length) return 0;
+  const store = readStore();
+  const existing = store.metrics || [];
+  const now = Date.now();
+  const fresh = snaps.filter((s) => {
+    const last = existing
+      .filter((e) => e.postId === s.postId)
+      .sort((a, b) => (a.ts < b.ts ? 1 : -1))[0];
+    return !last || now - Date.parse(last.ts) >= SNAPSHOT_MIN_INTERVAL_MS;
+  });
+  if (!fresh.length) return 0;
+  store.metrics = [...existing, ...fresh].slice(-METRICS_CAP);
+  writeStore(store);
+  return fresh.length;
+}
+
+export function listMetrics(): MetricSnapshot[] {
+  return readStore().metrics || [];
+}
+
+// ---- Metrics auth (secret refs captured on publish) ----
+export function setMetricsAuth(patch: Partial<MetricsAuth>): void {
+  const store = readStore();
+  store.metricsAuth = { ...(store.metricsAuth || {}), ...patch };
+  writeStore(store);
+}
+
+export function getMetricsAuth(): MetricsAuth {
+  return readStore().metricsAuth || {};
+}
+
+// ---- Pipeline board persistence ----
+export function getPipeline(): { cards: PipelineCard[]; updatedAt: string } | null {
+  return readStore().pipeline || null;
+}
+
+export function savePipeline(cards: PipelineCard[]): { cards: PipelineCard[]; updatedAt: string } {
+  const store = readStore();
+  store.pipeline = { cards: cards || [], updatedAt: new Date().toISOString() };
+  writeStore(store);
+  return store.pipeline;
 }

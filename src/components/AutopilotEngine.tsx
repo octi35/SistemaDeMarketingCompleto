@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "../lib/toast";
+import { apiPost } from "../lib/api";
 import { Sparkles, Play, CheckCircle2, Copy, Check, Code, Eye, FileText, Send, Share2, TrendingUp, HelpCircle, Loader2, ArrowRight, Layers, Layout, BookOpen, Facebook, Linkedin, Instagram, RefreshCw } from "lucide-react";
 
 interface AutopilotData {
@@ -155,15 +156,7 @@ export const AutopilotEngine: React.FC = () => {
 
     // Make backend call in parallel
     try {
-      const response = await fetch("/api/generate-autopilot", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Gemini-Key": localStorage.getItem("custom_gemini_api_key") || ""
-        },
-        body: JSON.stringify({ product, audience, offer, objective })
-      });
-      const data = await response.json();
+      const data = await apiPost("/api/generate-autopilot", { product, audience, offer, objective });
       
       // Wait for the visual sequence to finish before rendering results
       setTimeout(() => {

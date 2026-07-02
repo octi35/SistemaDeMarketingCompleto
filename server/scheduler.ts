@@ -10,6 +10,7 @@ import {
   publishLinkedInPost,
   PublishResult,
 } from "./publish";
+import { collectMetricsOnce } from "./metricsHistory";
 
 export function publishScheduled(post: Pick<ScheduledPost, "network" | "payload">): Promise<PublishResult> {
   const payload = unsealPayloadTokens(post.payload || {});
@@ -82,6 +83,11 @@ export function startScheduler(): void {
   // Check for due scheduled posts every 30s.
   jobs.push(setInterval(processScheduledPosts, 30_000));
   console.log("Scheduler activo: revisando publicaciones programadas cada 30s.");
+
+  // Snapshot post metrics every 6h (first run shortly after boot).
+  jobs.push(setTimeout(() => collectMetricsOnce().catch(() => {}), 90_000));
+  jobs.push(setInterval(() => collectMetricsOnce().catch(() => {}), 6 * 60 * 60 * 1000));
+  console.log("Metrics job activo: snapshot de métricas cada 6h.");
 }
 
 export function stopScheduler(): void {

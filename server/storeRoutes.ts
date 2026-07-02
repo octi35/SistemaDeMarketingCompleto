@@ -13,7 +13,10 @@ import {
   addScheduled,
   cancelScheduled,
   listScheduled,
+  getPipeline,
+  savePipeline,
 } from "../serverStore";
+import { collectMetricsOnce, buildMetricsSummary } from "./metricsHistory";
 import { saveDataUrlImage } from "../imageStore";
 import { sealPayloadTokens } from "./secretStore";
 import { parseBody, scheduleSchema, calendarSchema, projectSchema, mailSchema } from "./validate";
@@ -152,6 +155,32 @@ export function registerStoreRoutes(app: express.Express, ctx: ServerContext): v
       console.error("Error sending email via SMTP:", error);
       res.status(500).json({ success: false, error: error.message || "Fallo el envío SMTP" });
     }
+  });
+
+  // ---- Metrics history (publish → measure loop) ----
+  app.get("/api/metrics/history", (_req, res) => {
+    res.json(buildMetricsSummary());
+  });
+
+  // Triggers an on-demand metrics collection (also runs on a 6h schedule).
+  app.post("/api/metrics/collect", async (_req, res) => {
+    try {
+      const result = await collectMetricsOnce();
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "No se pudieron recolectar métricas" });
+    }
+  });
+
+  // ---- Pipeline board persistence ----
+  app.get("/api/pipeline", (_req, res) => {
+    res.json({ pipeline: getPipeline() });
+  });
+
+  app.post("/api/pipeline", (req, res) => {
+    const { cards } = req.body || {};
+    if (!Array.isArray(cards)) return res.status(400).json({ error: "Se requiere un array 'cards'." });
+    res.json({ pipeline: savePipeline(cards) });
   });
 
   // ---- Upload base64 images -> public URLs (needed for IG publishing) ----

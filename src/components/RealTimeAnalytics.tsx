@@ -1,26 +1,157 @@
-import React, { useState } from "react";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Legend, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from "recharts";
-import { BarChart3, TrendingUp, Skull, RotateCcw, AlertTriangle, ArrowUpRight, ShieldCheck, Mail, Sparkles } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Legend,
+} from "recharts";
+import { TrendingUp, Skull, RotateCcw, Mail, RefreshCw } from "lucide-react";
 import { RealMetricsPanel } from "./RealMetricsPanel";
+import { Card, SectionTitle, Badge, Button, Select } from "./ui";
+import { apiGet, apiPost } from "../lib/api";
+import { toast } from "../lib/toast";
+
+interface MetricSnapshot {
+  postId: string;
+  network: "instagram" | "facebook" | "linkedin";
+  ts: string;
+  likes: number;
+  comments: number;
+  engagement: number;
+}
+
+interface MetricsSummary {
+  totalPosts: number;
+  totalEngagement: number;
+  totalLikes: number;
+  totalComments: number;
+  byNetwork: Record<string, { posts: number; engagement: number }>;
+  latestPerPost: MetricSnapshot[];
+  series: MetricSnapshot[];
+}
+
+interface PublishedPost {
+  id: string;
+  network: "instagram" | "facebook" | "linkedin";
+  postId: string;
+  caption?: string;
+  permalink?: string;
+  createdAt: string;
+}
+
+const NETWORK_LABEL: Record<string, string> = {
+  instagram: "Instagram",
+  facebook: "Facebook",
+  linkedin: "LinkedIn",
+};
+
+// Sample series shown (clearly labeled) until real snapshots exist.
+const DEMO_SERIES = [
+  { name: "Día 01", Instagram: 12, Facebook: 8, LinkedIn: 5 },
+  { name: "Día 05", Instagram: 18, Facebook: 11, LinkedIn: 7 },
+  { name: "Día 10", Instagram: 25, Facebook: 13, LinkedIn: 9 },
+  { name: "Día 15", Instagram: 31, Facebook: 18, LinkedIn: 12 },
+  { name: "Día 20", Instagram: 38, Facebook: 22, LinkedIn: 15 },
+  { name: "Día 25", Instagram: 47, Facebook: 25, LinkedIn: 17 },
+  { name: "Día 30", Instagram: 55, Facebook: 31, LinkedIn: 21 },
+];
 
 export const RealTimeAnalytics: React.FC = () => {
-  // Mock interactive dates
   const [platformFilter, setPlatformFilter] = useState("all");
+  const [summary, setSummary] = useState<MetricsSummary | null>(null);
+  const [posts, setPosts] = useState<PublishedPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [collecting, setCollecting] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
-  // Predictive ROI Planner States
+  // Predictive ROI planner state (an honest calculator, no fake data)
   const [budget, setBudget] = useState(1500);
-  const [cpc, setCpc] = useState(0.40);
+  const [cpc, setCpc] = useState(0.4);
   const [ctr, setCtr] = useState(5.4);
   const [convRate, setConvRate] = useState(2.5);
   const [aov, setAov] = useState(45);
 
+  const load = async () => {
+    setLoading(true);
+    const [metricsRes, postsRes] = await Promise.allSettled([
+      apiGet<MetricsSummary>("/api/metrics/history"),
+      apiGet<{ posts: PublishedPost[] }>("/api/posts"),
+    ]);
+    if (metricsRes.status === "fulfilled") setSummary(metricsRes.value);
+    if (postsRes.status === "fulfilled") setPosts(postsRes.value.posts || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const hasRealData = (summary?.totalPosts ?? 0) > 0;
+
+  // Build a daily engagement series per network from the snapshots.
+  const realSeries = useMemo(() => {
+    if (!summary?.series?.length) return [];
+    const byDay = new Map<string, Record<string, number>>();
+    for (const s of summary.series) {
+      const day = s.ts.slice(0, 10);
+      const row = byDay.get(day) || {};
+      const label = NETWORK_LABEL[s.network] || s.network;
+      row[label] = (row[label] || 0) + s.engagement;
+      byDay.set(day, row);
+    }
+    return [...byDay.entries()]
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([day, row]) => ({ name: day.slice(5), ...row }));
+  }, [summary]);
+
+  const chartData = hasRealData && realSeries.length > 0 ? realSeries : DEMO_SERIES;
+
+  // Engagement by network for the bar chart.
+  const networkBars = useMemo(() => {
+    const src = summary?.byNetwork || {};
+    return Object.entries(src).map(([network, data]) => ({
+      network: NETWORK_LABEL[network] || network,
+      engagement: data.engagement,
+      posts: data.posts,
+    }));
+  }, [summary]);
+
+  // Hook Vault from real posts + their latest metrics: above-median engagement
+  // → repeat, below → kill.
+  const hookVault = useMemo(() => {
+    if (!summary || !posts.length) return [];
+    const withMetrics = posts
+      .map((p) => {
+        const m = summary.latestPerPost.find((s) => s.postId === p.postId);
+        return m ? { post: p, engagement: m.engagement, likes: m.likes, comments: m.comments } : null;
+      })
+      .filter(Boolean) as { post: PublishedPost; engagement: number; likes: number; comments: number }[];
+    if (!withMetrics.length) return [];
+    const sorted = [...withMetrics].sort((a, b) => b.engagement - a.engagement);
+    const median = sorted[Math.floor(sorted.length / 2)].engagement;
+    return sorted.map((m) => ({
+      id: m.post.id,
+      hook: (m.post.caption || "(sin texto)").slice(0, 120),
+      platform: NETWORK_LABEL[m.post.network] || m.post.network,
+      engagement: m.engagement,
+      likes: m.likes,
+      comments: m.comments,
+      status: m.engagement >= Math.max(median, 1) ? "REPETIR" : "MATAR",
+      reason:
+        m.engagement >= Math.max(median, 1)
+          ? `Engagement por encima de la mediana (${median}). Repite este ángulo o escálalo a más formatos.`
+          : `Engagement por debajo de la mediana (${median}). Cambia el gancho o pausa este ángulo.`,
+    }));
+  }, [summary, posts]);
+
+  const filteredHooks = hookVault.filter(
+    (h) => platformFilter === "all" || h.platform.toLowerCase().includes(platformFilter.toLowerCase())
+  );
+
+  // ROI planner math
   const estimatedClicks = budget / cpc;
   const estimatedSales = estimatedClicks * (convRate / 100);
   const revenue = estimatedSales * aov;
   const roas = budget > 0 ? revenue / budget : 0;
   const cac = estimatedSales > 0 ? budget / estimatedSales : 0;
 
-  // Formulate advice
   let roasAdvice = "";
   if (roas < 1.0) {
     roasAdvice = "⚠️ Margen negativo detectado. La tasa de conversión o el valor de ticket es muy bajo para el costo por clic actual. Lauti necesita redactar copies agresivos de venta directa y Facu debe auditar la velocidad de carga de la web.";
@@ -32,243 +163,123 @@ export const RealTimeAnalytics: React.FC = () => {
     roasAdvice = "💎 ¡Fórmula de Escalamiento Dorado! El Retorno sobre Gasto Publicitario es altísimo. Santi aconseja duplicar el presupuesto diario de inmediato y expandir tus campañas a audiencias Lookalike para dominar el mercado.";
   }
 
-  // Recharts Data 1: Over-time trend
-  const dailyMetrics = [
-    { name: "Día 01", MetaAds: 2.8, IG: 1.9, LinkedIn: 2.4 },
-    { name: "Día 05", MetaAds: 3.2, IG: 2.1, LinkedIn: 2.5 },
-    { name: "Día 10", MetaAds: 3.9, IG: 2.4, LinkedIn: 2.9 },
-    { name: "Día 15", MetaAds: 4.8, IG: 3.2, LinkedIn: 3.1 },
-    { name: "Día 20", MetaAds: 4.2, IG: 3.8, LinkedIn: 3.0 },
-    { name: "Día 25", MetaAds: 5.1, IG: 4.1, LinkedIn: 3.5 },
-    { name: "Día 30", MetaAds: 5.4, IG: 4.5, LinkedIn: 3.8 },
-  ];
-
-  // Recharts Data 2: Funnel Clicks -> conversions
-  const funnelData = [
-    { stage: "Impresiones", value: 125000, fill: "#312e81" },
-    { stage: "Clics (CTR)", value: 6500, fill: "#1e3a8a" },
-    { stage: "Leads (DM)", value: 2400, fill: "#1d4ed8" },
-    { stage: "Ventas", value: 480, fill: "#3b82f6" },
-  ];
-
-  // Platform comparisons
-  const platformComparison = [
-    { subject: "CTR (%)", Meta: 5.4, Instagram: 4.5, LinkedIn: 3.8 },
-    { subject: "Costo x Lead ($)", Meta: 1.2, Instagram: 1.8, LinkedIn: 4.5 },
-    { subject: "Conversión (%)", Meta: 3.1, Instagram: 2.4, LinkedIn: 1.9 },
-    { subject: "Retorno (ROI)", Meta: 4.5, Instagram: 3.8, LinkedIn: 2.9 },
-    { subject: "Engagement", Meta: 2.8, Instagram: 5.2, LinkedIn: 4.1 },
-  ];
-
-  // Mateo's Hook Vault: literal repeat vs. kill
-  const [hookVault, setHookVault] = useState([
-    {
-      id: "hk-1",
-      hook: "Por esto tu competencia está vendiendo 3 veces más que vos:",
-      platform: "Meta Ads Banner",
-      ctr: 5.4,
-      conversions: 184,
-      status: "REPETIR",
-      reason: "CTR superior a la media (5.4%). La premisa de ganancia competitiva resuena con pymes."
-    },
-    {
-      id: "hk-2",
-      hook: "La dura verdad que nadie te dice sobre la domótica inteligente...",
-      platform: "Instagram Stories",
-      ctr: 4.8,
-      conversions: 122,
-      status: "REPETIR",
-      reason: "Involucra un alto nivel de compartidos e interacción. Excelente conversión en DM."
-    },
-    {
-      id: "hk-3",
-      hook: "Atención emprendedores: no compren domótica sin ver esto antes",
-      platform: "Meta Ads Feed",
-      ctr: 1.1,
-      conversions: 8,
-      status: "MATAR",
-      reason: "CTR muy bajo (1.1%). La advertencia negativa generó rechazo en las primeras impresiones."
-    },
-    {
-      id: "hk-4",
-      hook: "Lo que desearía haber sabido de mi negocio hace un año...",
-      platform: "LinkedIn Post",
-      ctr: 3.9,
-      conversions: 62,
-      status: "REPETIR",
-      reason: "Tono vulnerable/storytelling tiene alta retención. Recomendado expandir a carrusel."
-    },
-    {
-      id: "hk-5",
-      hook: "Ahorra 40% de luz con un solo clic automatizado",
-      platform: "Instagram Reels",
-      ctr: 1.5,
-      conversions: 11,
-      status: "MATAR",
-      reason: "Mensaje redundante y de apariencia spammer. Las métricas de retención caen en el segundo 2."
+  const collectNow = async () => {
+    setCollecting(true);
+    try {
+      const r = await apiPost<{ collected: number; postsChecked: number; hasInstagramAuth: boolean; hasFacebookAuth: boolean }>(
+        "/api/metrics/collect",
+        {}
+      );
+      if (!r.hasInstagramAuth && !r.hasFacebookAuth) {
+        toast.info("Aún no hay credenciales guardadas: publica algo en Instagram o Facebook primero y el sistema las recordará.");
+      } else {
+        toast.success(`Métricas actualizadas: ${r.collected} snapshots nuevos de ${r.postsChecked} posts.`);
+      }
+      await load();
+    } catch (err: any) {
+      toast.error(err.message || "No se pudieron recolectar métricas.");
+    } finally {
+      setCollecting(false);
     }
-  ]);
+  };
 
-  // Facu's DM automation funnels auditor
-  const dmAutomations = [
-    { trigger: "Palabra clave 'INFO'", response: "Envío automático de PDF de propuesta + link de agenda", executions: 1284, conversion: "28.4%", active: true },
-    { trigger: "Palabra clave 'PRECIO'", response: "Envío de tarifas y link de pasarela Stripe / MercadoPago", executions: 942, conversion: "15.8%", active: true },
-    { trigger: "Mensaje directo inicial", response: "Saludo automatizado Santi y pre-calificación en 2 preguntas", executions: 3410, conversion: "41.2%", active: true }
-  ];
-
-  // Filter hooks
-  const filteredHooks = hookVault.filter((h) => platformFilter === "all" || h.platform.toLowerCase().includes(platformFilter.toLowerCase()));
-
-  // Simulated email report state
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-
-  const handleSendEmailReport = () => {
+  const handleSendEmailReport = async () => {
     setSendingEmail(true);
-    setTimeout(() => {
+    try {
+      const lines = [
+        `Informe AdTeam AI — ${new Date().toLocaleDateString()}`,
+        ``,
+        `Posts publicados: ${posts.length}`,
+        `Posts con métricas: ${summary?.totalPosts ?? 0}`,
+        `Engagement total: ${summary?.totalEngagement ?? 0} (${summary?.totalLikes ?? 0} me gusta, ${summary?.totalComments ?? 0} comentarios)`,
+        ``,
+        ...Object.entries(summary?.byNetwork || {}).map(
+          ([n, d]) => `- ${NETWORK_LABEL[n] || n}: ${d.engagement} interacciones en ${d.posts} posts`
+        ),
+      ];
+      const smtp = {
+        host: localStorage.getItem("smtp_host") || undefined,
+        port: localStorage.getItem("smtp_port") || undefined,
+        user: localStorage.getItem("smtp_user") || undefined,
+        pass: localStorage.getItem("smtp_pass") || undefined,
+      };
+      const r = await apiPost<{ success: boolean; simulated?: boolean; error?: string }>("/api/mail/send", {
+        ...smtp,
+        subject: "Informe de métricas — AdTeam AI",
+        text: lines.join("\n"),
+      });
+      if (r.success) {
+        toast.success("Informe enviado por email.");
+      } else if (r.simulated) {
+        toast.info("Configura SMTP en Integración Nube para enviar informes reales por email.");
+      } else {
+        toast.error(r.error || "No se pudo enviar el informe.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "No se pudo enviar el informe.");
+    } finally {
       setSendingEmail(false);
-      setEmailSent(true);
-    }, 1500);
+    }
   };
 
   return (
-    <div className="space-y-6" id="realtime-analytics-root">
-
+    <div className="space-y-5" id="realtime-analytics-root">
       {/* Real Instagram metrics + AI recommendations (live when connected) */}
       <RealMetricsPanel />
 
-      {/* Top statistical summaries bar */}
+      {/* KPI summary — real local metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-surface border border-line rounded-2xl p-4 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] text-faint font-mono uppercase tracking-wider block">Meta Ads CTR (7d)</span>
-            <span className="text-2xl font-bold text-ink mt-1 block">5.42%</span>
-            <span className="text-[10px] text-black font-mono mt-0.5 block flex items-center gap-1">
-              ▲ +16.2% vs. mes anterior
-            </span>
-          </div>
-          <div className="text-2xl opacity-35">📊</div>
-        </div>
-        <div className="bg-surface border border-line rounded-2xl p-4 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] text-faint font-mono uppercase tracking-wider block">Conversiones Totales (30d)</span>
-            <span className="text-2xl font-bold text-ink mt-1 block">$48,250</span>
-            <span className="text-[10px] text-black font-mono mt-0.5 block flex items-center gap-1">
-              ▲ +39.5% conversión
-            </span>
-          </div>
-          <div className="text-2xl opacity-35">💰</div>
-        </div>
-        <div className="bg-surface border border-line rounded-2xl p-4 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] text-faint font-mono uppercase tracking-wider block">Mensajes directos filtrados</span>
-            <span className="text-2xl font-bold text-ink mt-1 block">1,204</span>
-            <span className="text-[10px] text-black font-mono mt-0.5 block flex items-center gap-1">
-              ▲ +88.1% automatizados
-            </span>
-          </div>
-          <div className="text-2xl opacity-35">💬</div>
-        </div>
-        <div className="bg-surface border border-line rounded-2xl p-4 flex items-center justify-between">
-          <div>
-            <span className="text-[10px] text-faint font-mono uppercase tracking-wider block">Hooks en Prueba Activa</span>
-            <span className="text-2xl font-bold text-ink mt-1 block">482</span>
-            <span className="text-[10px] text-amber-400 font-mono mt-0.5 block flex items-center gap-1">
-              ⭐ 17 nuevos esta semana
-            </span>
-          </div>
-          <div className="text-2xl opacity-35">🔥</div>
-        </div>
+        {[
+          { label: "Engagement total medido", value: summary?.totalEngagement ?? 0, hint: `${summary?.totalPosts ?? 0} posts con métricas` },
+          { label: "Me gusta acumulados", value: summary?.totalLikes ?? 0, hint: "Última medición por post" },
+          { label: "Comentarios acumulados", value: summary?.totalComments ?? 0, hint: "Última medición por post" },
+          { label: "Snapshots del histórico", value: summary?.series?.length ?? 0, hint: "Se recolectan cada 6 h" },
+        ].map((kpi) => (
+          <Card key={kpi.label} padded={false} className="p-4">
+            <span className="text-[10px] text-faint font-mono uppercase tracking-wider block">{kpi.label}</span>
+            <span className="text-2xl font-bold text-ink mt-1 block">{loading ? "…" : kpi.value}</span>
+            <span className="text-[10px] text-faint mt-0.5 block">{kpi.hint}</span>
+          </Card>
+        ))}
       </div>
 
-      {/* Calculadora Predictiva de ROAS & ROI (Estrategia Santi) */}
-      <div className="bg-surface border border-line rounded-2xl p-5" id="predictive-roas-calculator">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-line mb-5">
-          <div>
-            <h3 className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
-              📊 Simulador Financiero: ROAS & Presupuesto Predictivo (Estrategia Santi)
-            </h3>
-            <p className="text-xs text-faint mt-0.5">Calcula el retorno de tu inversión publicitaria estimando el impacto financiero de tus creativos de conversión.</p>
-          </div>
-          <span className="bg-black/10 text-black text-[10px] px-2.5 py-1 rounded-full border border-black/20 font-mono font-bold uppercase">
-            Planificación de Campañas
-          </span>
-        </div>
+      {/* ROI planner (honest calculator) */}
+      <Card id="predictive-roas-calculator">
+        <SectionTitle
+          title="Simulador Financiero: ROAS & Presupuesto Predictivo"
+          subtitle="Calcula el retorno de tu inversión publicitaria estimando el impacto financiero de tus creativos."
+          action={<Badge tone="dark">Planificación</Badge>}
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-5">
           {/* Sliders panel */}
           <div className="lg:col-span-7 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Presupuesto */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted">Inversión Publicitaria Mensual:</span>
-                  <span className="text-black font-mono font-bold">${budget.toLocaleString()} USD</span>
+              {[
+                { label: "Inversión Publicitaria Mensual", value: `$${budget.toLocaleString()} USD`, min: 100, max: 10000, step: 100, state: budget, set: setBudget },
+                { label: "CPC Promedio Estimado", value: `$${cpc.toFixed(2)} USD`, min: 0.1, max: 5, step: 0.05, state: cpc, set: setCpc },
+                { label: "CTR de Creativos", value: `${ctr.toFixed(2)}%`, min: 0.5, max: 12, step: 0.1, state: ctr, set: setCtr },
+                { label: "Tasa de Conversión Web", value: `${convRate.toFixed(2)}%`, min: 0.1, max: 10, step: 0.1, state: convRate, set: setConvRate },
+              ].map((s) => (
+                <div key={s.label} className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted">{s.label}:</span>
+                    <span className="text-black font-mono font-bold">{s.value}</span>
+                  </div>
+                  <input
+                    type="range"
+                    aria-label={s.label}
+                    min={s.min}
+                    max={s.max}
+                    step={s.step}
+                    value={s.state}
+                    onChange={(e) => s.set(Number(e.target.value))}
+                    className="w-full accent-[#4f6ef7]"
+                  />
                 </div>
-                <input
-                  type="range"
-                  min="100"
-                  max="10000"
-                  step="100"
-                  value={budget}
-                  onChange={(e) => setBudget(Number(e.target.value))}
-                  className="w-full accent-[#101010]"
-                />
-              </div>
-
-              {/* CPC Promedio */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted">CPC Promedio Estimado:</span>
-                  <span className="text-black font-mono font-bold">${cpc.toFixed(2)} USD</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.10"
-                  max="5.00"
-                  step="0.05"
-                  value={cpc}
-                  onChange={(e) => setCpc(Number(e.target.value))}
-                  className="w-full accent-[#101010]"
-                />
-              </div>
-
-              {/* CTR Promedio */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted">CTR de Creativos (Santi):</span>
-                  <span className="text-black font-mono font-bold">{ctr.toFixed(2)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="12"
-                  step="0.1"
-                  value={ctr}
-                  onChange={(e) => setCtr(Number(e.target.value))}
-                  className="w-full accent-[#101010]"
-                />
-              </div>
-
-              {/* Tasa de conversión de la landing */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted">Tasa de Conversión Web:</span>
-                  <span className="text-black font-mono font-bold">{convRate.toFixed(2)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="10"
-                  step="0.1"
-                  value={convRate}
-                  onChange={(e) => setConvRate(Number(e.target.value))}
-                  className="w-full accent-[#101010]"
-                />
-              </div>
+              ))}
             </div>
 
-            {/* Valor Promedio de Venta (AOV) */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
                 <span className="text-muted">Valor Promedio del Ticket (AOV):</span>
@@ -276,18 +287,19 @@ export const RealTimeAnalytics: React.FC = () => {
               </div>
               <input
                 type="range"
-                min="5"
-                max="500"
-                step="5"
+                aria-label="Valor promedio del ticket"
+                min={5}
+                max={500}
+                step={5}
                 value={aov}
                 onChange={(e) => setAov(Number(e.target.value))}
-                className="w-full accent-[#101010]"
+                className="w-full accent-[#4f6ef7]"
               />
             </div>
           </div>
 
           {/* Results breakdown panel */}
-          <div className="lg:col-span-5 bg-sink border border-line rounded-xl p-4 flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-5 bg-sink rounded-input p-4 flex flex-col justify-between space-y-4">
             <div className="space-y-3">
               <div className="flex justify-between items-center text-xs pb-2 border-b border-line">
                 <span className="text-muted">Tráfico Estimado (Clics):</span>
@@ -307,13 +319,14 @@ export const RealTimeAnalytics: React.FC = () => {
               </div>
             </div>
 
-            {/* ROAS Speedometer/Metrics Display */}
-            <div className="bg-surface p-3 rounded-lg border border-line space-y-2">
+            <div className="bg-surface p-3 rounded-input space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] text-faint uppercase font-mono tracking-wider">RETORNO ESTIMADO (ROAS):</span>
-                <span className={`text-sm font-mono font-bold px-2 py-0.5 rounded ${
-                  roas >= 3.0 ? "bg-black/10 text-black" : roas >= 1.5 ? "bg-amber-400/10 text-amber-400" : "bg-rose-500/10 text-rose-400"
-                }`}>
+                <span
+                  className={`text-sm font-mono font-bold px-2 py-0.5 rounded ${
+                    roas >= 3.0 ? "bg-[#e6f7e6] text-[#3f9a3f]" : roas >= 1.5 ? "bg-[#fff6d6] text-[#a8791b]" : "bg-[#fdeaea] text-[#d5514f]"
+                  }`}
+                >
                   {roas.toFixed(2)}x
                 </span>
               </div>
@@ -323,204 +336,163 @@ export const RealTimeAnalytics: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Main interactive charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Chart 1: Daily CTR progression (takes 8 cols) */}
-        <div className="lg:col-span-8 bg-surface border border-line rounded-2xl p-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-3 border-b border-line mb-4">
-            <div>
-              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-black" /> Rendimiento de Clics por Plataforma (CTR %)
-              </h3>
-              <p className="text-xs text-faint mt-0.5">Analítica diaria recopilada por Mateo del píxel de conversión.</p>
-            </div>
-            
-            {/* Download/Email summary buttons */}
-            <button
-              onClick={handleSendEmailReport}
-              disabled={sendingEmail || emailSent}
-              className={`text-[11px] px-3 py-1.5 rounded-full border font-semibold flex items-center gap-1.5 transition ${
-                emailSent
-                  ? "bg-black/10 border-black/30 text-black"
-                  : "bg-sink hover:bg-[#eaedf6] border-line text-ink"
-              }`}
-              id="btn-analytics-email-report"
-            >
-              <Mail className="w-3.5 h-3.5 text-black" />
-              {sendingEmail ? "Enviando Reporte..." : emailSent ? "Reporte Enviado" : "Enviar Reporte al Email"}
-            </button>
-          </div>
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Chart 1: Engagement over time */}
+        <Card className="lg:col-span-8">
+          <SectionTitle
+            icon={TrendingUp}
+            title="Engagement por red a lo largo del tiempo"
+            subtitle={
+              hasRealData && realSeries.length > 0
+                ? "Serie construida con los snapshots reales del histórico de métricas."
+                : "Datos de ejemplo — publica en tus redes y el histórico real reemplazará esta gráfica."
+            }
+            action={
+              <div className="flex items-center gap-2">
+                {!(hasRealData && realSeries.length > 0) && <Badge tone="yellow">Ejemplo</Badge>}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={RefreshCw}
+                  onClick={collectNow}
+                  disabled={collecting}
+                >
+                  {collecting ? "Midiendo..." : "Medir ahora"}
+                </Button>
+                <Button variant="secondary" size="sm" icon={Mail} onClick={handleSendEmailReport} disabled={sendingEmail} id="btn-analytics-email-report">
+                  {sendingEmail ? "Enviando..." : "Enviar informe"}
+                </Button>
+              </div>
+            }
+          />
 
-          <div className="h-72 w-full mt-2">
+          <div className="h-72 w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dailyMetrics} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="colorMeta" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
                   <linearGradient id="colorIG" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ec4899" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#ec4899" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#4f6ef7" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#4f6ef7" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorFB" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8fd4f8" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#8fd4f8" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorLI" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#101010" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#101010" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#101010" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#101010" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ECECEC" />
                 <XAxis dataKey="name" stroke="#9CA3AF" style={{ fontSize: 10, fontFamily: "monospace" }} />
                 <YAxis stroke="#9CA3AF" style={{ fontSize: 10, fontFamily: "monospace" }} />
                 <Tooltip contentStyle={{ backgroundColor: "#F3F5FB", borderColor: "#ECECEC", borderRadius: 8, color: "#111111" }} />
-                <Legend style={{ fontSize: 11, fontFamily: "monospace" }} />
-                <Area type="monotone" dataKey="MetaAds" stroke="#3b82f6" fillOpacity={1} fill="url(#colorMeta)" strokeWidth={2} />
-                <Area type="monotone" dataKey="IG" stroke="#ec4899" fillOpacity={1} fill="url(#colorIG)" strokeWidth={2} />
+                <Legend />
+                <Area type="monotone" dataKey="Instagram" stroke="#4f6ef7" fillOpacity={1} fill="url(#colorIG)" strokeWidth={2} />
+                <Area type="monotone" dataKey="Facebook" stroke="#8fd4f8" fillOpacity={1} fill="url(#colorFB)" strokeWidth={2} />
                 <Area type="monotone" dataKey="LinkedIn" stroke="#101010" fillOpacity={1} fill="url(#colorLI)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </Card>
 
-        {/* Chart 2: Conversions Funnel (takes 4 cols) */}
-        <div className="lg:col-span-4 bg-surface border border-line rounded-2xl p-5">
-          <h3 className="text-xs font-semibold text-muted uppercase tracking-wider pb-3 border-b border-line mb-4">
-            Embudo de Tráfico y Conversiones (Mateo & Facu)
-          </h3>
-          <p className="text-xs text-faint -mt-2 mb-4 leading-relaxed">Pérdida de fricción en campañas integradas.</p>
-
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={funnelData} layout="vertical" margin={{ left: -10, right: 10, top: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ECECEC" />
-                <XAxis type="number" stroke="#9CA3AF" hide />
-                <YAxis dataKey="stage" type="category" stroke="#9CA3AF" style={{ fontSize: 10, fontWeight: "500" }} />
-                <Tooltip contentStyle={{ backgroundColor: "#F3F5FB", borderColor: "#ECECEC", color: "#111111" }} />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                  {funnelData.map((entry, index) => (
-                    <rect key={index} fill={index === 3 ? "#101010" : entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-sink p-2.5 rounded-lg border border-line mt-4 text-[10px] text-muted font-mono leading-relaxed">
-            🚀 <strong>Tasa de Conversión global:</strong> 7.38% desde clic a venta, un 2% arriba tras la optimización de copys de Santi.
-          </div>
-        </div>
+        {/* Chart 2: Engagement by network */}
+        <Card className="lg:col-span-4">
+          <SectionTitle
+            title="Engagement por red"
+            subtitle="Total de interacciones medidas en cada plataforma."
+            action={!networkBars.length ? <Badge tone="yellow">Sin datos</Badge> : undefined}
+          />
+          {networkBars.length > 0 ? (
+            <div className="h-64 w-full mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={networkBars} layout="vertical" margin={{ left: 10, right: 10, top: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ECECEC" />
+                  <XAxis type="number" stroke="#9CA3AF" hide />
+                  <YAxis dataKey="network" type="category" stroke="#9CA3AF" style={{ fontSize: 10, fontWeight: "500" }} />
+                  <Tooltip contentStyle={{ backgroundColor: "#F3F5FB", borderColor: "#ECECEC", color: "#111111" }} />
+                  <Bar dataKey="engagement" radius={[0, 6, 6, 0]} fill="#4f6ef7" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="mt-4 bg-sink rounded-input p-5 text-center">
+              <p className="text-[12px] text-muted leading-relaxed">
+                Cuando publiques en Instagram o Facebook, el sistema medirá automáticamente likes y comentarios de cada
+                post y verás aquí la comparativa real entre redes.
+              </p>
+            </div>
+          )}
+        </Card>
       </div>
 
-      {/* Mateo's Hook Vault: Kill/Repeat list */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Mateo's vault (takes 7 cols) */}
-        <div className="lg:col-span-7 bg-surface border border-line rounded-2xl p-5 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 pb-3 border-b border-line">
-            <div>
-              <h3 className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-2">
-                🔒 Hook Vault: Reporte de Desempeño Diario
-              </h3>
-              <p className="text-xs text-faint mt-0.5">La directiva literal de Mateo: Repetir el contenido ganador, matar el perdedor.</p>
-            </div>
-
-            <select
+      {/* Hook Vault: repeat/kill from real metrics */}
+      <Card>
+        <SectionTitle
+          title="🔒 Hook Vault: repetir o matar"
+          subtitle={
+            hookVault.length
+              ? "Basado en el engagement real medido de tus publicaciones: repite lo ganador, pausa lo perdedor."
+              : "Cuando existan métricas reales, cada publicación se clasificará automáticamente en repetir o matar."
+          }
+          action={
+            <Select
+              aria-label="Filtrar por plataforma"
               value={platformFilter}
-              onChange={(e) => setPlatformFilter(e.target.value)}
-              className="bg-sink rounded-input text-xs px-2.5 py-1.5 text-muted outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
-            >
-              <option value="all">Todas las plataformas</option>
-              <option value="meta">Meta Ads</option>
-              <option value="instagram">Instagram</option>
-              <option value="linkedin">LinkedIn</option>
-            </select>
-          </div>
+              onChange={setPlatformFilter}
+              options={[
+                { value: "all", label: "Todas las plataformas" },
+                { value: "instagram", label: "Instagram" },
+                { value: "facebook", label: "Facebook" },
+                { value: "linkedin", label: "LinkedIn" },
+              ]}
+              className="w-52"
+            />
+          }
+        />
 
-          {/* List items */}
-          <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1 custom-scrollbar">
+        {filteredHooks.length === 0 ? (
+          <div className="mt-4 bg-sink rounded-input p-6 text-center">
+            <p className="text-[13px] text-muted">
+              Sin datos suficientes todavía. Publica contenido y pulsa <strong>Medir ahora</strong> en la gráfica para
+              alimentar el vault con resultados reales.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar mt-4">
             {filteredHooks.map((h) => {
               const isRepeat = h.status === "REPETIR";
               return (
-                <div key={h.id} className="bg-sink rounded-xl p-3.5 border border-line flex gap-3 relative overflow-hidden group">
-                  <div className={`w-1 absolute left-0 top-0 h-full ${isRepeat ? "bg-black" : "bg-rose-500"}`} />
-                  
+                <div key={h.id} className="bg-sink rounded-xl p-3.5 flex gap-3 relative overflow-hidden">
+                  <div className={`w-1 absolute left-0 top-0 h-full ${isRepeat ? "bg-green" : "bg-[#d5514f]"}`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[10px] text-faint font-mono uppercase">{h.platform}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-semibold flex items-center gap-1 ${
-                        isRepeat ? "bg-black/10 text-black" : "bg-rose-500/10 text-rose-400"
-                      }`}>
-                        {isRepeat ? (
-                          <>
-                            <RotateCcw className="w-3 h-3 text-black" />
-                            <span>REPETIR / ESCALAR</span>
-                          </>
-                        ) : (
-                          <>
-                            <Skull className="w-3 h-3 text-rose-400" />
-                            <span>MATAR / PAUSAR</span>
-                          </>
-                        )}
-                      </span>
+                      <Badge tone={isRepeat ? "green" : "red"} icon={isRepeat ? RotateCcw : Skull}>
+                        {isRepeat ? "REPETIR / ESCALAR" : "MATAR / PAUSAR"}
+                      </Badge>
                     </div>
-
-                    <p className="text-xs font-semibold text-ink mt-2">
-                      "{h.hook}"
-                    </p>
-                    <p className="text-[11px] text-muted mt-1.5 leading-relaxed bg-sink p-2 rounded">
+                    <p className="text-xs font-semibold text-ink mt-2">"{h.hook}"</p>
+                    <p className="text-[11px] text-muted mt-1.5 leading-relaxed">
                       <span className="text-black font-mono font-bold">Mateo:</span> {h.reason}
                     </p>
                   </div>
-                  
-                  {/* CTR display on right */}
                   <div className="flex flex-col justify-center items-end text-right shrink-0 font-mono border-l border-line pl-3">
-                    <span className="text-[10px] text-faint uppercase font-semibold">CTR</span>
-                    <span className={`text-sm font-bold ${isRepeat ? "text-black" : "text-rose-400"}`}>{h.ctr}%</span>
-                    <span className="text-[10px] text-muted mt-0.5">{h.conversions} leads</span>
+                    <span className="text-[10px] text-faint uppercase font-semibold">Engagement</span>
+                    <span className={`text-sm font-bold ${isRepeat ? "text-[#3f9a3f]" : "text-[#d5514f]"}`}>{h.engagement}</span>
+                    <span className="text-[10px] text-muted mt-0.5">
+                      {h.likes} ❤ · {h.comments} 💬
+                    </span>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
-
-        {/* Facu's DM Funnels auditor (takes 5 cols) */}
-        <div className="lg:col-span-5 bg-surface border border-line rounded-2xl p-5 space-y-4">
-          <h3 className="text-xs font-semibold text-muted uppercase tracking-wider pb-3 border-b border-line">
-            🤖 Auditoría de Embudos DM (Por Facu)
-          </h3>
-          <p className="text-xs text-faint -mt-2">Automatización de mensajes directos e interacciones directas en Meta/IG.</p>
-
-          <div className="space-y-3">
-            {dmAutomations.map((dm, idx) => (
-              <div key={idx} className="bg-sink border border-line rounded-xl p-3.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-black font-mono">Disparador #{idx + 1}</span>
-                  <span className="flex items-center gap-1 text-[10px] bg-black/10 text-black px-2 py-0.5 rounded font-mono font-semibold">
-                    <ShieldCheck className="w-3 h-3 text-black" /> Activa
-                  </span>
-                </div>
-                
-                <div className="text-xs">
-                  <span className="text-faint font-semibold">Trigger:</span> <strong className="text-ink">{dm.trigger}</strong>
-                </div>
-
-                <div className="text-xs leading-relaxed bg-sink p-2 rounded text-muted">
-                  <span className="text-faint font-semibold font-mono text-[10px] block mb-0.5">Acción Automática:</span>
-                  {dm.response}
-                </div>
-
-                <div className="flex items-center justify-between pt-1 border-t border-line text-[11px] font-mono">
-                  <span className="text-faint">Ejecuciones: <strong className="text-muted">{dm.executions}</strong></span>
-                  <span className="text-faint">Conversión: <strong className="text-black">{dm.conversion}</strong></span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+        )}
+      </Card>
     </div>
   );
 };

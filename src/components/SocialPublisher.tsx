@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { apiPost, apiGet } from "../lib/api";
+import { apiPost, apiGet, apiDelete } from "../lib/api";
 import { toast } from "../lib/toast";
 import { STORAGE_KEYS, getStored, setStored } from "../lib/storageKeys";
 import {
@@ -117,9 +117,9 @@ export const SocialPublisher: React.FC = () => {
     }
     setLoadingAccounts(true);
     try {
-      const res = await fetch("/api/meta/accounts", { headers: { Authorization: `Bearer ${metaToken}` } });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error?.message || data?.error || "Error al cargar cuentas");
+      const data = await apiGet<{ pages: any[] }>("/api/meta/accounts", {
+        headers: { Authorization: `Bearer ${metaToken}` },
+      });
       const pages = data.pages || [];
       setMetaAccounts(pages);
       if (pages.length > 0) {
@@ -224,25 +224,13 @@ export const SocialPublisher: React.FC = () => {
     setGeneratedResult(null);
 
     try {
-      const response = await fetch("/api/generate-media-description", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          image: selectedMedia?.data || selectedMedia?.url,
-          mediaType: selectedMedia?.type || "image",
-          productName,
-          targetTone,
-          additionalNotes
-        })
+      const data = await apiPost("/api/generate-media-description", {
+        image: selectedMedia?.data || selectedMedia?.url,
+        mediaType: selectedMedia?.type || "image",
+        productName,
+        targetTone,
+        additionalNotes,
       });
-
-      if (!response.ok) {
-        throw new Error("Error en la llamada al servidor");
-      }
-
-      const data = await response.json();
       setGeneratedResult(data);
     } catch (error: any) {
       console.error("Error al generar descripciones:", error);
@@ -263,13 +251,8 @@ export const SocialPublisher: React.FC = () => {
     let publicImageUrl = rawImage;
     if (rawImage.startsWith("data:")) {
       try {
-        const up = await fetch("/api/upload-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ dataUrl: rawImage }),
-        });
-        const upData = await up.json();
-        if (up.ok && upData.urls?.[0]) publicImageUrl = upData.urls[0];
+        const upData = await apiPost<{ urls: string[] }>("/api/upload-image", { dataUrl: rawImage });
+        if (upData.urls?.[0]) publicImageUrl = upData.urls[0];
       } catch {
         /* fall back to the raw value */
       }
@@ -397,11 +380,9 @@ export const SocialPublisher: React.FC = () => {
 
   const cancelScheduledPost = async (id: string) => {
     try {
-      const res = await fetch(`/api/scheduled/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast.success("Programación cancelada.");
-        loadScheduled();
-      }
+      await apiDelete(`/api/scheduled/${id}`);
+      toast.success("Programación cancelada.");
+      loadScheduled();
     } catch {
       toast.error("No se pudo cancelar.");
     }

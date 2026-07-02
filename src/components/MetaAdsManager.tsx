@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { Creative } from "../types";
 import { Search, SlidersHorizontal, Download, Share2, Upload, Calendar, RefreshCw, Check, Sparkles, Filter, AlertCircle, PlayCircle } from "lucide-react";
 import { PixelAvatar } from "./AgentProfiles";
+import { apiPost } from "../lib/api";
+import { toast } from "../lib/toast";
 
 export const MetaAdsManager: React.FC = () => {
   // Input fields
@@ -46,22 +48,14 @@ export const MetaAdsManager: React.FC = () => {
     setCreatives([]);
     setActiveCreative(null);
     try {
-      const response = await fetch("/api/generate-creatives", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "X-Gemini-Key": localStorage.getItem("custom_gemini_api_key") || ""
-        },
-        body: JSON.stringify({ description, niche, audience }),
-      });
-      const data = await response.json();
+      const data = await apiPost("/api/generate-creatives", { description, niche, audience });
       if (data.creatives) {
         setCreatives(data.creatives);
         setActiveCreative(data.creatives[0]);
         setIsDemo(!!data.isMock);
       }
-    } catch (err) {
-      console.error("Error fetching creatives:", err);
+    } catch (err: any) {
+      toast.error(err.message || "No se pudieron generar los creativos.");
     } finally {
       setLoading(false);
     }
