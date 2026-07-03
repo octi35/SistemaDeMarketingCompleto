@@ -6,7 +6,7 @@ import { Topbar } from "./components/Topbar";
 import { DashboardOverview } from "./components/DashboardOverview";
 import {
   RefreshCw, LayoutDashboard, Rocket, Images, Zap, GalleryHorizontalEnd,
-  PenLine, CalendarDays, ClipboardList, BarChart3, Users, Cloud,
+  PenLine, CalendarDays, ClipboardList, BarChart3, Users, Cloud, Palette,
 } from "lucide-react";
 
 // Tab views are code-split so each one only loads when opened (smaller initial bundle).
@@ -23,6 +23,7 @@ const IntegrationsManager = lazyNamed(() => import("./components/IntegrationsMan
 const TeamPipeline = lazyNamed(() => import("./components/TeamPipeline"), "TeamPipeline");
 const AutopilotEngine = lazyNamed(() => import("./components/AutopilotEngine"), "AutopilotEngine");
 const SocialPublisher = lazyNamed(() => import("./components/SocialPublisher"), "SocialPublisher");
+const BrandKit = lazyNamed(() => import("./components/BrandKit"), "BrandKit");
 
 interface Tab extends NavItem {
   desc: string;
@@ -30,6 +31,7 @@ interface Tab extends NavItem {
 
 const TABS: Tab[] = [
   { id: "dashboard", label: "Panel general", desc: "Vista global de tu agencia de marketing con IA", icon: LayoutDashboard },
+  { id: "brand", label: "Marca", desc: "Brand kit: identidad que usa toda la IA + informe semanal", icon: Palette },
   { id: "autopilot", label: "Piloto Automático", desc: "Automatización total de campañas publicitarias", icon: Rocket },
   { id: "social-publisher", label: "Gestor de Contenido", desc: "Sube imágenes/videos y publica en tus redes", icon: Images },
   { id: "meta-ads", label: "Meta Ads 50x", desc: "Genera 50 anuncios de conversión al instante", icon: Zap },
@@ -95,6 +97,7 @@ export default function App() {
                       </div>
                     }
                   >
+                    {activeTab === "brand" && <BrandKit />}
                     {activeTab === "autopilot" && <AutopilotEngine />}
                     {activeTab === "social-publisher" && <SocialPublisher />}
                     {activeTab === "meta-ads" && <MetaAdsManager />}

@@ -9,6 +9,8 @@ import {
   publishFacebookPost,
   publishLinkedInPost,
 } from "./publish";
+import { createMetaAdsDraft } from "./metaAds";
+import { parseBody, metaAdsDraftSchema } from "./validate";
 
 export function registerSocialRoutes(app: express.Express): void {
 
@@ -342,6 +344,19 @@ app.post("/api/meta/instagram/carousel", async (req, res) => {
   } catch (error: any) {
     console.error("Error publishing IG carousel:", error);
     res.status(500).json({ error: error.message || "Failed to publish Instagram carousel" });
+  }
+});
+
+// 10. POST /api/meta/ads/draft - Creates a full PAUSED ads draft
+// (campaign + ad set + creative + ad) ready for human review in Ads Manager.
+app.post("/api/meta/ads/draft", async (req, res) => {
+  const body = parseBody(metaAdsDraftSchema, req, res);
+  if (!body) return;
+  try {
+    const result = await createMetaAdsDraft(body);
+    res.status(result.ok ? 200 : result.status).json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo crear el borrador de campaña" });
   }
 });
 

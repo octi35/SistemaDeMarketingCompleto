@@ -11,6 +11,7 @@ import {
   PublishResult,
 } from "./publish";
 import { collectMetricsOnce } from "./metricsHistory";
+import { maybeSendWeeklyReport } from "./weeklyReport";
 
 export function publishScheduled(post: Pick<ScheduledPost, "network" | "payload">): Promise<PublishResult> {
   const payload = unsealPayloadTokens(post.payload || {});
@@ -88,6 +89,10 @@ export function startScheduler(): void {
   jobs.push(setTimeout(() => collectMetricsOnce().catch(() => {}), 90_000));
   jobs.push(setInterval(() => collectMetricsOnce().catch(() => {}), 6 * 60 * 60 * 1000));
   console.log("Metrics job activo: snapshot de métricas cada 6h.");
+
+  // Weekly email report: hourly check, fires Mondays ~09:00 when enabled.
+  jobs.push(setInterval(() => maybeSendWeeklyReport().catch(() => {}), 60 * 60 * 1000));
+  console.log("Informe semanal activo: se envía los lunes a las 9:00 si está habilitado.");
 }
 
 export function stopScheduler(): void {

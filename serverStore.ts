@@ -70,6 +70,40 @@ export interface PipelineCard {
   [key: string]: any;
 }
 
+export interface BrandKit {
+  businessName?: string;
+  description?: string;
+  audience?: string;
+  tone?: string;
+  website?: string;
+  palette?: string;
+  hashtags?: string;
+  updatedAt?: string;
+}
+
+export interface Experiment {
+  id: string;
+  name: string;
+  postIdA: string;
+  postIdB: string;
+  decideAfterDays: number;
+  status: "running" | "decided";
+  winner?: "A" | "B" | "tie";
+  engagementA?: number;
+  engagementB?: number;
+  createdAt: string;
+  decidedAt?: string;
+}
+
+export interface ReportConfig {
+  enabled: boolean;
+  to?: string;
+  /** Encrypted secret refs — never plaintext. */
+  smtp?: { host?: string; port?: string; user?: string; passRef?: string };
+  lastSentAt?: string;
+  updatedAt?: string;
+}
+
 interface Store {
   projects: CarouselProject[];
   calendar?: CalendarPlan;
@@ -78,6 +112,9 @@ interface Store {
   metrics?: MetricSnapshot[];
   metricsAuth?: MetricsAuth;
   pipeline?: { cards: PipelineCard[]; updatedAt: string };
+  brand?: BrandKit;
+  experiments?: Experiment[];
+  reportConfig?: ReportConfig;
 }
 
 function readStore(): Store {
@@ -93,6 +130,9 @@ function readStore(): Store {
       metrics: Array.isArray(parsed.metrics) ? parsed.metrics : [],
       metricsAuth: parsed.metricsAuth,
       pipeline: parsed.pipeline,
+      brand: parsed.brand,
+      experiments: Array.isArray(parsed.experiments) ? parsed.experiments : [],
+      reportConfig: parsed.reportConfig,
     };
   } catch (err) {
     console.error("[store] Failed to read store, starting empty:", err);
@@ -281,6 +321,69 @@ export function setMetricsAuth(patch: Partial<MetricsAuth>): void {
 
 export function getMetricsAuth(): MetricsAuth {
   return readStore().metricsAuth || {};
+}
+
+// ---- Brand kit (injected into every AI prompt) ----
+export function getBrand(): BrandKit | null {
+  return readStore().brand || null;
+}
+
+export function saveBrand(patch: BrandKit): BrandKit {
+  const store = readStore();
+  store.brand = { ...(store.brand || {}), ...patch, updatedAt: new Date().toISOString() };
+  writeStore(store);
+  return store.brand;
+}
+
+// ---- A/B experiments ----
+export function listExperiments(): Experiment[] {
+  return (readStore().experiments || []).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export function addExperiment(input: {
+  name: string;
+  postIdA: string;
+  postIdB: string;
+  decideAfterDays?: number;
+}): Experiment {
+  const store = readStore();
+  const exp: Experiment = {
+    id: `exp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    name: input.name,
+    postIdA: input.postIdA,
+    postIdB: input.postIdB,
+    decideAfterDays: input.decideAfterDays ?? 3,
+    status: "running",
+    createdAt: new Date().toISOString(),
+  };
+  store.experiments = [exp, ...(store.experiments || [])];
+  writeStore(store);
+  return exp;
+}
+
+export function updateExperiment(id: string, patch: Partial<Experiment>): void {
+  const store = readStore();
+  const exp = (store.experiments || []).find((e) => e.id === id);
+  if (!exp) return;
+  Object.assign(exp, patch);
+  writeStore(store);
+}
+
+// ---- Weekly report configuration ----
+export function getReportConfig(): ReportConfig | null {
+  return readStore().reportConfig || null;
+}
+
+export function saveReportConfig(patch: Partial<ReportConfig>): ReportConfig {
+  const store = readStore();
+  store.reportConfig = {
+    enabled: false,
+    ...(store.reportConfig || {}),
+    ...patch,
+    updatedAt: new Date().toISOString(),
+  };
+  writeStore(store);
+  return store.reportConfig;
 }
 
 // ---- Pipeline board persistence ----

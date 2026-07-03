@@ -35,6 +35,52 @@ export const mailSchema = z.object({
   html: z.string().max(500_000).optional(),
 });
 
+export const brandSchema = z.object({
+  businessName: z.string().max(120).optional(),
+  description: z.string().max(2000).optional(),
+  audience: z.string().max(1000).optional(),
+  tone: z.string().max(200).optional(),
+  website: z.string().max(300).optional(),
+  palette: z.string().max(300).optional(),
+  hashtags: z.string().max(500).optional(),
+});
+
+export const experimentSchema = z.object({
+  name: z.string().min(1).max(200),
+  postIdA: z.string().min(1),
+  postIdB: z.string().min(1),
+  decideAfterDays: z.number().min(1).max(30).optional(),
+});
+
+export const reportConfigSchema = z.object({
+  enabled: z.boolean(),
+  to: z.string().max(300).optional(),
+  smtp: z
+    .object({
+      host: z.string().max(200).optional(),
+      port: z.union([z.string(), z.number()]).optional(),
+      user: z.string().max(200).optional(),
+      pass: z.string().max(500).optional(),
+    })
+    .optional(),
+});
+
+export const metaAdsDraftSchema = z.object({
+  adAccountId: z.string().min(3),
+  token: z.string().min(10),
+  pageId: z.string().min(3),
+  campaignName: z.string().min(1).max(200),
+  objective: z.string().max(60).optional(),
+  dailyBudgetUsd: z.number().min(1).max(100000),
+  countries: z.array(z.string().length(2)).max(20).default(["AR"]),
+  ageMin: z.number().min(13).max(65).optional(),
+  ageMax: z.number().min(13).max(65).optional(),
+  message: z.string().min(1).max(3000),
+  headline: z.string().max(200).optional(),
+  link: z.string().url(),
+  imageUrl: z.string().url().optional(),
+});
+
 /**
  * Parses req.body with the given schema. On failure it answers 400 with the
  * first issue and returns null so the handler can simply early-return.

@@ -1,7 +1,15 @@
 // Background metrics collector: closes the publish → measure loop.
 // Uses the credentials captured at publish time (secret refs) to snapshot
 // likes/comments for every registered post and build a local time series.
-import { listPosts, saveMetricSnapshots, getMetricsAuth, listMetrics, MetricSnapshot } from "../serverStore";
+import {
+  listPosts,
+  saveMetricSnapshots,
+  getMetricsAuth,
+  listMetrics,
+  listExperiments,
+  updateExperiment,
+  MetricSnapshot,
+} from "../serverStore";
 import { resolveSecret } from "./secretStore";
 
 const GRAPH = "https://graph.facebook.com/v18.0";
@@ -68,12 +76,36 @@ export async function collectMetricsOnce(): Promise<CollectResult> {
   if (collected > 0) {
     console.log(`[Metrics] Guardados ${collected} snapshots de métricas (${checked} posts consultados).`);
   }
+
+  decideDueExperiments();
+
   return {
     collected,
     postsChecked: checked,
     hasInstagramAuth: !!igToken,
     hasFacebookAuth: !!fbToken,
   };
+}
+
+/** Resolves running A/B experiments whose decision window has elapsed. */
+export function decideDueExperiments(): void {
+  const summary = buildMetricsSummary();
+  const latest = new Map(summary.latestPerPost.map((s) => [s.postId, s]));
+  for (const exp of listExperiments()) {
+    if (exp.status !== "running") continue;
+    const due = Date.now() - Date.parse(exp.createdAt) >= exp.decideAfterDays * 24 * 3600 * 1000;
+    if (!due) continue;
+    const a = latest.get(exp.postIdA)?.engagement ?? 0;
+    const b = latest.get(exp.postIdB)?.engagement ?? 0;
+    updateExperiment(exp.id, {
+      status: "decided",
+      winner: a > b ? "A" : b > a ? "B" : "tie",
+      engagementA: a,
+      engagementB: b,
+      decidedAt: new Date().toISOString(),
+    });
+    console.log(`[Experiments] Decidido "${exp.name}": A=${a} vs B=${b}.`);
+  }
 }
 
 export interface MetricsSummary {

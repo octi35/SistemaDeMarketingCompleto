@@ -10,7 +10,25 @@ import {
   NANO_BANANA_MODELS,
   NANO_BANANA_PRO_MODELS,
 } from "../aiHelpers";
+import { getBrand } from "../serverStore";
 import type { ServerContext } from "./context";
+
+// Brand kit context automatically prepended to every AI generation prompt so
+// all creatives/copys/calendars speak with the configured brand voice.
+function brandPreamble(): string {
+  const brand = getBrand();
+  if (!brand) return "";
+  const parts: string[] = [];
+  if (brand.businessName) parts.push(`Business/Brand name: ${brand.businessName}`);
+  if (brand.description) parts.push(`About the business: ${brand.description}`);
+  if (brand.audience) parts.push(`Primary audience: ${brand.audience}`);
+  if (brand.tone) parts.push(`Brand voice/tone: ${brand.tone}`);
+  if (brand.website) parts.push(`Website: ${brand.website}`);
+  if (brand.palette) parts.push(`Brand colors/palette: ${brand.palette}`);
+  if (brand.hashtags) parts.push(`Preferred hashtags: ${brand.hashtags}`);
+  if (!parts.length) return "";
+  return `[BRAND KIT — always respect this brand identity]\n${parts.join("\n")}\n\n`;
+}
 
 export function registerAiRoutes(app: express.Express, ctx: ServerContext): void {
   const { ai, anthropicClient, getCustomAiClient } = ctx;
@@ -73,7 +91,7 @@ app.post("/api/generate-creatives", async (req, res) => {
     // we'll instruct the model to generate a set of 10 highly distinct, premium foundational templates,
     // and we will expand them into a structured list of 50 in our Express handler. This guarantees
     // high quality, avoids token exhaustion, and provides a spectacular user experience.
-    const prompt = `You are Santi, the Elite Content Strategist AI, and Mateo, the Data Analyst. 
+    const prompt = `${brandPreamble()}You are Santi, the Elite Content Strategist AI, and Mateo, the Data Analyst. 
 Generate a list of 10 highly distinct, high-performance meta ads creative templates for the following business:
 Business Description: ${description}
 Niche/Category: ${niche || "General"}
@@ -267,7 +285,7 @@ app.post("/api/generate-carousel", async (req, res) => {
 
     try {
       console.log(`[Claude API] Generating carousel with Claude Haiku for topic: ${topic}`);
-      const prompt = `You are Santi, the Content Strategist AI, and Lauti, the Scriptwriter.
+      const prompt = `${brandPreamble()}You are Santi, the Content Strategist AI, and Lauti, the Scriptwriter.
 Generate a structured Carousel presentation of exactly ${count} slides for the platform: ${platform || "Instagram"}.
 Topic: ${topic}
 Tone of Voice: ${tone || "Professional & Persuasive"}
@@ -344,7 +362,7 @@ Do not write any preamble, explanation, or markdown backtick block. Just the raw
   }
 
   try {
-    const prompt = `You are Santi, the Content Strategist AI, and Lauti, the Scriptwriter.
+    const prompt = `${brandPreamble()}You are Santi, the Content Strategist AI, and Lauti, the Scriptwriter.
 Generate a structured Carousel presentation of exactly ${count} slides for the platform: ${platform || "Instagram"}.
 Topic: ${topic}
 Tone of Voice: ${tone || "Professional & Persuasive"}
@@ -502,7 +520,7 @@ app.post("/api/generate-copys", async (req, res) => {
   }
 
   try {
-    const prompt = `You are Santi (Estratega de Contenido) and Lauti (Guionista).
+    const prompt = `${brandPreamble()}You are Santi (Estratega de Contenido) and Lauti (Guionista).
 Create 3 variations of persuasive advertising copy for the topic: "${topic}".
 Framework: ${framework || "AIDA (Attention, Interest, Desire, Action)"}.
 Tone: ${tone || "Directo y Persuasivo"}.
@@ -593,7 +611,7 @@ app.post("/api/generate-calendar", async (req, res) => {
   }
 
   try {
-    const prompt = `You are Cami (Ideadora) and Facu (Encargado de Publicación).
+    const prompt = `${brandPreamble()}You are Cami (Ideadora) and Facu (Encargado de Publicación).
 Generate a custom monthly publication calendar (exactly 30 days) for a brand in this niche: "${niche || "Servicios Digitales"}" focusing on "${topic || "Crecimiento y Ventas"}".
 
 Generate a list of 15 highly detailed unique calendar entries. We will interpolate them to make a 30-day calendar. For each entry, provide:
@@ -709,7 +727,7 @@ app.post("/api/generate-ideas", async (req, res) => {
   }
 
   try {
-    const prompt = `You are Cami (Ideadora), who is playful, fast-paced, and generates highly innovative content angles.
+    const prompt = `${brandPreamble()}You are Cami (Ideadora), who is playful, fast-paced, and generates highly innovative content angles.
 Generate exactly 30 unique, winning social media content ideas / angles for a business in the niche: "${niche || "e-commerce"}".
 Goal of the content: "${goal || "Get clients and increase views"}".
 
@@ -949,7 +967,7 @@ app.post("/api/generate-autopilot", async (req, res) => {
   }
 
   try {
-    const prompt = `You are a group of 6 autonomous marketing agents collaborating in AdTeam AI:
+    const prompt = `${brandPreamble()}You are a group of 6 autonomous marketing agents collaborating in AdTeam AI:
 1. Santi (Estratega): Defines direct-response strategy and budget split.
 2. Lauti (Guionista): Writes AIDA/PAS persuasive copies.
 3. Cami (Diseñadora): Outlines carousel visual structures.
@@ -1108,7 +1126,7 @@ app.post("/api/generate-media-description", async (req, res) => {
       });
     }
 
-    const textPrompt = `You are an elite multi-channel social media copywriter.
+    const textPrompt = `${brandPreamble()}You are an elite multi-channel social media copywriter.
 Analyze the following parameters:
 - Media Type: ${mediaType || "image"}
 - Related Product/Campaign: ${productName || "General marketing content"}
@@ -1194,7 +1212,7 @@ app.post("/api/recommendations", async (req, res) => {
   if (!activeAi) return res.json({ ...getMock(), isMock: true });
 
   try {
-    const prompt = `Eres Mateo, analista de performance de marketing. A partir de estas métricas de publicaciones (JSON), da recomendaciones accionables de qué REPETIR, qué MATAR y qué AJUSTAR para mejorar alcance y conversión${niche ? ` en el nicho ${niche}` : ""}.
+    const prompt = `${brandPreamble()}Eres Mateo, analista de performance de marketing. A partir de estas métricas de publicaciones (JSON), da recomendaciones accionables de qué REPETIR, qué MATAR y qué AJUSTAR para mejorar alcance y conversión${niche ? ` en el nicho ${niche}` : ""}.
 Métricas: ${JSON.stringify(metrics || []).slice(0, 4000)}
 Devuelve JSON con un array "recommendations" de 4-6 objetos { action: "repeat"|"kill"|"tweak", title, reason, priority: "alta"|"media"|"baja" }. En español, conciso y accionable.`;
     const response = await generateContentWithFallback(

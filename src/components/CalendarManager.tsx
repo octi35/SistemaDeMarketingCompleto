@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { CalendarItem } from "../types";
 import { apiPost, apiGet } from "../lib/api";
 import { toast } from "../lib/toast";
-import { Sparkles, Calendar, Plus, RefreshCw, Check, Clock, Trash2, Edit3, Share2, AlertCircle, Save } from "lucide-react";
+import { Sparkles, Calendar, Plus, RefreshCw, Check, Clock, Trash2, Edit3, Share2, AlertCircle, Save, CalendarClock } from "lucide-react";
 import { PixelAvatar } from "./AgentProfiles";
+import { STORAGE_KEYS, getStored } from "../lib/storageKeys";
 
 export const CalendarManager: React.FC = () => {
   const [niche, setNiche] = useState("Marketing de Afiliados y Cursos Online");
@@ -128,6 +129,101 @@ export const CalendarManager: React.FC = () => {
     }, 2000);
   };
 
+  // ---- Real 1-click scheduling: calendar item -> auto-publish queue ----
+  const [schedulingDay, setSchedulingDay] = useState<number | null>(null);
+  const [schedulingAll, setSchedulingAll] = useState(false);
+
+  // Text-only publishing is supported on Facebook Pages and LinkedIn.
+  // Instagram requires an image (use the Gestor de Contenido for that).
+  const platformToNetwork = (platform: string): "facebook" | "linkedin" | null => {
+    if (platform.includes("LinkedIn")) return "linkedin";
+    if (platform.includes("Ads") || platform.includes("Facebook")) return "facebook";
+    return null;
+  };
+
+  // Day 1 of the plan = tomorrow, at the item's configured time.
+  const publishAtFor = (item: CalendarItem): string => {
+    const d = new Date();
+    d.setDate(d.getDate() + Math.max(1, item.day));
+    const [hh, mm] = (item.time || "10:00").split(":").map((n) => parseInt(n, 10));
+    d.setHours(isNaN(hh) ? 10 : hh, isNaN(mm) ? 0 : mm, 0, 0);
+    return d.toISOString();
+  };
+
+  const buildSchedulePayload = (item: CalendarItem, network: "facebook" | "linkedin") => {
+    const text = `${item.title}\n\n${item.copy}`;
+    if (network === "linkedin") {
+      return { text, token: getStored(STORAGE_KEYS.linkedinAccessToken) };
+    }
+    return {
+      pageId: getStored(STORAGE_KEYS.metaPageId) || "sandbox_page_id",
+      message: text,
+      token: getStored(STORAGE_KEYS.metaAccessToken),
+    };
+  };
+
+  const scheduleItem = async (item: CalendarItem, silent = false): Promise<boolean> => {
+    const network = platformToNetwork(item.platform);
+    if (!network) {
+      if (!silent) {
+        toast.info(
+          item.platform.includes("Instagram") || item.platform.includes("Carousel")
+            ? "Instagram necesita imagen: usa el Gestor de Contenido o Carruseles para programarlo con su creatividad."
+            : `${item.platform} aún no soporta auto-publicación; se mantiene como recordatorio en el plan.`
+        );
+      }
+      return false;
+    }
+    const payload = buildSchedulePayload(item, network);
+    if (!payload.token) {
+      if (!silent) toast.error(`Conecta tu cuenta de ${network === "linkedin" ? "LinkedIn" : "Meta"} en Integración Nube primero.`);
+      return false;
+    }
+    try {
+      await apiPost("/api/schedule", {
+        network,
+        payload,
+        publishAt: publishAtFor(item),
+        label: `Calendario día ${item.day}: ${item.title.slice(0, 60)}`,
+      });
+      setCalendar((prev) => prev.map((c) => (c.day === item.day ? { ...c, status: "Programado" } : c)));
+      if (activeItem?.day === item.day) setEditingStatus("Programado");
+      if (!silent) toast.success(`Día ${item.day} programado para ${new Date(publishAtFor(item)).toLocaleString()}.`);
+      return true;
+    } catch (err: any) {
+      if (!silent) toast.error(`No se pudo programar: ${err.message || err}`);
+      return false;
+    }
+  };
+
+  const handleScheduleActive = async () => {
+    if (!activeItem) return;
+    setSchedulingDay(activeItem.day);
+    await scheduleItem({ ...activeItem, title: editingTitle, copy: editingCopy, platform: editingPlatform, time: editingTime });
+    setSchedulingDay(null);
+  };
+
+  const handleScheduleAll = async () => {
+    setSchedulingAll(true);
+    let ok = 0;
+    let skipped = 0;
+    for (const item of calendar) {
+      if (item.status !== "Borrador") continue;
+      const network = platformToNetwork(item.platform);
+      if (!network) {
+        skipped++;
+        continue;
+      }
+      if (await scheduleItem(item, true)) {
+        ok++;
+      } else {
+        skipped++;
+      }
+    }
+    setSchedulingAll(false);
+    toast.success(`Plan programado: ${ok} publicaciones en cola de auto-publicación${skipped ? `, ${skipped} omitidas (plataforma sin soporte o sin token)` : ""}.`);
+  };
+
   return (
     <div className="space-y-6" id="calendar-manager-root">
       {/* Search and control section */}
@@ -204,6 +300,15 @@ export const CalendarManager: React.FC = () => {
           >
             {savingPlan ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-black" />}
             <span>Guardar plan</span>
+          </button>
+          <button
+            onClick={handleScheduleAll}
+            disabled={calendar.length === 0 || schedulingAll}
+            className="bg-accent hover:brightness-110 text-white font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider disabled:opacity-50"
+            id="btn-schedule-all-plan"
+          >
+            {schedulingAll ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CalendarClock className="w-4 h-4" />}
+            <span>Programar plan (auto-publicación)</span>
           </button>
         </div>
       </div>
@@ -372,6 +477,20 @@ export const CalendarManager: React.FC = () => {
                     id="btn-calendar-save-edit"
                   >
                     <span>Guardar Cambios Locales</span>
+                  </button>
+
+                  <button
+                    onClick={handleScheduleActive}
+                    disabled={schedulingDay === activeItem.day}
+                    className="w-full bg-accent hover:brightness-110 text-white font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition disabled:opacity-50"
+                    id="btn-calendar-schedule-item"
+                  >
+                    {schedulingDay === activeItem.day ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CalendarClock className="w-4 h-4" />
+                    )}
+                    <span>Programar publicación real (día {activeItem.day})</span>
                   </button>
 
                   <button

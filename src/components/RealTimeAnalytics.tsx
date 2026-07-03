@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, Legend,
 } from "recharts";
-import { TrendingUp, Skull, RotateCcw, Mail, RefreshCw } from "lucide-react";
+import { TrendingUp, Skull, RotateCcw, Mail, RefreshCw, FlaskConical, Trophy } from "lucide-react";
 import { RealMetricsPanel } from "./RealMetricsPanel";
 import { Card, SectionTitle, Badge, Button, Select } from "./ui";
 import { apiGet, apiPost } from "../lib/api";
@@ -42,6 +42,19 @@ const NETWORK_LABEL: Record<string, string> = {
   linkedin: "LinkedIn",
 };
 
+interface Experiment {
+  id: string;
+  name: string;
+  postIdA: string;
+  postIdB: string;
+  decideAfterDays: number;
+  status: "running" | "decided";
+  winner?: "A" | "B" | "tie";
+  engagementA?: number;
+  engagementB?: number;
+  createdAt: string;
+}
+
 // Sample series shown (clearly labeled) until real snapshots exist.
 const DEMO_SERIES = [
   { name: "Día 01", Instagram: 12, Facebook: 8, LinkedIn: 5 },
@@ -68,15 +81,49 @@ export const RealTimeAnalytics: React.FC = () => {
   const [convRate, setConvRate] = useState(2.5);
   const [aov, setAov] = useState(45);
 
+  // A/B experiments
+  const [experiments, setExperiments] = useState<Experiment[]>([]);
+  const [expName, setExpName] = useState("");
+  const [expPostA, setExpPostA] = useState("");
+  const [expPostB, setExpPostB] = useState("");
+  const [creatingExp, setCreatingExp] = useState(false);
+
   const load = async () => {
     setLoading(true);
-    const [metricsRes, postsRes] = await Promise.allSettled([
+    const [metricsRes, postsRes, expRes] = await Promise.allSettled([
       apiGet<MetricsSummary>("/api/metrics/history"),
       apiGet<{ posts: PublishedPost[] }>("/api/posts"),
+      apiGet<{ experiments: Experiment[] }>("/api/experiments"),
     ]);
     if (metricsRes.status === "fulfilled") setSummary(metricsRes.value);
     if (postsRes.status === "fulfilled") setPosts(postsRes.value.posts || []);
+    if (expRes.status === "fulfilled") setExperiments(expRes.value.experiments || []);
     setLoading(false);
+  };
+
+  const createExperiment = async () => {
+    if (!expPostA || !expPostB) {
+      toast.error("Elige las dos publicaciones a comparar.");
+      return;
+    }
+    setCreatingExp(true);
+    try {
+      await apiPost("/api/experiments", {
+        name: expName || `A/B ${new Date().toLocaleDateString()}`,
+        postIdA: expPostA,
+        postIdB: expPostB,
+        decideAfterDays: 3,
+      });
+      toast.success("Experimento creado: en 3 días el sistema declarará el ganador según engagement real.");
+      setExpName("");
+      setExpPostA("");
+      setExpPostB("");
+      await load();
+    } catch (err: any) {
+      toast.error(err.message || "No se pudo crear el experimento.");
+    } finally {
+      setCreatingExp(false);
+    }
   };
 
   useEffect(() => {
@@ -486,6 +533,89 @@ export const RealTimeAnalytics: React.FC = () => {
                     <span className="text-[10px] text-muted mt-0.5">
                       {h.likes} ❤ · {h.comments} 💬
                     </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* A/B testing: compare two published posts, decided by real metrics */}
+      <Card>
+        <SectionTitle
+          icon={FlaskConical}
+          title="Experimentos A/B"
+          subtitle="Compara dos publicaciones: a los 3 días el job de métricas declara el ganador según engagement real."
+        />
+
+        {/* Creation form */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-5">
+          <div className="md:col-span-1">
+            <input
+              type="text"
+              value={expName}
+              onChange={(e) => setExpName(e.target.value)}
+              placeholder="Nombre del experimento"
+              aria-label="Nombre del experimento"
+              className="w-full h-[46px] rounded-input bg-sink text-sm text-ink placeholder:text-faint px-4 outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
+            />
+          </div>
+          <Select
+            aria-label="Variante A"
+            value={expPostA}
+            onChange={setExpPostA}
+            options={[
+              { value: "", label: "Variante A (elige post)" },
+              ...posts.map((p) => ({ value: p.postId, label: `[${NETWORK_LABEL[p.network]}] ${(p.caption || p.postId).slice(0, 40)}` })),
+            ]}
+          />
+          <Select
+            aria-label="Variante B"
+            value={expPostB}
+            onChange={setExpPostB}
+            options={[
+              { value: "", label: "Variante B (elige post)" },
+              ...posts.map((p) => ({ value: p.postId, label: `[${NETWORK_LABEL[p.network]}] ${(p.caption || p.postId).slice(0, 40)}` })),
+            ]}
+          />
+          <Button onClick={createExperiment} disabled={creatingExp || posts.length < 2} icon={FlaskConical}>
+            {creatingExp ? "Creando..." : "Crear experimento"}
+          </Button>
+        </div>
+        {posts.length < 2 && (
+          <p className="text-[12px] text-faint mt-2">
+            Necesitas al menos 2 publicaciones registradas para comparar variantes.
+          </p>
+        )}
+
+        {/* Experiment list */}
+        {experiments.length > 0 && (
+          <div className="mt-5 space-y-3">
+            {experiments.map((e) => {
+              const postA = posts.find((p) => p.postId === e.postIdA);
+              const postB = posts.find((p) => p.postId === e.postIdB);
+              return (
+                <div key={e.id} className="bg-sink rounded-input p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[13px] font-semibold text-ink">{e.name}</span>
+                    {e.status === "decided" ? (
+                      <Badge tone={e.winner === "tie" ? "neutral" : "green"} icon={Trophy}>
+                        {e.winner === "tie" ? "Empate" : `Ganó la variante ${e.winner}`}
+                      </Badge>
+                    ) : (
+                      <Badge tone="accent" dot>En curso · decide en {e.decideAfterDays} días</Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3 text-[12px] text-muted">
+                    <div className={`p-2.5 rounded-lg bg-surface ${e.winner === "A" ? "ring-1 ring-[#7dd87d]" : ""}`}>
+                      <strong className="text-ink">A:</strong> {(postA?.caption || e.postIdA).slice(0, 70)}
+                      {e.engagementA !== undefined && <span className="block text-faint mt-1">{e.engagementA} interacciones</span>}
+                    </div>
+                    <div className={`p-2.5 rounded-lg bg-surface ${e.winner === "B" ? "ring-1 ring-[#7dd87d]" : ""}`}>
+                      <strong className="text-ink">B:</strong> {(postB?.caption || e.postIdB).slice(0, 70)}
+                      {e.engagementB !== undefined && <span className="block text-faint mt-1">{e.engagementB} interacciones</span>}
+                    </div>
                   </div>
                 </div>
               );

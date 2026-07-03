@@ -4,6 +4,7 @@ import { Search, SlidersHorizontal, Download, Share2, Upload, Calendar, RefreshC
 import { PixelAvatar } from "./AgentProfiles";
 import { apiPost } from "../lib/api";
 import { toast } from "../lib/toast";
+import { STORAGE_KEYS, getStored, setStored } from "../lib/storageKeys";
 
 export const MetaAdsManager: React.FC = () => {
   // Input fields
@@ -29,6 +30,54 @@ export const MetaAdsManager: React.FC = () => {
   const [editedHook, setEditedHook] = useState("");
   const [editedBodyCopy, setEditedBodyCopy] = useState("");
   const [editedCta, setEditedCta] = useState("");
+
+  // Real Meta Ads draft (campaign + ad set + creative + ad, all PAUSED)
+  const [adAccountId, setAdAccountId] = useState(() => getStored(STORAGE_KEYS.metaAdAccountId));
+  const [adsPageId, setAdsPageId] = useState(() => getStored(STORAGE_KEYS.metaPageId));
+  const [adsLink, setAdsLink] = useState("");
+  const [adsBudget, setAdsBudget] = useState(10);
+  const [adsCountries, setAdsCountries] = useState("AR");
+  const [creatingDraft, setCreatingDraft] = useState(false);
+  const [draftResult, setDraftResult] = useState<{ ok: boolean; campaignId?: string; adId?: string; steps: { step: string; id?: string; error?: any }[] } | null>(null);
+
+  const createRealAdsDraft = async () => {
+    const token = getStored(STORAGE_KEYS.metaAccessToken);
+    if (!token) {
+      toast.error("Conecta tu cuenta de Meta en Integración Nube primero.");
+      return;
+    }
+    if (!adAccountId || !adsPageId || !adsLink) {
+      toast.error("Completa la cuenta publicitaria, la página de Facebook y el link de destino.");
+      return;
+    }
+    setCreatingDraft(true);
+    setDraftResult(null);
+    try {
+      const r = await apiPost("/api/meta/ads/draft", {
+        adAccountId,
+        token,
+        pageId: adsPageId,
+        campaignName: editedHeadline || "Campaña AdTeam AI",
+        dailyBudgetUsd: adsBudget,
+        countries: adsCountries.split(",").map((c) => c.trim().toUpperCase()).filter((c) => c.length === 2),
+        message: `${editedHook}\n\n${editedBodyCopy}`,
+        headline: editedHeadline || undefined,
+        link: adsLink,
+      });
+      setDraftResult(r);
+      setStored(STORAGE_KEYS.metaAdAccountId, adAccountId);
+      setStored(STORAGE_KEYS.metaPageId, adsPageId);
+      if (r.ok) {
+        toast.success("Borrador creado en Meta (PAUSADO): revísalo y actívalo desde el Administrador de Anuncios.");
+      } else {
+        toast.error("La creación quedó incompleta: revisa el detalle de pasos abajo.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "No se pudo crear el borrador de campaña.");
+    } finally {
+      setCreatingDraft(false);
+    }
+  };
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -669,6 +718,117 @@ export const MetaAdsManager: React.FC = () => {
                     <p className="text-black/80">{"{"} "name": "{editedHeadline}", "body": "{editedBodyCopy.slice(0, 40)}...", "title": "{editedHeadline}", "call_to_action": "{editedCta}", "status": "ACTIVE" {"}"}</p>
                   </div>
                 )}
+
+                {/* REAL Meta Ads draft: campaign + ad set + creative + ad (PAUSED) */}
+                <div className="border border-line rounded-2xl p-5 space-y-4 bg-accent-soft/40">
+                  <div className="flex items-start justify-between gap-3 border-b border-line pb-3">
+                    <div>
+                      <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
+                        🚀 Crear campaña REAL en Meta (borrador pausado)
+                      </h4>
+                      <p className="text-[11px] text-muted mt-1 leading-relaxed">
+                        Crea campaña, conjunto de anuncios, creatividad y anuncio con este copy — todo en{" "}
+                        <strong>PAUSED</strong> para que lo revises y actives desde el Administrador de Anuncios.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-semibold text-faint font-mono uppercase">Cuenta publicitaria</label>
+                      <input
+                        type="text"
+                        value={adAccountId}
+                        onChange={(e) => setAdAccountId(e.target.value)}
+                        placeholder="act_123456789"
+                        className="w-full bg-surface rounded-input p-2.5 text-xs text-ink outline-none focus:ring-2 focus:ring-accent/20"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-semibold text-faint font-mono uppercase">ID de página de Facebook</label>
+                      <input
+                        type="text"
+                        value={adsPageId}
+                        onChange={(e) => setAdsPageId(e.target.value)}
+                        placeholder="1234567890"
+                        className="w-full bg-surface rounded-input p-2.5 text-xs text-ink outline-none focus:ring-2 focus:ring-accent/20"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-semibold text-faint font-mono uppercase">Link de destino</label>
+                      <input
+                        type="text"
+                        value={adsLink}
+                        onChange={(e) => setAdsLink(e.target.value)}
+                        placeholder="https://tunegocio.com/oferta"
+                        className="w-full bg-surface rounded-input p-2.5 text-xs text-ink outline-none focus:ring-2 focus:ring-accent/20"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-faint font-mono uppercase">USD/día</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={adsBudget}
+                          onChange={(e) => setAdsBudget(Number(e.target.value))}
+                          className="w-full bg-surface rounded-input p-2.5 text-xs text-ink outline-none focus:ring-2 focus:ring-accent/20"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-semibold text-faint font-mono uppercase">Países</label>
+                        <input
+                          type="text"
+                          value={adsCountries}
+                          onChange={(e) => setAdsCountries(e.target.value)}
+                          placeholder="AR, MX"
+                          className="w-full bg-surface rounded-input p-2.5 text-xs text-ink outline-none focus:ring-2 focus:ring-accent/20"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={createRealAdsDraft}
+                    disabled={creatingDraft}
+                    className="bg-accent hover:brightness-110 disabled:opacity-50 text-white font-bold text-xs px-6 py-3 rounded-full flex items-center justify-center gap-2 transition uppercase tracking-wider"
+                    id="btn-create-real-ads-draft"
+                  >
+                    {creatingDraft ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Creando borrador en Meta...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>Crear borrador real en Meta Ads</span>
+                      </>
+                    )}
+                  </button>
+
+                  {draftResult && (
+                    <div className="bg-surface rounded-input p-3 font-mono text-[10px] text-muted space-y-1">
+                      {draftResult.steps.map((s) => (
+                        <div key={s.step} className="flex items-center justify-between gap-2">
+                          <span className="uppercase">{s.step}</span>
+                          {s.error ? (
+                            <span className="text-[#d5514f] truncate max-w-[70%]">
+                              ✖ {typeof s.error === "string" ? s.error : s.error?.error?.message || JSON.stringify(s.error).slice(0, 120)}
+                            </span>
+                          ) : (
+                            <span className="text-[#3f9a3f]">✔ {s.id || "ok"}</span>
+                          )}
+                        </div>
+                      ))}
+                      {draftResult.ok && (
+                        <p className="text-ink pt-1 border-t border-line">
+                          Campaña {draftResult.campaignId} creada en PAUSED — actívala desde Meta Ads Manager.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="bg-surface border border-line rounded-2xl p-12 text-center text-muted">

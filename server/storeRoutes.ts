@@ -15,11 +15,27 @@ import {
   listScheduled,
   getPipeline,
   savePipeline,
+  getBrand,
+  saveBrand,
+  listExperiments,
+  addExperiment,
+  getReportConfig,
+  saveReportConfig,
 } from "../serverStore";
-import { collectMetricsOnce, buildMetricsSummary } from "./metricsHistory";
+import { collectMetricsOnce, buildMetricsSummary, decideDueExperiments } from "./metricsHistory";
+import { sendWeeklyReport, buildReportText } from "./weeklyReport";
 import { saveDataUrlImage } from "../imageStore";
-import { sealPayloadTokens } from "./secretStore";
-import { parseBody, scheduleSchema, calendarSchema, projectSchema, mailSchema } from "./validate";
+import { sealPayloadTokens, storeSecret } from "./secretStore";
+import {
+  parseBody,
+  scheduleSchema,
+  calendarSchema,
+  projectSchema,
+  mailSchema,
+  brandSchema,
+  experimentSchema,
+  reportConfigSchema,
+} from "./validate";
 import type { ServerContext } from "./context";
 
 export function registerStoreRoutes(app: express.Express, ctx: ServerContext): void {
@@ -181,6 +197,73 @@ export function registerStoreRoutes(app: express.Express, ctx: ServerContext): v
     const { cards } = req.body || {};
     if (!Array.isArray(cards)) return res.status(400).json({ error: "Se requiere un array 'cards'." });
     res.json({ pipeline: savePipeline(cards) });
+  });
+
+  // ---- Brand kit (injected into every AI prompt) ----
+  app.get("/api/brand", (_req, res) => {
+    res.json({ brand: getBrand() });
+  });
+
+  app.post("/api/brand", (req, res) => {
+    const body = parseBody(brandSchema, req, res);
+    if (!body) return;
+    res.json({ brand: saveBrand(body) });
+  });
+
+  // ---- A/B experiments (decided automatically by the metrics job) ----
+  app.get("/api/experiments", (_req, res) => {
+    decideDueExperiments();
+    res.json({ experiments: listExperiments() });
+  });
+
+  app.post("/api/experiments", (req, res) => {
+    const body = parseBody(experimentSchema, req, res);
+    if (!body) return;
+    if (body.postIdA === body.postIdB) {
+      return res.status(400).json({ error: "Elige dos publicaciones distintas para comparar." });
+    }
+    res.json({ experiment: addExperiment(body) });
+  });
+
+  // ---- Weekly report ----
+  app.get("/api/report/config", (_req, res) => {
+    const cfg = getReportConfig();
+    res.json({
+      config: cfg
+        ? {
+            enabled: cfg.enabled,
+            to: cfg.to,
+            lastSentAt: cfg.lastSentAt,
+            hasSmtp: !!(cfg.smtp?.host && cfg.smtp?.user && cfg.smtp?.passRef) || !!process.env.SMTP_HOST,
+          }
+        : { enabled: false, hasSmtp: !!process.env.SMTP_HOST },
+    });
+  });
+
+  app.post("/api/report/config", (req, res) => {
+    const body = parseBody(reportConfigSchema, req, res);
+    if (!body) return;
+    const patch: any = { enabled: body.enabled, to: body.to };
+    if (body.smtp) {
+      patch.smtp = {
+        host: body.smtp.host,
+        port: body.smtp.port ? String(body.smtp.port) : undefined,
+        user: body.smtp.user,
+        // The password is encrypted at rest; only a ref is stored.
+        passRef: body.smtp.pass ? storeSecret(body.smtp.pass) : getReportConfig()?.smtp?.passRef,
+      };
+    }
+    const saved = saveReportConfig(patch);
+    res.json({ config: { enabled: saved.enabled, to: saved.to, lastSentAt: saved.lastSentAt } });
+  });
+
+  app.get("/api/report/preview", (_req, res) => {
+    res.type("text/plain").send(buildReportText());
+  });
+
+  app.post("/api/report/send-now", async (_req, res) => {
+    const result = await sendWeeklyReport();
+    res.status(result.success ? 200 : 400).json(result);
   });
 
   // ---- Upload base64 images -> public URLs (needed for IG publishing) ----
