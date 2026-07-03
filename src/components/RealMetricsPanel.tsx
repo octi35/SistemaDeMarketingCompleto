@@ -43,18 +43,28 @@ export const RealMetricsPanel: React.FC = () => {
       .catch(() => {});
   }, []);
 
+  const [network, setNetwork] = useState<"instagram" | "facebook">("instagram");
+
   const igId = getStored(STORAGE_KEYS.metaIgAccountId);
+  const pageId = getStored(STORAGE_KEYS.metaPageId);
   const token = getStored(STORAGE_KEYS.metaAccessToken);
-  const connected = !!(igId && token);
+  const connected = network === "instagram" ? !!(igId && token) : !!(pageId && token);
 
   const loadMetrics = async () => {
     if (!connected) {
-      toast.error("Conecta tu Instagram en 'Gestor de Contenido' → 'Cargar mis páginas' para ver métricas reales.");
+      toast.error(
+        network === "instagram"
+          ? "Conecta tu Instagram en 'Gestor de Contenido' → 'Cargar mis páginas' para ver métricas reales."
+          : "Conecta tu página de Facebook en 'Gestor de Contenido' → 'Cargar mis páginas' primero."
+      );
       return;
     }
     setLoading(true);
     try {
-      const data = await apiPost<{ media: MediaMetric[] }>("/api/metrics/instagram", { igUserId: igId, token });
+      const data =
+        network === "instagram"
+          ? await apiPost<{ media: MediaMetric[] }>("/api/metrics/instagram", { igUserId: igId, token })
+          : await apiPost<{ media: MediaMetric[] }>("/api/metrics/facebook", { pageId, token });
       setMedia(data.media || []);
       if ((data.media || []).length === 0) toast.info("La cuenta no tiene publicaciones todavía.");
       else toast.success(`${data.media.length} publicaciones cargadas.`);
@@ -89,13 +99,30 @@ export const RealMetricsPanel: React.FC = () => {
             <BarChart3 className="w-4 h-4 text-black" />
           </span>
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink">Métricas reales de Instagram</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink">Métricas reales</h3>
             <p className="text-[10px] text-muted">
-              {connected ? "Cuenta conectada — datos en vivo vía Graph API." : "Conecta tu Instagram para ver datos reales."}
+              {connected ? "Cuenta conectada — datos en vivo vía Graph API." : "Conecta tu cuenta para ver datos reales."}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
+          <div className="flex bg-sink border border-line rounded-lg p-0.5">
+            {(["instagram", "facebook"] as const).map((n) => (
+              <button
+                key={n}
+                onClick={() => {
+                  setNetwork(n);
+                  setMedia([]);
+                  setRecommendations([]);
+                }}
+                className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase transition ${
+                  network === n ? "bg-black text-white" : "text-muted hover:text-ink"
+                }`}
+              >
+                {n === "instagram" ? "IG" : "FB"}
+              </button>
+            ))}
+          </div>
           <button
             onClick={loadMetrics}
             disabled={loading}

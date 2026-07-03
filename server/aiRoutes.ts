@@ -10,7 +10,8 @@ import {
   NANO_BANANA_MODELS,
   NANO_BANANA_PRO_MODELS,
 } from "../aiHelpers";
-import { getBrand } from "../serverStore";
+import { getBrand, listPosts } from "../serverStore";
+import { buildMetricsSummary } from "./metricsHistory";
 import type { ServerContext } from "./context";
 
 // Brand kit context automatically prepended to every AI generation prompt so
@@ -28,6 +29,27 @@ function brandPreamble(): string {
   if (brand.hashtags) parts.push(`Preferred hashtags: ${brand.hashtags}`);
   if (!parts.length) return "";
   return `[BRAND KIT — always respect this brand identity]\n${parts.join("\n")}\n\n`;
+}
+
+// Real performance data (measured engagement of published posts) prepended to
+// idea/calendar prompts so the AI doubles down on what already worked.
+function performanceContext(): string {
+  try {
+    const summary = buildMetricsSummary();
+    if (!summary.totalPosts) return "";
+    const captions = new Map(listPosts().map((p) => [p.postId, p.caption || ""]));
+    const top = [...summary.latestPerPost].sort((a, b) => b.engagement - a.engagement).slice(0, 5);
+    const lines = top.map(
+      (s) =>
+        `- [${s.network}] engagement ${s.engagement} (${s.likes} likes, ${s.comments} comments): "${(captions.get(s.postId) || "").replace(/\s+/g, " ").slice(0, 140)}"`
+    );
+    const nets = Object.entries(summary.byNetwork)
+      .map(([n, v]) => `${n}: ${v.posts} posts, ${v.engagement} engagement total`)
+      .join("; ");
+    return `[REAL PERFORMANCE DATA — measured on this account, lean into what already works]\nNetwork totals: ${nets}\nTop posts by measured engagement:\n${lines.join("\n")}\n\n`;
+  } catch {
+    return "";
+  }
 }
 
 export function registerAiRoutes(app: express.Express, ctx: ServerContext): void {
@@ -611,7 +633,7 @@ app.post("/api/generate-calendar", async (req, res) => {
   }
 
   try {
-    const prompt = `${brandPreamble()}You are Cami (Ideadora) and Facu (Encargado de Publicación).
+    const prompt = `${brandPreamble()}${performanceContext()}You are Cami (Ideadora) and Facu (Encargado de Publicación).
 Generate a custom monthly publication calendar (exactly 30 days) for a brand in this niche: "${niche || "Servicios Digitales"}" focusing on "${topic || "Crecimiento y Ventas"}".
 
 Generate a list of 15 highly detailed unique calendar entries. We will interpolate them to make a 30-day calendar. For each entry, provide:
@@ -727,7 +749,7 @@ app.post("/api/generate-ideas", async (req, res) => {
   }
 
   try {
-    const prompt = `${brandPreamble()}You are Cami (Ideadora), who is playful, fast-paced, and generates highly innovative content angles.
+    const prompt = `${brandPreamble()}${performanceContext()}You are Cami (Ideadora), who is playful, fast-paced, and generates highly innovative content angles.
 Generate exactly 30 unique, winning social media content ideas / angles for a business in the niche: "${niche || "e-commerce"}".
 Goal of the content: "${goal || "Get clients and increase views"}".
 

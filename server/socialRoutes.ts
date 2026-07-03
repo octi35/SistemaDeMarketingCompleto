@@ -349,6 +349,43 @@ app.post("/api/metrics/instagram", async (req, res) => {
   }
 });
 
+// Real Facebook Page metrics: recent posts with likes/comments/shares.
+app.post("/api/metrics/facebook", async (req, res) => {
+  const { pageId, token, limit } = req.body || {};
+  const activeToken = token || req.headers.authorization?.replace("Bearer ", "");
+  if (!activeToken || !pageId) {
+    return res.status(400).json({ error: "Faltan pageId y token de Meta." });
+  }
+  try {
+    const n = Math.min(Number(limit) || 12, 25);
+    const url =
+      `https://graph.facebook.com/v18.0/${pageId}/posts?` +
+      `fields=id,message,created_time,permalink_url,likes.summary(true),comments.summary(true),shares` +
+      `&limit=${n}&access_token=${activeToken}`;
+    const r = await fetch(url);
+    const d = (await r.json()) as any;
+    if (!r.ok) return res.status(r.status).json({ error: d.error?.message || d });
+    const media = (d.data || []).map((p: any) => {
+      const likes = p.likes?.summary?.total_count || 0;
+      const comments = p.comments?.summary?.total_count || 0;
+      const shares = p.shares?.count || 0;
+      return {
+        id: p.id,
+        caption: p.message || "",
+        permalink: p.permalink_url,
+        timestamp: p.created_time,
+        likes,
+        comments,
+        shares,
+        engagement: likes + comments + shares,
+      };
+    });
+    res.json({ media });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudieron obtener las métricas de Facebook" });
+  }
+});
+
 // 4. POST /api/linkedin/post - Publishes posts on LinkedIn via ugcPosts
 app.post("/api/linkedin/post", async (req, res) => {
   const { text, authorUrn, token, imageUrls } = req.body || {};
