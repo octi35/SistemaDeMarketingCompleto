@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { toast } from "../lib/toast";
 import { apiGet, apiPost } from "../lib/api";
 import { STORAGE_KEYS, getStored, setStored } from "../lib/storageKeys";
+import { WebhooksPanel } from "./WebhooksPanel";
 import {
   Cloud, Folder, FileText, CheckCircle, RefreshCw, Calendar, Mail,
   FileCheck, ArrowUpRight, ArrowRight, ShieldAlert, Key, Globe, 
@@ -1642,6 +1643,9 @@ export const IntegrationsManager: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Outgoing webhooks: connect AdTeam with external systems */}
+      <WebhooksPanel />
 
     </div>
   );

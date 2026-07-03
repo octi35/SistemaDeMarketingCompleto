@@ -81,6 +81,17 @@ export interface BrandKit {
   updatedAt?: string;
 }
 
+/** Outgoing webhook subscription (notify external systems). */
+export interface WebhookSub {
+  id: string;
+  url: string;
+  /** Empty = all events. */
+  events?: string[];
+  /** Shared secret used to sign payloads (HMAC-SHA256). */
+  secret?: string;
+  createdAt: string;
+}
+
 /** An AI-generated (or uploaded) brand image stored in /uploads. */
 export interface BrandAsset {
   id: string;
@@ -125,6 +136,7 @@ interface Store {
   pipeline?: { cards: PipelineCard[]; updatedAt: string };
   brand?: BrandKit;
   assets?: BrandAsset[];
+  webhooks?: WebhookSub[];
   experiments?: Experiment[];
   reportConfig?: ReportConfig;
 }
@@ -144,6 +156,7 @@ function readStore(): Store {
       pipeline: parsed.pipeline,
       brand: parsed.brand,
       assets: Array.isArray(parsed.assets) ? parsed.assets : [],
+      webhooks: Array.isArray(parsed.webhooks) ? parsed.webhooks : [],
       experiments: Array.isArray(parsed.experiments) ? parsed.experiments : [],
       reportConfig: parsed.reportConfig,
     };
@@ -375,6 +388,34 @@ export function deleteAsset(id: string): BrandAsset | null {
   store.assets = (store.assets || []).filter((a) => a.id !== id);
   writeStore(store);
   return asset;
+}
+
+// ---- Outgoing webhooks ----
+export function listWebhooks(): WebhookSub[] {
+  return readStore().webhooks || [];
+}
+
+export function addWebhook(input: { url: string; events?: string[]; secret?: string }): WebhookSub {
+  const store = readStore();
+  const hook: WebhookSub = {
+    id: `hook_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    url: input.url,
+    events: input.events,
+    secret: input.secret,
+    createdAt: new Date().toISOString(),
+  };
+  store.webhooks = [hook, ...(store.webhooks || [])].slice(0, 20);
+  writeStore(store);
+  return hook;
+}
+
+export function deleteWebhook(id: string): boolean {
+  const store = readStore();
+  const before = (store.webhooks || []).length;
+  store.webhooks = (store.webhooks || []).filter((w) => w.id !== id);
+  if ((store.webhooks || []).length === before) return false;
+  writeStore(store);
+  return true;
 }
 
 // ---- A/B experiments ----

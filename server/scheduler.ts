@@ -12,6 +12,7 @@ import {
 } from "./publish";
 import { collectMetricsOnce } from "./metricsHistory";
 import { maybeSendWeeklyReport } from "./weeklyReport";
+import { fireWebhook } from "./webhooks";
 
 export function publishScheduled(post: Pick<ScheduledPost, "network" | "payload">): Promise<PublishResult> {
   const payload = unsealPayloadTokens(post.payload || {});
@@ -68,9 +69,11 @@ export async function processScheduledPosts(): Promise<void> {
         } else {
           markScheduled(post.id, { status: "failed", error: JSON.stringify(result.data).slice(0, 500) });
           console.warn(`[Scheduler] Failed scheduled post ${post.id}:`, result.data?.error || result.data);
+          fireWebhook("post.failed", { scheduledId: post.id, network: post.network, label: post.label, error: result.data?.error || result.data });
         }
       } catch (err: any) {
         markScheduled(post.id, { status: "failed", error: err.message || String(err) });
+        fireWebhook("post.failed", { scheduledId: post.id, network: post.network, label: post.label, error: err.message || String(err) });
       }
     }
   } finally {

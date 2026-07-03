@@ -8,13 +8,10 @@ import {
   publishInstagramCarousel,
   publishFacebookPost,
   publishLinkedInPost,
-  publishToAllNetworks,
-  NetworkName,
 } from "./publish";
+import { runPublishAll } from "./publishAllCore";
 import { createMetaAdsDraft } from "./metaAds";
 import { parseBody, metaAdsDraftSchema, publishAllSchema } from "./validate";
-import { addScheduled } from "../serverStore";
-import { sealPayloadTokens } from "./secretStore";
 
 export function registerSocialRoutes(app: express.Express): void {
 
@@ -410,74 +407,9 @@ app.post("/api/meta/instagram/carousel", async (req, res) => {
 app.post("/api/publish-all", async (req, res) => {
   const body = parseBody(publishAllSchema, req, res);
   if (!body) return;
-  const { networks, caption, captions, imageUrls, publishAt, label } = body;
-
-  if (!networks.instagram && !networks.facebook && !networks.linkedin) {
-    return res.status(400).json({ error: "Incluye credenciales de al menos una red en 'networks'." });
-  }
-
-  // ---- Scheduled mode: create one encrypted scheduled post per network ----
-  if (publishAt) {
-    if (Date.parse(publishAt) <= Date.now()) {
-      return res.status(400).json({ error: "publishAt debe ser una fecha futura." });
-    }
-    const images = (imageUrls || []).filter(Boolean);
-    const scheduled: { network: NetworkName; id: string }[] = [];
-    const skipped: { network: NetworkName; reason: string }[] = [];
-
-    if (networks.instagram) {
-      if (images.length === 0) {
-        skipped.push({ network: "instagram", reason: "Instagram requiere al menos una imagen." });
-      } else {
-        const post = addScheduled({
-          network: "instagram",
-          payload: sealPayloadTokens({
-            igAccountId: networks.instagram.igAccountId,
-            token: networks.instagram.token,
-            imageUrls: images,
-            caption: captions?.instagram ?? caption,
-          }),
-          publishAt,
-          label,
-        });
-        scheduled.push({ network: "instagram", id: post.id });
-      }
-    }
-    if (networks.facebook) {
-      const post = addScheduled({
-        network: "facebook",
-        payload: sealPayloadTokens({
-          pageId: networks.facebook.pageId,
-          token: networks.facebook.token,
-          imageUrls: images,
-          message: captions?.facebook ?? caption,
-        }),
-        publishAt,
-        label,
-      });
-      scheduled.push({ network: "facebook", id: post.id });
-    }
-    if (networks.linkedin) {
-      const post = addScheduled({
-        network: "linkedin",
-        payload: sealPayloadTokens({
-          token: networks.linkedin.token,
-          authorUrn: networks.linkedin.authorUrn,
-          imageUrls: images,
-          text: captions?.linkedin ?? caption,
-        }),
-        publishAt,
-        label,
-      });
-      scheduled.push({ network: "linkedin", id: post.id });
-    }
-    return res.json({ ok: scheduled.length > 0, mode: "scheduled", publishAt, scheduled, skipped });
-  }
-
-  // ---- Immediate mode: publish to every network in parallel ----
   try {
-    const outcome = await publishToAllNetworks({ caption, captions, imageUrls, targets: networks });
-    res.status(outcome.ok ? 200 : 207).json({ mode: "published", ...outcome });
+    const result = await runPublishAll(body);
+    res.status(result.status).json(result.body);
   } catch (error: any) {
     res.status(500).json({ error: error.message || "No se pudo publicar en las redes" });
   }

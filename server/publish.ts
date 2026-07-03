@@ -2,6 +2,17 @@
 // scheduler (which calls them directly instead of POSTing to itself).
 import { savePost, setMetricsAuth } from "../serverStore";
 import { storeSecret } from "./secretStore";
+import { fireWebhook } from "./webhooks";
+
+// Registers the published post and notifies webhook subscribers.
+function recordPublished(network: "instagram" | "facebook" | "linkedin", postId: string, caption?: string): void {
+  try {
+    savePost({ network, postId, caption });
+  } catch {
+    /* non-fatal */
+  }
+  fireWebhook("post.published", { network, postId, caption });
+}
 
 // Remembers (encrypted) the last working credentials per network so the
 // background metrics collector can query the Graph API on its own.
@@ -62,11 +73,7 @@ export async function publishInstagramPost(args: {
     return { ok: false, status: publishRes.status, data: { step: "publish", error: publishData } };
   }
 
-  try {
-    savePost({ network: "instagram", postId: publishData.id, caption });
-  } catch {
-    /* non-fatal */
-  }
+  recordPublished("instagram", publishData.id, caption);
   rememberMetricsAuth("instagram", igAccountId, token);
   return { ok: true, status: 200, data: { success: true, result: publishData }, postId: publishData.id };
 }
@@ -117,11 +124,7 @@ export async function publishInstagramCarousel(args: {
     return { ok: false, status: publishRes.status, data: { step: "publish", error: publishData } };
   }
 
-  try {
-    savePost({ network: "instagram", postId: publishData.id, caption });
-  } catch {
-    /* non-fatal */
-  }
+  recordPublished("instagram", publishData.id, caption);
   rememberMetricsAuth("instagram", igAccountId, token);
   return {
     ok: true,
@@ -181,11 +184,7 @@ export async function publishFacebookPost(args: {
   }
 
   const postId = result.id || result.post_id || "";
-  try {
-    savePost({ network: "facebook", postId, caption: message });
-  } catch {
-    /* non-fatal */
-  }
+  recordPublished("facebook", postId, message);
   rememberMetricsAuth("facebook", pageId, token);
   return { ok: true, status: 200, data: { success: true, result }, postId };
 }
@@ -375,10 +374,6 @@ export async function publishLinkedInPost(args: {
     console.error("LinkedIn ugcPosts post failed:", resData);
     return { ok: false, status: response.status, data: { success: false, error: resData } };
   }
-  try {
-    savePost({ network: "linkedin", postId: resData.id || "", caption: text });
-  } catch {
-    /* non-fatal */
-  }
+  recordPublished("linkedin", resData.id || "", text);
   return { ok: true, status: 200, data: { success: true, result: resData }, postId: resData.id };
 }

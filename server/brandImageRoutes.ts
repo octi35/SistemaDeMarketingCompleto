@@ -8,6 +8,7 @@ import { Type } from "@google/genai";
 import { generateContentWithFallback, generateNanoBananaImage, NANO_BANANA_MODELS, NANO_BANANA_PRO_MODELS } from "../aiHelpers";
 import { getBrand, listAssets, addAsset, deleteAsset } from "../serverStore";
 import { saveDataUrlImage, UPLOADS_DIR } from "../imageStore";
+import { fireWebhook } from "./webhooks";
 import { parseBody, brandImagePlanSchema, brandImageGenerateSchema } from "./validate";
 import type { ServerContext } from "./context";
 
@@ -142,7 +143,9 @@ Return strictly valid JSON conforming to the requested schema. No markdown wrapp
       }
       const file = saveDataUrlImage(image);
       const asset = addAsset({ file, prompt: body.prompt, concept: body.concept, tags: body.tags });
-      res.json({ asset: assetToJson(req, asset) });
+      const json = assetToJson(req, asset);
+      fireWebhook("asset.created", { id: asset.id, url: json.url, concept: asset.concept });
+      res.json({ asset: json });
     } catch (error: any) {
       console.error("Error generating brand image:", error);
       const msg = (error?.message || String(error)).toLowerCase();

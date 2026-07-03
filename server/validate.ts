@@ -65,6 +65,12 @@ export const reportConfigSchema = z.object({
     .optional(),
 });
 
+export const webhookSchema = z.object({
+  url: z.string().url().max(500),
+  events: z.array(z.enum(["post.published", "post.failed", "asset.created"])).max(10).optional(),
+  secret: z.string().max(200).optional(),
+});
+
 export const brandImagePlanSchema = z.object({
   count: z.number().int().min(1).max(50).optional(),
   focus: z.string().max(500).optional(),
