@@ -88,4 +88,4 @@ Cabeceras: `X-AdTeam-Event` (nombre del evento) y, si configuraste `secret`, `X-
 const ok = crypto.createHmac("sha256", SECRET).update(rawBody).digest("hex") === req.headers["x-adteam-signature"];
 ```
 
-La entrega es *fire-and-forget* con timeout de 8s (sin reintentos por ahora); si tu endpoint estuvo caído, consulta `/api/ext/posts` para re-sincronizar.
+La entrega corre en segundo plano con timeout de 8s y **hasta 3 intentos** (esperas de 5s y 30s) ante errores de red, respuestas 5xx o 429. Las respuestas 4xx no se reintentan (se asume payload rechazado). Si tu endpoint estuvo caído más tiempo, consulta `/api/ext/posts` para re-sincronizar.
