@@ -13,6 +13,10 @@
 - **Tokens de larga duración**: el OAuth de Meta entrega tokens de ~60 días con **aviso de vencimiento** y renovación desde el panel.
 - **API externa + webhooks**: otros sistemas pueden publicar y leer datos con API keys (`/api/ext/*`), y AdTeam avisa a tu CRM/Zapier/Make cuando se publica o falla un post. Ver **[API.md](./API.md)**.
 - **Métricas de Facebook** además de Instagram, e **ideas/calendario guiados por tus datos reales** de engagement.
+- **Carruseles programables**: elige fecha/hora en el modal de publicación y el servidor lo publica solo (en una red o en todas).
+- **Scheduler resiliente**: los posts programados que fallan se reintentan hasta 3 veces con backoff, con botón de reintento manual.
+- **Export .ics real**: descarga el plan de 30 días e impórtalo en Google Calendar / Outlook.
+- **Webhooks con reintentos** ante caídas transitorias del receptor.
 
 ## ✨ Novedades anteriores
 
