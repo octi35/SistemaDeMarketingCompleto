@@ -37,6 +37,8 @@ export interface CalendarItem {
   time: string;
   status: "Publicado" | "Programado" | "Borrador";
   copy: string;
+  /** Public URL of the attached creative (required to schedule Instagram). */
+  imageUrl?: string;
 }
 
 export interface CopyOption {

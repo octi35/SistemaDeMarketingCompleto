@@ -24,6 +24,18 @@ export const CalendarManager: React.FC = () => {
   const [editingPlatform, setEditingPlatform] = useState("");
   const [editingTime, setEditingTime] = useState("");
   const [editingStatus, setEditingStatus] = useState<"Publicado" | "Programado" | "Borrador">("Borrador");
+  const [editingImageUrl, setEditingImageUrl] = useState("");
+
+  // Per-network view filter + brand asset picker (attach creatives to days)
+  const [networkFilter, setNetworkFilter] = useState<"all" | "instagram" | "facebook" | "linkedin" | "other">("all");
+  const [brandAssets, setBrandAssets] = useState<{ id: string; url: string; concept?: string }[]>([]);
+  const [showAssetPicker, setShowAssetPicker] = useState(false);
+
+  useEffect(() => {
+    apiGet<{ assets: { id: string; url: string; concept?: string }[] }>("/api/assets")
+      .then((r) => setBrandAssets(r.assets || []))
+      .catch(() => {});
+  }, []);
 
   const generateCalendar = async () => {
     setLoading(true);
@@ -89,35 +101,24 @@ export const CalendarManager: React.FC = () => {
       setEditingPlatform(activeItem.platform);
       setEditingTime(activeItem.time);
       setEditingStatus(activeItem.status);
+      setEditingImageUrl(activeItem.imageUrl || "");
     }
   }, [activeItem]);
 
   // Update calendar item
   const handleSaveItemEdit = () => {
     if (!activeItem) return;
-    setCalendar((prev) =>
-      prev.map((item) =>
-        item.day === activeItem.day
-          ? {
-              ...item,
-              title: editingTitle,
-              copy: editingCopy,
-              platform: editingPlatform,
-              time: editingTime,
-              status: editingStatus,
-            }
-          : item
-      )
-    );
-    // update active selection
-    setActiveItem({
-      ...activeItem,
+    const patch = {
       title: editingTitle,
       copy: editingCopy,
       platform: editingPlatform,
       time: editingTime,
       status: editingStatus,
-    });
+      imageUrl: editingImageUrl || undefined,
+    };
+    setCalendar((prev) => prev.map((item) => (item.day === activeItem.day ? { ...item, ...patch } : item)));
+    // update active selection
+    setActiveItem({ ...activeItem, ...patch });
   };
 
   // Sync with Google Calendar API simulation
@@ -133,11 +134,12 @@ export const CalendarManager: React.FC = () => {
   const [schedulingDay, setSchedulingDay] = useState<number | null>(null);
   const [schedulingAll, setSchedulingAll] = useState(false);
 
-  // Text-only publishing is supported on Facebook Pages and LinkedIn.
-  // Instagram requires an image (use the Gestor de Contenido for that).
-  const platformToNetwork = (platform: string): "facebook" | "linkedin" | null => {
+  // Facebook/LinkedIn accept text-only posts; Instagram items can be
+  // scheduled too once a creative (image) is attached from the library.
+  const platformToNetwork = (platform: string): "facebook" | "linkedin" | "instagram" | null => {
     if (platform.includes("LinkedIn")) return "linkedin";
     if (platform.includes("Ads") || platform.includes("Facebook")) return "facebook";
+    if (platform.includes("Instagram") || platform.includes("Carousel")) return "instagram";
     return null;
   };
 
@@ -150,14 +152,24 @@ export const CalendarManager: React.FC = () => {
     return d.toISOString();
   };
 
-  const buildSchedulePayload = (item: CalendarItem, network: "facebook" | "linkedin") => {
+  const buildSchedulePayload = (item: CalendarItem, network: "facebook" | "linkedin" | "instagram") => {
     const text = `${item.title}\n\n${item.copy}`;
+    const imageUrls = item.imageUrl ? [item.imageUrl] : [];
     if (network === "linkedin") {
-      return { text, token: getStored(STORAGE_KEYS.linkedinAccessToken) };
+      return { text, imageUrls, token: getStored(STORAGE_KEYS.linkedinAccessToken) };
+    }
+    if (network === "instagram") {
+      return {
+        igAccountId: getStored(STORAGE_KEYS.metaIgAccountId),
+        imageUrl: item.imageUrl,
+        caption: text,
+        token: getStored(STORAGE_KEYS.metaAccessToken),
+      };
     }
     return {
       pageId: getStored(STORAGE_KEYS.metaPageId) || "sandbox_page_id",
       message: text,
+      imageUrls,
       token: getStored(STORAGE_KEYS.metaAccessToken),
     };
   };
@@ -166,12 +178,18 @@ export const CalendarManager: React.FC = () => {
     const network = platformToNetwork(item.platform);
     if (!network) {
       if (!silent) {
-        toast.info(
-          item.platform.includes("Instagram") || item.platform.includes("Carousel")
-            ? "Instagram necesita imagen: usa el Gestor de Contenido o Carruseles para programarlo con su creatividad."
-            : `${item.platform} aún no soporta auto-publicación; se mantiene como recordatorio en el plan.`
-        );
+        toast.info(`${item.platform} aún no soporta auto-publicación; se mantiene como recordatorio en el plan.`);
       }
+      return false;
+    }
+    if (network === "instagram" && !item.imageUrl) {
+      if (!silent) {
+        toast.error("Instagram necesita imagen: adjunta una creatividad de tu biblioteca en el panel del día.");
+      }
+      return false;
+    }
+    if (network === "instagram" && !getStored(STORAGE_KEYS.metaIgAccountId)) {
+      if (!silent) toast.error("Elige tu cuenta de Instagram en 'Gestor de Contenido' → 'Cargar mis páginas' primero.");
       return false;
     }
     const payload = buildSchedulePayload(item, network);
@@ -199,7 +217,14 @@ export const CalendarManager: React.FC = () => {
   const handleScheduleActive = async () => {
     if (!activeItem) return;
     setSchedulingDay(activeItem.day);
-    await scheduleItem({ ...activeItem, title: editingTitle, copy: editingCopy, platform: editingPlatform, time: editingTime });
+    await scheduleItem({
+      ...activeItem,
+      title: editingTitle,
+      copy: editingCopy,
+      platform: editingPlatform,
+      time: editingTime,
+      imageUrl: editingImageUrl || undefined,
+    });
     setSchedulingDay(null);
   };
 
@@ -330,10 +355,55 @@ export const CalendarManager: React.FC = () => {
               </div>
             </div>
 
+            {/* Per-network view filter */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {(
+                [
+                  { id: "all", label: "Todas" },
+                  { id: "instagram", label: "Instagram" },
+                  { id: "facebook", label: "Facebook" },
+                  { id: "linkedin", label: "LinkedIn" },
+                  { id: "other", label: "Otras" },
+                ] as const
+              ).map((f) => {
+                const count =
+                  f.id === "all"
+                    ? calendar.length
+                    : calendar.filter((c) =>
+                        f.id === "other" ? platformToNetwork(c.platform) === null : platformToNetwork(c.platform) === f.id
+                      ).length;
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => setNetworkFilter(f.id)}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition ${
+                      networkFilter === f.id ? "bg-black text-white" : "bg-sink text-muted hover:text-ink"
+                    }`}
+                  >
+                    {f.label} <span className="font-mono text-[9px] opacity-70">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Calendar Grid 7 columns */}
             <div className="grid grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-2">
               {calendar.map((item) => {
                 const isActive = activeItem?.day === item.day;
+                const itemNetwork = platformToNetwork(item.platform);
+                const hiddenByFilter =
+                  networkFilter !== "all" &&
+                  (networkFilter === "other" ? itemNetwork !== null : itemNetwork !== networkFilter);
+                if (hiddenByFilter) {
+                  return (
+                    <div
+                      key={item.day}
+                      className="p-2 rounded-lg border border-line/50 bg-sink/30 h-20 flex flex-col justify-between opacity-30"
+                    >
+                      <span className="text-xs font-mono">{item.day}</span>
+                    </div>
+                  );
+                }
                 
                 // Color mapping based on platform
                 let platColor = "bg-sink border-line text-muted hover:border-line";
@@ -356,8 +426,11 @@ export const CalendarManager: React.FC = () => {
                     }`}
                     id={`btn-calendar-day-${item.day}`}
                   >
-                    <span className="text-xs font-mono font-semibold">{item.day}</span>
-                    
+                    <span className="text-xs font-mono font-semibold">
+                      {item.day}
+                      {item.imageUrl && <span className="ml-1 text-[9px]" title="Creatividad adjunta">🖼</span>}
+                    </span>
+
                     {/* Platform tiny acronym */}
                     <span className="text-[9px] font-mono font-semibold truncate w-full mt-1">
                       {item.platform.split(" ")[0]}
@@ -467,6 +540,39 @@ export const CalendarManager: React.FC = () => {
                       className="w-full h-32 bg-sink rounded-input p-2.5 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20 resize-none leading-relaxed"
                     />
                   </div>
+
+                  {/* Attached creative (required for Instagram scheduling) */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-semibold text-faint font-mono uppercase">
+                      Creatividad (imagen del post)
+                    </label>
+                    {editingImageUrl ? (
+                      <div className="flex items-center gap-3 bg-sink border border-line rounded-lg p-2">
+                        <img src={editingImageUrl} alt="creatividad" className="w-14 h-14 rounded object-cover border border-line" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] text-muted truncate">{editingImageUrl}</p>
+                          <div className="flex gap-2 mt-1">
+                            <button onClick={() => setShowAssetPicker(true)} className="text-[10px] font-bold text-black hover:underline">
+                              Cambiar
+                            </button>
+                            <button onClick={() => setEditingImageUrl("")} className="text-[10px] font-bold text-red-400 hover:underline">
+                              Quitar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowAssetPicker(true)}
+                        className="w-full border-2 border-dashed border-line hover:border-black/40 rounded-lg p-3 text-[11px] text-muted hover:text-ink transition text-left"
+                      >
+                        + Adjuntar imagen de la biblioteca de marca
+                        {platformToNetwork(editingPlatform) === "instagram" && (
+                          <span className="block text-amber-500 mt-0.5">Instagram la necesita para poder programarse.</span>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Save and sync buttons */}
@@ -532,6 +638,53 @@ export const CalendarManager: React.FC = () => {
             ) : (
               <div className="bg-surface border border-line rounded-2xl p-12 text-center text-muted text-xs">
                 Selecciona un día del calendario a la izquierda para editar o inspeccionar.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Brand asset picker modal */}
+      {showAssetPicker && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setShowAssetPicker(false)}
+        >
+          <div
+            className="bg-surface border border-line rounded-2xl p-5 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-ink">Elegir creatividad de la biblioteca</h3>
+              <button onClick={() => setShowAssetPicker(false)} className="text-faint hover:text-ink text-lg leading-none" aria-label="Cerrar">
+                ×
+              </button>
+            </div>
+            {brandAssets.length === 0 ? (
+              <p className="text-xs text-muted py-6 text-center">
+                Tu biblioteca está vacía. Genera imágenes en la pestaña <strong>Marca</strong> (Fábrica de imágenes 🍌) y aparecerán aquí.
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                {brandAssets.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => {
+                      setEditingImageUrl(a.url);
+                      // Apply to the plan right away so "Programar plan" sees it.
+                      if (activeItem) {
+                        setCalendar((prev) => prev.map((c) => (c.day === activeItem.day ? { ...c, imageUrl: a.url } : c)));
+                      }
+                      setShowAssetPicker(false);
+                    }}
+                    className={`rounded-lg overflow-hidden border-2 transition ${
+                      editingImageUrl === a.url ? "border-black" : "border-transparent hover:border-black/40"
+                    }`}
+                    title={a.concept || ""}
+                  >
+                    <img src={a.url} alt={a.concept || "asset"} loading="lazy" className="w-full aspect-square object-cover" />
+                  </button>
+                ))}
               </div>
             )}
           </div>
