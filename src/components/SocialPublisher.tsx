@@ -84,6 +84,12 @@ export const SocialPublisher: React.FC = () => {
   // Publishing progress
   const [isPublishing, setIsPublishing] = useState<string | null>(null);
   const [publishStatus, setPublishStatus] = useState<{ [key: string]: { status: string; link?: string } }>({});
+
+  // One-click multi-network publishing
+  const [isPublishingAll, setIsPublishingAll] = useState(false);
+  const [publishAllResults, setPublishAllResults] = useState<
+    { network: string; ok: boolean; skipped?: boolean; detail: string }[] | null
+  >(null);
   
   // OAuth Token check from localStorage
   const [linkedinToken, setLinkedinToken] = useState(() => localStorage.getItem("linkedin_access_token") || "");
@@ -308,27 +314,102 @@ export const SocialPublisher: React.FC = () => {
         }));
         toast.success(`¡Subido con éxito a tu canal oficial de ${network.toUpperCase()}! 🎉`);
       } else {
-        // Fallback simulation status
-        setPublishStatus(prev => ({
-          ...prev,
-          [network]: {
-            status: "Simulado con Éxito (Sandbox)",
-            link: "#"
-          }
-        }));
-        toast.info("Simulación completada. Conecta tu cuenta y elige tu página/IG en 'Integración Nube' para publicar de forma real.");
+        const reason =
+          data?.error?.message || data?.error?.error?.message ||
+          (typeof data?.error === "string" ? data.error : JSON.stringify(data?.error || data || {}).slice(0, 160));
+        setPublishStatus(prev => ({ ...prev, [network]: { status: "Falló — reintentar" } }));
+        toast.error(`No se publicó en ${network.toUpperCase()}: ${reason}. Revisa tu conexión en 'Integración Nube'.`);
       }
     } catch (err: any) {
       console.error(err);
-      setPublishStatus(prev => ({ 
-        ...prev, 
-        [network]: { 
-          status: "Simulado con Éxito (Sandbox)", 
-          link: "#" 
-        } 
-      }));
+      setPublishStatus(prev => ({ ...prev, [network]: { status: "Falló — reintentar" } }));
+      toast.error(`Error de red publicando en ${network.toUpperCase()}: ${err.message || err}`);
     } finally {
       setIsPublishing(null);
+    }
+  };
+
+  // ---- One click -> the 3 networks at once (immediate or scheduled) ----
+  const buildPublishAllBody = async (publishAt?: string) => {
+    const netText = (n: "linkedin" | "instagram" | "facebook") => {
+      const c = generatedResult![n];
+      return `${c.hook}\n\n${c.body}\n\n${c.cta}\n\n${c.hashtags.join(" ")}`;
+    };
+    const metaPublishToken = selectedPageToken || metaToken;
+
+    const rawImage = selectedMedia?.data || selectedMedia?.url || "";
+    let publicImageUrl = rawImage;
+    if (rawImage.startsWith("data:")) {
+      const upData = await apiPost<{ urls: string[] }>("/api/upload-image", { dataUrl: rawImage });
+      if (upData.urls?.[0]) publicImageUrl = upData.urls[0];
+    }
+
+    const networks: any = {};
+    if (metaPublishToken && selectedIgId) networks.instagram = { igAccountId: selectedIgId, token: metaPublishToken };
+    if (metaPublishToken && selectedPageId) networks.facebook = { pageId: selectedPageId, token: metaPublishToken };
+    if (linkedinToken) networks.linkedin = { token: linkedinToken };
+
+    return {
+      captions: { instagram: netText("instagram"), facebook: netText("facebook"), linkedin: netText("linkedin") },
+      imageUrls: publicImageUrl && !publicImageUrl.startsWith("data:") ? [publicImageUrl] : [],
+      networks,
+      publishAt,
+      label: productName.slice(0, 60),
+    };
+  };
+
+  const NETWORK_LABELS: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn" };
+
+  const handlePublishAll = async (publishAt?: string) => {
+    if (!generatedResult) return;
+    setIsPublishingAll(true);
+    setPublishAllResults(null);
+    try {
+      const body = await buildPublishAllBody(publishAt);
+      if (Object.keys(body.networks).length === 0) {
+        toast.error("Conecta Meta y/o LinkedIn en 'Integración Nube' (y carga tus páginas) antes de publicar.");
+        return;
+      }
+      const res = await fetch("/api/publish-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok && data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data.mode === "scheduled") {
+        const nets = (data.scheduled || []).map((s: any) => NETWORK_LABELS[s.network]).join(", ");
+        setPublishAllResults([
+          ...(data.scheduled || []).map((s: any) => ({ network: s.network, ok: true, detail: `Programado para ${new Date(data.publishAt).toLocaleString()}` })),
+          ...(data.skipped || []).map((s: any) => ({ network: s.network, ok: false, skipped: true, detail: s.reason })),
+        ]);
+        toast.success(`Programado en: ${nets || "ninguna red"}.`);
+        loadScheduled();
+      } else {
+        const rows = (["instagram", "facebook", "linkedin"] as const).map((n) => {
+          const r = data.results?.[n] || {};
+          return {
+            network: n,
+            ok: !!r.ok,
+            skipped: !!r.skipped,
+            detail: r.ok ? `Publicado ✓ (id ${r.postId || "?"})` : r.error || "Sin detalle",
+          };
+        });
+        setPublishAllResults(rows);
+        const okCount = rows.filter((r) => r.ok).length;
+        const failed = rows.filter((r) => !r.ok && !r.skipped);
+        if (failed.length === 0 && okCount > 0) toast.success(`¡Publicado en ${okCount} red(es)! 🎉`);
+        else if (okCount > 0) toast.info(`Publicado en ${okCount} red(es); falló en ${failed.map((f) => NETWORK_LABELS[f.network]).join(", ")}.`);
+        else toast.error("No se pudo publicar en ninguna red. Revisa los detalles.");
+      }
+    } catch (err: any) {
+      toast.error(`Error publicando en todas las redes: ${err.message || err}`);
+    } finally {
+      setIsPublishingAll(false);
     }
   };
 
@@ -802,6 +883,52 @@ export const SocialPublisher: React.FC = () => {
                       </button>
                     </div>
 
+                    {/* One-click multi-network publishing */}
+                    <div className="bg-black rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <CloudLightning className="w-4 h-4 text-lime-300" />
+                        <span className="text-[10px] text-lime-300 uppercase font-mono font-bold">Publicación total — 1 click</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-300">
+                        Publica este contenido en Instagram, Facebook y LinkedIn al mismo tiempo, cada red con su copy optimizado.
+                      </p>
+                      <button
+                        onClick={() => handlePublishAll()}
+                        disabled={isPublishingAll || isPublishing !== null}
+                        className="w-full bg-lime-300 hover:bg-lime-200 text-black font-bold text-xs uppercase py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition tracking-wider disabled:opacity-50"
+                      >
+                        {isPublishingAll ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Publicando en todas las redes...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Share2 className="w-4 h-4" />
+                            <span>Publicar en TODAS las redes</span>
+                          </>
+                        )}
+                      </button>
+
+                      {publishAllResults && (
+                        <div className="space-y-1 pt-1">
+                          {publishAllResults.map((r) => (
+                            <div key={r.network} className="flex items-start gap-2 text-[11px] bg-white/5 border border-white/10 rounded px-2.5 py-1.5">
+                              {r.ok ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-lime-300 shrink-0 mt-0.5" />
+                              ) : r.skipped ? (
+                                <HelpCircle className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
+                              ) : (
+                                <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                              )}
+                              <span className="uppercase font-mono text-[9px] text-zinc-300 w-16 shrink-0 mt-0.5">{NETWORK_LABELS[r.network]}</span>
+                              <span className={`flex-1 break-words ${r.ok ? "text-lime-200" : r.skipped ? "text-zinc-400" : "text-red-300"}`}>{r.detail}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Scheduling controls */}
                     <div className="bg-sink/60 border border-line rounded-xl p-4 space-y-3">
                       <div className="flex items-center gap-2">
@@ -822,6 +949,18 @@ export const SocialPublisher: React.FC = () => {
                         >
                           {scheduling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5 text-black" />}
                           <span>Programar en {activeNetworkTab}</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!scheduleAt) return toast.error("Elige fecha y hora para programar.");
+                            if (new Date(scheduleAt).getTime() <= Date.now()) return toast.error("La fecha/hora debe ser futura.");
+                            handlePublishAll(new Date(scheduleAt).toISOString());
+                          }}
+                          disabled={isPublishingAll || !scheduleAt}
+                          className="bg-black text-white hover:bg-sidebar text-[11px] px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50 shrink-0 font-bold"
+                        >
+                          {isPublishingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CloudLightning className="w-3.5 h-3.5 text-lime-300" />}
+                          <span>Programar en TODAS</span>
                         </button>
                       </div>
 

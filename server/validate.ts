@@ -65,6 +65,29 @@ export const reportConfigSchema = z.object({
     .optional(),
 });
 
+export const publishAllSchema = z.object({
+  caption: z.string().max(5000).optional(),
+  captions: z
+    .object({
+      instagram: z.string().max(2200).optional(),
+      facebook: z.string().max(5000).optional(),
+      linkedin: z.string().max(3000).optional(),
+    })
+    .optional(),
+  imageUrls: z.array(z.string().url()).max(10).optional(),
+  networks: z.object({
+    instagram: z.object({ igAccountId: z.string().min(3), token: z.string().min(10) }).optional(),
+    facebook: z.object({ pageId: z.string().min(3), token: z.string().min(10) }).optional(),
+    linkedin: z.object({ authorUrn: z.string().optional(), token: z.string().min(10) }).optional(),
+  }),
+  // Optional: schedule for later instead of publishing right away.
+  publishAt: z
+    .string()
+    .refine((v) => !isNaN(Date.parse(v)), { message: "publishAt debe ser una fecha/hora válida (ISO)." })
+    .optional(),
+  label: z.string().max(200).optional(),
+});
+
 export const metaAdsDraftSchema = z.object({
   adAccountId: z.string().min(3),
   token: z.string().min(10),

@@ -29,8 +29,9 @@ export const CarouselDesigner: React.FC = () => {
   const [isDemo, setIsDemo] = useState(false);
 
   // Upload / export state
-  const [uploading, setUploading] = useState(false);
-  const [uploaded, setUploaded] = useState(false);
+  // "instagram" publishes only the IG carousel; "all" also posts the slides to
+  // Facebook (multi-photo) and LinkedIn (multi-image) in the same click.
+  const [publishTarget, setPublishTarget] = useState<"instagram" | "all">("instagram");
   const [zipping, setZipping] = useState(false);
 
   // Saved projects (server-side persistence)
@@ -120,7 +121,6 @@ export const CarouselDesigner: React.FC = () => {
     setLoading(true);
     setSlides([]);
     setCurrentSlideIndex(0);
-    setUploaded(false);
     setImageError(null);
     try {
       const data = await apiPost<{ slides?: CarouselSlide[]; isMock?: boolean }>(
@@ -423,16 +423,6 @@ export const CarouselDesigner: React.FC = () => {
     }
   };
 
-  // Direct publish from the carousel is a guided shortcut to the real publisher.
-  const handleDirectUploadAPI = () => {
-    setUploading(true);
-    setTimeout(() => {
-      setUploading(false);
-      setUploaded(true);
-      toast.info(`Para publicar de verdad en ${platform}, conecta tu cuenta en "Integración Nube" y usa "Gestor de Contenido".`);
-    }, 1200);
-  };
-
   // ---- Real Instagram carousel publishing ----
   const renderSlideToDataUrl = async (slide: CarouselSlide): Promise<string> => {
     await drawSlide(slide);
@@ -469,6 +459,55 @@ export const CarouselDesigner: React.FC = () => {
         token,
       });
       toast.success("¡Carrusel publicado en Instagram! 🎉");
+      setShowPublishConfirm(false);
+    } catch (err: any) {
+      toast.error(`No se pudo publicar: ${err.message || err}`);
+    } finally {
+      setPublishingIG(false);
+      setPublishStep("");
+    }
+  };
+
+  // ---- One click -> publish the carousel to every connected network ----
+  const publishCarouselToAll = async () => {
+    const metaToken = getStored(STORAGE_KEYS.metaAccessToken);
+    const igId = getStored(STORAGE_KEYS.metaIgAccountId);
+    const pageId = getStored(STORAGE_KEYS.metaPageId);
+    const linkedinToken = getStored(STORAGE_KEYS.linkedinAccessToken);
+
+    const networks: any = {};
+    if (metaToken && igId && slides.length >= 2) networks.instagram = { igAccountId: igId, token: metaToken };
+    if (metaToken && pageId) networks.facebook = { pageId, token: metaToken };
+    if (linkedinToken) networks.linkedin = { token: linkedinToken };
+
+    if (Object.keys(networks).length === 0) {
+      toast.error("Conecta Meta y/o LinkedIn en 'Integración Nube' (y elige tu página en 'Gestor de Contenido').");
+      setShowPublishConfirm(false);
+      return;
+    }
+
+    setPublishingIG(true);
+    try {
+      setPublishStep("Renderizando diapositivas en alta resolución...");
+      const dataUrls: string[] = [];
+      for (const s of slides.slice(0, 10)) dataUrls.push(await renderSlideToDataUrl(s));
+
+      setPublishStep("Subiendo imágenes al hosting público...");
+      const up = await apiPost<{ urls: string[] }>("/api/upload-image", { images: dataUrls });
+
+      setPublishStep("Publicando en todas tus redes conectadas...");
+      const data = await apiPost<{ ok: boolean; results: Record<string, any> }>("/api/publish-all", {
+        caption: topic,
+        imageUrls: up.urls,
+        networks,
+      });
+
+      const labels: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn" };
+      const okNets = Object.entries(data.results || {}).filter(([, r]) => r.ok).map(([n]) => labels[n]);
+      const failNets = Object.entries(data.results || {}).filter(([, r]) => !r.ok && !r.skipped);
+      if (okNets.length > 0) toast.success(`¡Carrusel publicado en ${okNets.join(", ")}! 🎉`);
+      for (const [n, r] of failNets) toast.error(`${labels[n]}: ${r.error || "falló"}`);
+      if (okNets.length === 0 && failNets.length === 0) toast.info("No había redes con credenciales para publicar.");
       setShowPublishConfirm(false);
     } catch (err: any) {
       toast.error(`No se pudo publicar: ${err.message || err}`);
@@ -946,7 +985,10 @@ export const CarouselDesigner: React.FC = () => {
 
               {platform === "Instagram" && (
                 <button
-                  onClick={() => setShowPublishConfirm(true)}
+                  onClick={() => {
+                    setPublishTarget("instagram");
+                    setShowPublishConfirm(true);
+                  }}
                   disabled={slides.length < 2 || publishingIG}
                   className="w-full bg-gradient-to-r from-[#feda75] via-[#d62976] to-[#962fbf] hover:opacity-90 disabled:opacity-50 text-white font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition"
                   id="btn-publish-instagram-carousel"
@@ -957,31 +999,16 @@ export const CarouselDesigner: React.FC = () => {
               )}
 
               <button
-                onClick={handleDirectUploadAPI}
-                disabled={uploading || uploaded}
-                className={`w-full font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition border ${
-                  uploaded
-                    ? "bg-black/10 border-black/30 text-black"
-                    : "bg-sink hover:bg-[#eaedf6] text-ink border-line"
-                }`}
-                id="btn-carousel-api-direct"
+                onClick={() => {
+                  setPublishTarget("all");
+                  setShowPublishConfirm(true);
+                }}
+                disabled={slides.length < 1 || publishingIG}
+                className="w-full bg-black hover:bg-sidebar disabled:opacity-50 text-lime-300 font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition"
+                id="btn-publish-carousel-all"
               >
-                {uploading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-black" />
-                    <span>Preparando para {platform}...</span>
-                  </>
-                ) : uploaded ? (
-                  <>
-                    <Check className="w-4 h-4 text-black" />
-                    <span>Listo para publicar en {platform}</span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 text-green-500" />
-                    <span>Publicar en mi {platform}</span>
-                  </>
-                )}
+                <Upload className="w-4 h-4" />
+                <span>Publicar en TODAS las redes (IG + FB + LinkedIn)</span>
               </button>
             </div>
           </div>
@@ -1000,7 +1027,8 @@ export const CarouselDesigner: React.FC = () => {
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-ink flex items-center gap-2">
-                <Instagram className="w-4 h-4 text-pink-400" /> Publicar carrusel en Instagram
+                <Instagram className="w-4 h-4 text-pink-400" />
+                {publishTarget === "all" ? "Publicar en todas las redes" : "Publicar carrusel en Instagram"}
               </h3>
               {!publishingIG && (
                 <button onClick={() => setShowPublishConfirm(false)} className="text-faint hover:text-ink" aria-label="Cerrar">
@@ -1017,11 +1045,28 @@ export const CarouselDesigner: React.FC = () => {
             ) : (
               <>
                 <p className="text-xs text-muted leading-relaxed mb-4">
-                  Se publicará un carrusel de <strong className="text-ink">{Math.min(slides.length, 10)} imágenes</strong> en tu cuenta de Instagram Business conectada. El texto de cada slide ya va incrustado en la imagen y el tema se usa como descripción.
+                  {publishTarget === "all" ? (
+                    <>
+                      Se publicarán las <strong className="text-ink">{Math.min(slides.length, 10)} imágenes</strong> del carrusel en
+                      todas tus redes conectadas: carrusel en Instagram, publicación multi-foto en Facebook y post con imágenes en
+                      LinkedIn. El tema se usa como descripción.
+                    </>
+                  ) : (
+                    <>
+                      Se publicará un carrusel de <strong className="text-ink">{Math.min(slides.length, 10)} imágenes</strong> en tu
+                      cuenta de Instagram Business conectada. El texto de cada slide ya va incrustado en la imagen y el tema se usa
+                      como descripción.
+                    </>
+                  )}
                 </p>
                 {!getStored(STORAGE_KEYS.metaIgAccountId) && (
                   <p className="text-[11px] text-amber-400 mb-3 leading-relaxed">
                     ⚠ No hay cuenta de Instagram conectada. Conéctala en "Gestor de Contenido" → "Cargar mis páginas". (Requiere app de Meta + servidor con URL pública.)
+                  </p>
+                )}
+                {publishTarget === "all" && !getStored(STORAGE_KEYS.linkedinAccessToken) && (
+                  <p className="text-[11px] text-amber-400 mb-3 leading-relaxed">
+                    ⚠ LinkedIn no está conectado; se omitirá. Conéctalo en "Integración Nube".
                   </p>
                 )}
                 <div className="flex gap-2">
@@ -1032,7 +1077,7 @@ export const CarouselDesigner: React.FC = () => {
                     Cancelar
                   </button>
                   <button
-                    onClick={publishCarouselToInstagram}
+                    onClick={publishTarget === "all" ? publishCarouselToAll : publishCarouselToInstagram}
                     className="flex-1 bg-gradient-to-r from-[#feda75] via-[#d62976] to-[#962fbf] text-white font-bold text-xs py-2.5 rounded-lg transition"
                   >
                     Confirmar y publicar

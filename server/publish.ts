@@ -190,6 +190,98 @@ export async function publishFacebookPost(args: {
   return { ok: true, status: 200, data: { success: true, result }, postId };
 }
 
+// ---- Multi-network orchestrator (one click -> Instagram + Facebook + LinkedIn) ----
+export type NetworkName = "instagram" | "facebook" | "linkedin";
+
+export interface MultiPublishTargets {
+  instagram?: { igAccountId: string; token: string };
+  facebook?: { pageId: string; token: string };
+  linkedin?: { authorUrn?: string; token: string };
+}
+
+export interface NetworkOutcome {
+  ok: boolean;
+  postId?: string;
+  /** Human-readable error when the publish failed. */
+  error?: string;
+  /** True when the network was not attempted (no credentials / no image for IG). */
+  skipped?: boolean;
+}
+
+/**
+ * Publishes the same content to every network with credentials, in parallel.
+ * Each network fails independently: one bad token never blocks the others.
+ */
+export async function publishToAllNetworks(args: {
+  caption?: string;
+  captions?: Partial<Record<NetworkName, string>>;
+  imageUrls?: string[];
+  targets: MultiPublishTargets;
+}): Promise<{ ok: boolean; results: Record<NetworkName, NetworkOutcome> }> {
+  const images = (args.imageUrls || []).filter(Boolean);
+  const captionFor = (n: NetworkName) => args.captions?.[n] ?? args.caption ?? "";
+  const { targets } = args;
+
+  const toOutcome = (r: PublishResult): NetworkOutcome =>
+    r.ok
+      ? { ok: true, postId: r.postId }
+      : { ok: false, error: JSON.stringify(r.data?.error ?? r.data ?? {}).slice(0, 500) };
+
+  const run = async (fn: () => Promise<PublishResult>): Promise<NetworkOutcome> => {
+    try {
+      return toOutcome(await fn());
+    } catch (err: any) {
+      return { ok: false, error: err?.message || String(err) };
+    }
+  };
+
+  const [instagram, facebook, linkedin] = await Promise.all([
+    !targets.instagram
+      ? Promise.resolve<NetworkOutcome>({ ok: false, skipped: true, error: "Sin credenciales de Instagram." })
+      : images.length === 0
+        ? Promise.resolve<NetworkOutcome>({ ok: false, skipped: true, error: "Instagram requiere al menos una imagen." })
+        : run(() =>
+            images.length >= 2
+              ? publishInstagramCarousel({
+                  igAccountId: targets.instagram!.igAccountId,
+                  imageUrls: images,
+                  caption: captionFor("instagram"),
+                  token: targets.instagram!.token,
+                })
+              : publishInstagramPost({
+                  igAccountId: targets.instagram!.igAccountId,
+                  imageUrl: images[0],
+                  caption: captionFor("instagram"),
+                  token: targets.instagram!.token,
+                })
+          ),
+    !targets.facebook
+      ? Promise.resolve<NetworkOutcome>({ ok: false, skipped: true, error: "Sin credenciales de Facebook." })
+      : run(() =>
+          publishFacebookPost({
+            pageId: targets.facebook!.pageId,
+            message: captionFor("facebook"),
+            imageUrls: images,
+            token: targets.facebook!.token,
+          })
+        ),
+    !targets.linkedin
+      ? Promise.resolve<NetworkOutcome>({ ok: false, skipped: true, error: "Sin credenciales de LinkedIn." })
+      : run(() =>
+          publishLinkedInPost({
+            text: captionFor("linkedin"),
+            authorUrn: targets.linkedin!.authorUrn,
+            imageUrls: images,
+            token: targets.linkedin!.token,
+          })
+        ),
+  ]);
+
+  const results = { instagram, facebook, linkedin };
+  const attempted = Object.values(results).filter((r) => !r.skipped);
+  return { ok: attempted.length > 0 && attempted.every((r) => r.ok), results };
+}
+
 // ---- LinkedIn ----
 export async function publishLinkedInPost(args: {
   text?: string;
