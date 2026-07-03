@@ -15,6 +15,8 @@ export const STORAGE_KEYS = {
   metaCode: "meta_code",
   metaIgAccountId: "meta_ig_account_id",
   metaPageId: "meta_page_id",
+  metaTokenExpiresAt: "meta_token_expires_at",
+  linkedinTokenExpiresAt: "linkedin_token_expires_at",
 
   driveFolderId: "custom_drive_folder_id",
   driveApiKey: "custom_drive_api_key",

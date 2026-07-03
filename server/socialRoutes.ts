@@ -187,7 +187,30 @@ app.get(["/api/meta/callback", "/api/meta/callback/"], async (req, res) => {
       return res.status(tokenRes.status).send(`Failed to exchange Meta token: ${JSON.stringify(data)}`);
     }
 
-    const accessToken = data.access_token;
+    // Upgrade the short-lived token (hours) to a long-lived one (~60 days)
+    // so scheduled posts keep working; fall back to the short token on error.
+    let accessToken = data.access_token;
+    let expiresIn = data.expires_in;
+    try {
+      const llRes = await fetch(
+        `https://graph.facebook.com/v18.0/oauth/access_token?` +
+          new URLSearchParams({
+            grant_type: "fb_exchange_token",
+            client_id: appId,
+            client_secret: appSecret,
+            fb_exchange_token: accessToken,
+          }).toString()
+      );
+      const llData = (await llRes.json()) as any;
+      if (llRes.ok && llData.access_token) {
+        accessToken = llData.access_token;
+        expiresIn = llData.expires_in || 60 * 24 * 60 * 60;
+        console.log("[Meta OAuth] Token intercambiado por uno de larga duración (~60 días).");
+      }
+    } catch (err) {
+      console.warn("[Meta OAuth] No se pudo obtener token de larga duración; se usa el corto:", err);
+    }
+    data.expires_in = expiresIn;
     res.send(`
       <html>
         <body style="font-family: sans-serif; background: #0A0A0B; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center;">
@@ -212,6 +235,36 @@ app.get(["/api/meta/callback", "/api/meta/callback/"], async (req, res) => {
     `);
   } catch (error: any) {
     res.status(500).send(`Error exchanging Meta credentials: ${error.message || error}`);
+  }
+});
+
+// 6.b POST /api/meta/refresh-token - Re-exchanges a (still valid) token for a
+// fresh long-lived one, so the 60-day window can be renewed from the panel.
+app.post("/api/meta/refresh-token", async (req, res) => {
+  const token = req.body?.token || req.headers.authorization?.replace("Bearer ", "");
+  if (!token) return res.status(400).json({ error: "Falta el token de Meta a renovar." });
+  const appId = process.env.META_APP_ID || "";
+  const appSecret = process.env.META_APP_SECRET || "";
+  if (!appId || !appSecret) {
+    return res.status(400).json({ error: "Faltan META_APP_ID / META_APP_SECRET en el servidor." });
+  }
+  try {
+    const r = await fetch(
+      `https://graph.facebook.com/v18.0/oauth/access_token?` +
+        new URLSearchParams({
+          grant_type: "fb_exchange_token",
+          client_id: appId,
+          client_secret: appSecret,
+          fb_exchange_token: String(token),
+        }).toString()
+    );
+    const d = (await r.json()) as any;
+    if (!r.ok || !d.access_token) {
+      return res.status(r.status || 400).json({ error: d.error?.message || "No se pudo renovar el token." });
+    }
+    res.json({ token: d.access_token, expires_in: d.expires_in || 60 * 24 * 60 * 60 });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo renovar el token." });
   }
 });
 

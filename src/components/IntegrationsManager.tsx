@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "../lib/toast";
 import { apiGet, apiPost } from "../lib/api";
+import { STORAGE_KEYS, getStored, setStored } from "../lib/storageKeys";
 import {
   Cloud, Folder, FileText, CheckCircle, RefreshCw, Calendar, Mail,
   FileCheck, ArrowUpRight, ArrowRight, ShieldAlert, Key, Globe, 
@@ -55,6 +56,69 @@ export const IntegrationsManager: React.FC = () => {
     if (code) return "CONNECTED";
     return "SANDBOX";
   });
+
+  // --- TOKEN EXPIRY TRACKING (Meta ~60 días, LinkedIn ~60 días) ---
+  const [metaExpiresAt, setMetaExpiresAt] = useState<number>(() => Number(getStored(STORAGE_KEYS.metaTokenExpiresAt)) || 0);
+  const [linkedinExpiresAt, setLinkedinExpiresAt] = useState<number>(
+    () => Number(getStored(STORAGE_KEYS.linkedinTokenExpiresAt)) || 0
+  );
+  const [refreshingMetaToken, setRefreshingMetaToken] = useState(false);
+
+  const daysLeft = (ts: number) => Math.floor((ts - Date.now()) / (24 * 3600 * 1000));
+
+  const refreshMetaToken = async () => {
+    if (!metaToken) return;
+    setRefreshingMetaToken(true);
+    try {
+      const r = await apiPost<{ token: string; expires_in: number }>("/api/meta/refresh-token", { token: metaToken });
+      setMetaToken(r.token);
+      localStorage.setItem("meta_access_token", r.token);
+      const expiry = Date.now() + (r.expires_in || 60 * 24 * 3600) * 1000;
+      setStored(STORAGE_KEYS.metaTokenExpiresAt, String(expiry));
+      setMetaExpiresAt(expiry);
+      toast.success(`Token de Meta renovado: válido hasta ${new Date(expiry).toLocaleDateString()}.`);
+    } catch (err: any) {
+      toast.error(`No se pudo renovar: ${err.message || err}. Reconecta con el botón OAuth.`);
+    } finally {
+      setRefreshingMetaToken(false);
+    }
+  };
+
+  /** Renders a token-expiry warning line for a connected network. */
+  const TokenHealth: React.FC<{ network: "meta" | "linkedin" }> = ({ network }) => {
+    const expiresAt = network === "meta" ? metaExpiresAt : linkedinExpiresAt;
+    const hasToken = network === "meta" ? !!metaToken : !!linkedinToken;
+    if (!hasToken || !expiresAt) return null;
+    const days = daysLeft(expiresAt);
+    if (days > 7) {
+      return (
+        <p className="text-[10px] text-faint mt-1.5 font-mono">
+          Token válido hasta {new Date(expiresAt).toLocaleDateString()} ({days} días).
+        </p>
+      );
+    }
+    return (
+      <div className="mt-2 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-start gap-2">
+        <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <p className="text-[11px] text-amber-600 font-semibold">
+            {days < 0 ? "El token expiró: las publicaciones programadas van a fallar." : `El token vence en ${days} día(s).`}
+          </p>
+          {network === "meta" ? (
+            <button
+              onClick={refreshMetaToken}
+              disabled={refreshingMetaToken}
+              className="text-[11px] font-bold text-black underline mt-1 disabled:opacity-50"
+            >
+              {refreshingMetaToken ? "Renovando..." : "Renovar ahora (60 días más)"}
+            </button>
+          ) : (
+            <p className="text-[10px] text-muted mt-0.5">Vuelve a conectar LinkedIn con el botón OAuth para renovarlo.</p>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // --- GOOGLE DRIVE BACKUP CUSTOM CREDENTIALS ---
   const [customDriveFolderId, setCustomDriveFolderId] = useState(() => localStorage.getItem("custom_drive_folder_id") || "");
@@ -585,27 +649,33 @@ export const IntegrationsManager: React.FC = () => {
 
       // Real backend OAuth callback message handlers
       if (e.data?.type === "OAUTH_LINKEDIN_SUCCESS") {
-        const { token } = e.data;
+        const { token, expires_in } = e.data;
         setLinkedinToken(token);
         setLinkedinStatus("CONNECTED");
         localStorage.setItem("linkedin_access_token", token);
+        const liExpiry = Date.now() + (Number(expires_in) || 60 * 24 * 3600) * 1000;
+        setStored(STORAGE_KEYS.linkedinTokenExpiresAt, String(liExpiry));
+        setLinkedinExpiresAt(liExpiry);
         setTerminalLogs(prev => [
           ...prev,
           `[OAuth LinkedIn] ✔ ¡Sincronización Exitosa! Token de producción real recibido.`,
-          `[OAuth LinkedIn] Conectado en Modo Producción mediante flujo OAuth real.`
+          `[OAuth LinkedIn] Válido hasta ${new Date(liExpiry).toLocaleDateString()}.`
         ]);
         toast.info("¡Conexión real establecida con LinkedIn! 🎉");
       }
-      
+
       if (e.data?.type === "OAUTH_META_SUCCESS") {
-        const { token } = e.data;
+        const { token, expires_in } = e.data;
         setMetaToken(token);
         setMetaStatus("CONNECTED");
         localStorage.setItem("meta_access_token", token);
+        const metaExpiry = Date.now() + (Number(expires_in) || 60 * 24 * 3600) * 1000;
+        setStored(STORAGE_KEYS.metaTokenExpiresAt, String(metaExpiry));
+        setMetaExpiresAt(metaExpiry);
         setTerminalLogs(prev => [
           ...prev,
-          `[OAuth Meta] ✔ ¡Sincronización con Meta Exitosa! Token de producción real recibido.`,
-          `[OAuth Meta] Conectado en Modo Producción con Facebook e Instagram.`
+          `[OAuth Meta] ✔ ¡Sincronización con Meta Exitosa! Token de larga duración recibido.`,
+          `[OAuth Meta] Válido hasta ${new Date(metaExpiry).toLocaleDateString()} (~60 días).`
         ]);
         toast.info("¡Conexión real establecida con Meta (Facebook & Instagram)! 🎉");
       }
@@ -1087,6 +1157,7 @@ export const IntegrationsManager: React.FC = () => {
                     Guardar
                   </button>
                 </div>
+                <TokenHealth network="linkedin" />
               </div>
 
               <div className="space-y-3">
@@ -1184,6 +1255,7 @@ export const IntegrationsManager: React.FC = () => {
                     Guardar
                   </button>
                 </div>
+                <TokenHealth network="meta" />
               </div>
 
               <div className="space-y-3">
