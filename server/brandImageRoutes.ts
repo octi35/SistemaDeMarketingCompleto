@@ -7,7 +7,8 @@ import path from "path";
 import { Type } from "@google/genai";
 import { generateContentWithFallback, generateNanoBananaImage, NANO_BANANA_MODELS, NANO_BANANA_PRO_MODELS } from "../aiHelpers";
 import { getBrand, listAssets, addAsset, deleteAsset } from "../serverStore";
-import { saveDataUrlImage, UPLOADS_DIR } from "../imageStore";
+import { UPLOADS_DIR } from "../imageStore";
+import { storeImagePublic, deleteCloudImage } from "./cloudStorage";
 import { fireWebhook } from "./webhooks";
 import { parseBody, brandImagePlanSchema, brandImageGenerateSchema } from "./validate";
 import type { ServerContext } from "./context";
@@ -41,9 +42,10 @@ const FALLBACK_CONCEPTS = [
 export function registerBrandImageRoutes(app: express.Express, ctx: ServerContext): void {
   const { ai, getCustomAiClient } = ctx;
 
+  // Cloud-stored assets carry their absolute URL; local ones are served from /uploads.
   const assetToJson = (req: express.Request, a: ReturnType<typeof listAssets>[number]) => ({
     ...a,
-    url: `${ctx.publicBaseUrl(req)}/uploads/${a.file}`,
+    url: a.url || `${ctx.publicBaseUrl(req)}/uploads/${a.file}`,
   });
 
   // 1. Plan N distinct visual concepts (default 50) from the Brand Kit.
@@ -141,8 +143,14 @@ Return strictly valid JSON conforming to the requested schema. No markdown wrapp
       if (!image) {
         return res.status(502).json({ error: "Nano Banana no devolvió imagen. Reintenta en unos segundos." });
       }
-      const file = saveDataUrlImage(image);
-      const asset = addAsset({ file, prompt: body.prompt, concept: body.concept, tags: body.tags });
+      const stored = await storeImagePublic(image, ctx.publicBaseUrl(req));
+      const asset = addAsset({
+        file: stored.file,
+        url: stored.url.startsWith(ctx.publicBaseUrl(req)) ? undefined : stored.url,
+        prompt: body.prompt,
+        concept: body.concept,
+        tags: body.tags,
+      });
       const json = assetToJson(req, asset);
       fireWebhook("asset.created", { id: asset.id, url: json.url, concept: asset.concept });
       res.json({ asset: json });
@@ -162,13 +170,17 @@ Return strictly valid JSON conforming to the requested schema. No markdown wrapp
     res.json({ assets: listAssets().map((a) => assetToJson(req, a)) });
   });
 
-  // 4. Remove an asset (record + file on disk).
-  app.delete("/api/assets/:id", (req, res) => {
+  // 4. Remove an asset (record + file on disk or in the cloud bucket).
+  app.delete("/api/assets/:id", async (req, res) => {
     const asset = deleteAsset(req.params.id);
     if (!asset) return res.status(404).json({ error: "Asset no encontrado" });
     try {
-      const file = path.join(UPLOADS_DIR, path.basename(asset.file));
-      if (fs.existsSync(file)) fs.unlinkSync(file);
+      if (asset.url) {
+        await deleteCloudImage(path.basename(asset.file));
+      } else {
+        const file = path.join(UPLOADS_DIR, path.basename(asset.file));
+        if (fs.existsSync(file)) fs.unlinkSync(file);
+      }
     } catch {
       /* record removed; leftover file is non-fatal */
     }

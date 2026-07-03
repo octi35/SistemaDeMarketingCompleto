@@ -25,7 +25,7 @@ import {
 } from "../serverStore";
 import { collectMetricsOnce, buildMetricsSummary, decideDueExperiments } from "./metricsHistory";
 import { sendWeeklyReport, buildReportText } from "./weeklyReport";
-import { saveDataUrlImage } from "../imageStore";
+import { storeImagePublic } from "./cloudStorage";
 import { sealPayloadTokens, storeSecret } from "./secretStore";
 import {
   parseBody,
@@ -323,7 +323,8 @@ export function registerStoreRoutes(app: express.Express, ctx: ServerContext): v
   });
 
   // ---- Upload base64 images -> public URLs (needed for IG publishing) ----
-  app.post("/api/upload-image", (req, res) => {
+  // Uses Supabase Storage when configured (stable CDN URLs); local /uploads otherwise.
+  app.post("/api/upload-image", async (req, res) => {
     try {
       const { images, dataUrl } = req.body || {};
       const list: string[] = Array.isArray(images) ? images : dataUrl ? [dataUrl] : [];
@@ -331,8 +332,8 @@ export function registerStoreRoutes(app: express.Express, ctx: ServerContext): v
         return res.status(400).json({ error: "No hay imágenes para subir." });
       }
       const base = ctx.publicBaseUrl(req);
-      const urls = list.map((d) => `${base}/uploads/${saveDataUrlImage(d)}`);
-      res.json({ urls, publicBase: base });
+      const stored = await Promise.all(list.map((d) => storeImagePublic(d, base)));
+      res.json({ urls: stored.map((s) => s.url), publicBase: base });
     } catch (error: any) {
       console.error("Error uploading image:", error);
       res.status(500).json({ error: error.message || "No se pudo subir la imagen" });

@@ -102,15 +102,20 @@ El programador de publicaciones corre **dentro del servidor Express**, así que 
 - **Real**: publicación IG/FB/LinkedIn, carruseles Nano Banana, biblioteca de marca, calendario con programación automática, métricas IG/FB, borradores de Meta Ads, email SMTP, API externa y webhooks.
 - **Simulado todavía**: Google Drive y Google Calendar (requieren OAuth de Google), y los datos del tablero de equipo/pipeline.
 
-## 🗺️ Fase 2 (próximo salto): multi-usuario con Supabase
+## ☁️ Persistencia en la nube con Supabase (fase 2, parte 1 — ya disponible)
 
-Hoy el sistema es mono-usuario (tokens en tu navegador + datos en `.data/store.json`). Para que **todo tu equipo** trabaje en el mismo espacio:
+Por defecto todo vive en `.data/` (disco local). Si tu hosting tiene disco efímero, conecta Supabase y tus datos e imágenes sobreviven cualquier redeploy:
+
+1. Ejecuta **`supabase/migration.sql`** una vez en tu proyecto (Dashboard → SQL Editor).
+2. Define `SUPABASE_URL` y `SUPABASE_SERVICE_KEY` (Settings → API → service_role) en el servidor.
+
+Con eso: el store completo (calendario, programados, biblioteca, brand kit, webhooks) se respalda en Postgres al instante y se restaura solo al arrancar, y las imágenes nuevas se suben a **Supabase Storage** con URL pública estable (ideal para Instagram). Sin esas variables, la app funciona igual que siempre en local.
+
+## 🗺️ Fase 2 (parte 2, pendiente): multi-usuario
 
 1. **Supabase Auth** (login por email) + roles (admin / editor / aprobador).
-2. Migrar `serverStore.ts` a **Postgres** (la capa ya está aislada en ese módulo, es un swap directo).
-3. Mover `/uploads` a **Supabase Storage** (URLs públicas estables que sobreviven redeploys).
-4. Tokens de redes guardados **cifrados en el servidor por workspace** (el `secretStore` ya existe) en vez de localStorage.
-5. Flujo editorial: borrador → aprobado → programado → publicado.
+2. Tokens de redes guardados **cifrados en el servidor por workspace** (el `secretStore` ya existe) en vez de localStorage.
+3. Flujo editorial: borrador → aprobado → programado → publicado.
 
 ## ⚠️ Seguridad
 

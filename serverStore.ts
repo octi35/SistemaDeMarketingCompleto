@@ -3,6 +3,7 @@
 // (gitignored). For multi-user / production, swap this for Supabase/Postgres.
 import fs from "fs";
 import path from "path";
+import { queueCloudPush } from "./server/cloudStore";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const STORE_FILE = path.join(DATA_DIR, "store.json");
@@ -94,11 +95,13 @@ export interface WebhookSub {
   createdAt: string;
 }
 
-/** An AI-generated (or uploaded) brand image stored in /uploads. */
+/** An AI-generated (or uploaded) brand image stored in /uploads or the cloud. */
 export interface BrandAsset {
   id: string;
-  /** Filename inside the uploads dir; served as /uploads/<file>. */
+  /** Filename inside the uploads dir (or the cloud bucket). */
   file: string;
+  /** Absolute public URL when stored in cloud storage (Supabase). */
+  url?: string;
   prompt?: string;
   concept?: string;
   tags?: string[];
@@ -174,6 +177,31 @@ function writeStore(store: Store): void {
     fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2));
   } catch (err) {
     console.error("[store] Failed to persist store:", err);
+  }
+  // Mirrors the snapshot to Supabase when configured (debounced, background).
+  queueCloudPush(store);
+}
+
+// ---- Cloud sync helpers (used by server/cloudStore at boot) ----
+export function exportStoreSnapshot(): Store {
+  return readStore();
+}
+
+export function hasLocalStoreData(): boolean {
+  const s = readStore();
+  return Boolean(
+    s.projects.length || s.posts?.length || s.scheduled?.length || s.calendar?.items?.length ||
+    s.assets?.length || s.brand || s.webhooks?.length || s.metrics?.length
+  );
+}
+
+/** Overwrites the local store with a cloud snapshot (no cloud re-push). */
+export function replaceStoreFromCloud(snapshot: any): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(STORE_FILE, JSON.stringify(snapshot ?? { projects: [] }, null, 2));
+  } catch (err) {
+    console.error("[store] Failed to restore store from cloud:", err);
   }
 }
 
@@ -386,6 +414,7 @@ export function addAsset(input: Omit<BrandAsset, "id" | "createdAt">): BrandAsse
   const asset: BrandAsset = {
     id: `asset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     file: input.file,
+    url: input.url,
     prompt: input.prompt,
     concept: input.concept,
     tags: input.tags,

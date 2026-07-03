@@ -22,6 +22,8 @@ import { registerSocialRoutes } from "./server/socialRoutes";
 import { registerBrandImageRoutes } from "./server/brandImageRoutes";
 import { registerExternalApi } from "./server/externalApi";
 import { startScheduler } from "./server/scheduler";
+import { initCloudStore } from "./server/cloudStore";
+import { exportStoreSnapshot, hasLocalStoreData, replaceStoreFromCloud } from "./serverStore";
 
 dotenv.config();
 
@@ -124,6 +126,14 @@ registerExternalApi(app, ctx);
 
 // Serve static frontend assets in production or integrate Vite in dev
 async function startServer() {
+  // Optional Supabase persistence: restore/seed the store snapshot before
+  // anything reads it (see server/cloudStore.ts and supabase/migration.sql).
+  await initCloudStore({
+    readLocal: exportStoreSnapshot,
+    hasLocalData: hasLocalStoreData,
+    replaceLocal: replaceStoreFromCloud,
+  });
+
   if (!isProduction) {
     console.log("Setting up Vite Development Server middleware...");
     const vite = await createViteServer({
