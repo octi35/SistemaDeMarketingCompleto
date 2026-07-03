@@ -140,6 +140,54 @@ export function registerStoreRoutes(app: express.Express, ctx: ServerContext): v
     }
   });
 
+  // ---- Calendar export as iCalendar (importable in Google Calendar/Outlook) ----
+  app.get("/api/calendar.ics", (_req, res) => {
+    const cal = getCalendar();
+    const items: any[] = cal?.items || [];
+    if (!items.length) {
+      return res.status(404).type("text/plain").send("No hay plan de calendario guardado. Genera y guarda el plan primero.");
+    }
+
+    const esc = (s: string) =>
+      String(s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+    const pad = (n: number) => String(n).padStart(2, "0");
+    // Same convention as the UI scheduler: day 1 of the plan = tomorrow.
+    const fmtLocal = (d: Date) =>
+      `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+    const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+
+    const events = items.map((item) => {
+      const d = new Date();
+      d.setDate(d.getDate() + Math.max(1, Number(item.day) || 1));
+      const [hh, mm] = String(item.time || "10:00").split(":").map((n: string) => parseInt(n, 10));
+      d.setHours(isNaN(hh) ? 10 : hh, isNaN(mm) ? 0 : mm, 0, 0);
+      const end = new Date(d.getTime() + 30 * 60 * 1000);
+      return [
+        "BEGIN:VEVENT",
+        `UID:adteam-day-${item.day}-${cal?.updatedAt || "plan"}@adteam.ai`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART:${fmtLocal(d)}`,
+        `DTEND:${fmtLocal(end)}`,
+        `SUMMARY:${esc(`[${item.platform || "Post"}] ${item.title || `Día ${item.day}`}`)}`,
+        `DESCRIPTION:${esc(item.copy || item.description || "")}`,
+        "END:VEVENT",
+      ].join("\r\n");
+    });
+
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//AdTeam AI//Calendario de Contenido//ES",
+      "CALSCALE:GREGORIAN",
+      ...events,
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="adteam-calendario.ics"');
+    res.send(ics);
+  });
+
   // ---- Real email via SMTP (Nodemailer) ----
   app.post("/api/mail/send", async (req, res) => {
     const body = parseBody(mailSchema, req, res);

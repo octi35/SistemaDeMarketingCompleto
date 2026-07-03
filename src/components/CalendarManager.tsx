@@ -321,6 +321,21 @@ export const CalendarManager: React.FC = () => {
             {schedulingAll ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CalendarClock className="w-4 h-4" />}
             <span>Programar plan (auto-publicación)</span>
           </button>
+          <button
+            onClick={async () => {
+              if (calendar.length === 0) return;
+              // The export reads the saved plan, so persist the latest edits first.
+              await saveCalendarPlan();
+              window.open("/api/calendar.ics", "_blank");
+            }}
+            disabled={calendar.length === 0 || savingPlan}
+            className="bg-sink hover:border-black/50 text-muted hover:text-ink font-bold px-5 py-3.5 rounded-full flex items-center justify-center gap-2 transition text-xs uppercase tracking-wider disabled:opacity-50"
+            id="btn-export-ics"
+            title="Descarga un .ics para importar en Google Calendar u Outlook"
+          >
+            <Calendar className="w-4 h-4 text-black" />
+            <span>Exportar .ics (Google Calendar)</span>
+          </button>
         </div>
       </div>
 
