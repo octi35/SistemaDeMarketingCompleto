@@ -42,6 +42,9 @@ export const CarouselDesigner: React.FC = () => {
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   const [publishingIG, setPublishingIG] = useState(false);
   const [publishStep, setPublishStep] = useState("");
+  // Optional datetime-local value: when set, the carousel is scheduled
+  // instead of published immediately.
+  const [scheduleAt, setScheduleAt] = useState("");
 
   // Refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -429,47 +432,8 @@ export const CarouselDesigner: React.FC = () => {
     return canvasRef.current ? canvasRef.current.toDataURL("image/png") : "";
   };
 
-  const publishCarouselToInstagram = async () => {
-    const token = getStored(STORAGE_KEYS.metaAccessToken);
-    const ig = getStored(STORAGE_KEYS.metaIgAccountId);
-    if (!token || !ig) {
-      toast.error("Conecta Meta y elige tu cuenta de Instagram en 'Gestor de Contenido' → 'Cargar mis páginas'.");
-      setShowPublishConfirm(false);
-      return;
-    }
-    if (slides.length < 2) {
-      toast.error("Instagram necesita al menos 2 diapositivas para un carrusel.");
-      setShowPublishConfirm(false);
-      return;
-    }
-    setPublishingIG(true);
-    try {
-      setPublishStep("Renderizando diapositivas en alta resolución...");
-      const dataUrls: string[] = [];
-      for (const s of slides.slice(0, 10)) dataUrls.push(await renderSlideToDataUrl(s));
-
-      setPublishStep("Subiendo imágenes al hosting público...");
-      const up = await apiPost<{ urls: string[] }>("/api/upload-image", { images: dataUrls });
-
-      setPublishStep("Publicando carrusel en Instagram...");
-      await apiPost("/api/meta/instagram/carousel", {
-        igAccountId: ig,
-        imageUrls: up.urls,
-        caption: topic,
-        token,
-      });
-      toast.success("¡Carrusel publicado en Instagram! 🎉");
-      setShowPublishConfirm(false);
-    } catch (err: any) {
-      toast.error(`No se pudo publicar: ${err.message || err}`);
-    } finally {
-      setPublishingIG(false);
-      setPublishStep("");
-    }
-  };
-
-  // ---- One click -> publish the carousel to every connected network ----
-  const publishCarouselToAll = async () => {
+  // ---- One click -> publish (or schedule) the carousel on the connected networks ----
+  const publishCarouselToAll = async (only?: "instagram") => {
     const metaToken = getStored(STORAGE_KEYS.metaAccessToken);
     const igId = getStored(STORAGE_KEYS.metaIgAccountId);
     const pageId = getStored(STORAGE_KEYS.metaPageId);
@@ -477,13 +441,33 @@ export const CarouselDesigner: React.FC = () => {
 
     const networks: any = {};
     if (metaToken && igId && slides.length >= 2) networks.instagram = { igAccountId: igId, token: metaToken };
-    if (metaToken && pageId) networks.facebook = { pageId, token: metaToken };
-    if (linkedinToken) networks.linkedin = { token: linkedinToken };
+    if (!only) {
+      if (metaToken && pageId) networks.facebook = { pageId, token: metaToken };
+      if (linkedinToken) networks.linkedin = { token: linkedinToken };
+    }
 
+    if (only === "instagram" && !networks.instagram) {
+      toast.error(
+        slides.length < 2
+          ? "Instagram necesita al menos 2 diapositivas para un carrusel."
+          : "Conecta Meta y elige tu cuenta de Instagram en 'Gestor de Contenido' → 'Cargar mis páginas'."
+      );
+      setShowPublishConfirm(false);
+      return;
+    }
     if (Object.keys(networks).length === 0) {
       toast.error("Conecta Meta y/o LinkedIn en 'Integración Nube' (y elige tu página en 'Gestor de Contenido').");
       setShowPublishConfirm(false);
       return;
+    }
+
+    let publishAt: string | undefined;
+    if (scheduleAt) {
+      if (new Date(scheduleAt).getTime() <= Date.now()) {
+        toast.error("La fecha/hora de programación debe ser futura.");
+        return;
+      }
+      publishAt = new Date(scheduleAt).toISOString();
     }
 
     setPublishingIG(true);
@@ -495,22 +479,33 @@ export const CarouselDesigner: React.FC = () => {
       setPublishStep("Subiendo imágenes al hosting público...");
       const up = await apiPost<{ urls: string[] }>("/api/upload-image", { images: dataUrls });
 
-      setPublishStep("Publicando en todas tus redes conectadas...");
-      const data = await apiPost<{ ok: boolean; results: Record<string, any> }>("/api/publish-all", {
-        caption: topic,
-        imageUrls: up.urls,
-        networks,
-      });
+      setPublishStep(publishAt ? "Programando en tus redes conectadas..." : "Publicando en todas tus redes conectadas...");
+      const data = await apiPost<{ ok: boolean; mode: string; results?: Record<string, any>; scheduled?: any[] }>(
+        "/api/publish-all",
+        {
+          caption: topic,
+          imageUrls: up.urls,
+          networks,
+          publishAt,
+          label: `Carrusel: ${topic.slice(0, 60)}`,
+        }
+      );
 
       const labels: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn" };
-      const okNets = Object.entries(data.results || {}).filter(([, r]) => r.ok).map(([n]) => labels[n]);
-      const failNets = Object.entries(data.results || {}).filter(([, r]) => !r.ok && !r.skipped);
-      if (okNets.length > 0) toast.success(`¡Carrusel publicado en ${okNets.join(", ")}! 🎉`);
-      for (const [n, r] of failNets) toast.error(`${labels[n]}: ${r.error || "falló"}`);
-      if (okNets.length === 0 && failNets.length === 0) toast.info("No había redes con credenciales para publicar.");
+      if (data.mode === "scheduled") {
+        const nets = (data.scheduled || []).map((s: any) => labels[s.network]).join(", ");
+        toast.success(`Carrusel programado en ${nets} para ${new Date(publishAt!).toLocaleString()} 📅`);
+        setScheduleAt("");
+      } else {
+        const okNets = Object.entries(data.results || {}).filter(([, r]) => r.ok).map(([n]) => labels[n]);
+        const failNets = Object.entries(data.results || {}).filter(([, r]) => !r.ok && !r.skipped);
+        if (okNets.length > 0) toast.success(`¡Carrusel publicado en ${okNets.join(", ")}! 🎉`);
+        for (const [n, r] of failNets) toast.error(`${labels[n]}: ${r.error || "falló"}`);
+        if (okNets.length === 0 && failNets.length === 0) toast.info("No había redes con credenciales para publicar.");
+      }
       setShowPublishConfirm(false);
     } catch (err: any) {
-      toast.error(`No se pudo publicar: ${err.message || err}`);
+      toast.error(`No se pudo ${publishAt ? "programar" : "publicar"}: ${err.message || err}`);
     } finally {
       setPublishingIG(false);
       setPublishStep("");
@@ -1069,6 +1064,35 @@ export const CarouselDesigner: React.FC = () => {
                     ⚠ LinkedIn no está conectado; se omitirá. Conéctalo en "Integración Nube".
                   </p>
                 )}
+
+                {/* Optional scheduling */}
+                <div className="mb-4 space-y-1.5">
+                  <label className="text-[10px] font-semibold text-faint font-mono uppercase block">
+                    Programar para más tarde (opcional)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="datetime-local"
+                      value={scheduleAt}
+                      onChange={(e) => setScheduleAt(e.target.value)}
+                      className="flex-1 bg-sink border border-line rounded-input px-3 py-2 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
+                    />
+                    {scheduleAt && (
+                      <button
+                        onClick={() => setScheduleAt("")}
+                        className="text-[10px] text-muted hover:text-red-400 shrink-0"
+                      >
+                        Quitar
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-faint">
+                    {scheduleAt
+                      ? `Se programará para el ${new Date(scheduleAt).toLocaleString()} (el servidor lo publica solo).`
+                      : "Déjalo vacío para publicar ahora mismo."}
+                  </p>
+                </div>
+
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowPublishConfirm(false)}
@@ -1077,10 +1101,10 @@ export const CarouselDesigner: React.FC = () => {
                     Cancelar
                   </button>
                   <button
-                    onClick={publishTarget === "all" ? publishCarouselToAll : publishCarouselToInstagram}
+                    onClick={() => publishCarouselToAll(publishTarget === "instagram" ? "instagram" : undefined)}
                     className="flex-1 bg-gradient-to-r from-[#feda75] via-[#d62976] to-[#962fbf] text-white font-bold text-xs py-2.5 rounded-lg transition"
                   >
-                    Confirmar y publicar
+                    {scheduleAt ? "Confirmar y programar" : "Confirmar y publicar"}
                   </button>
                 </div>
               </>
