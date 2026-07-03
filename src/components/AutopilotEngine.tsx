@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "../lib/toast";
 import { apiPost } from "../lib/api";
+import { STORAGE_KEYS, getStored } from "../lib/storageKeys";
 import { Sparkles, Play, CheckCircle2, Copy, Check, Code, Eye, FileText, Send, Share2, TrendingUp, HelpCircle, Loader2, ArrowRight, Layers, Layout, BookOpen, Facebook, Linkedin, Instagram, RefreshCw } from "lucide-react";
 
 interface AutopilotData {
@@ -189,16 +190,29 @@ export const AutopilotEngine: React.FC = () => {
         body = { text: textToPost, token: linkedinToken };
       } else if (network === "facebook") {
         endpoint = "/api/meta/facebook/post";
-        // Prompt for first page returned or default to mock
-        body = { pageId: "sandbox_page_id", message: textToPost, token: metaToken };
+        body = { pageId: getStored(STORAGE_KEYS.metaPageId), message: textToPost, token: metaToken };
+        if (!body.pageId) {
+          toast.error("Elige tu página de Facebook en 'Gestor de Contenido' → 'Cargar mis páginas' primero.");
+          setSocialPublishStatus(prev => ({ ...prev, [network]: "Falta configurar" }));
+          return;
+        }
       } else if (network === "instagram") {
         endpoint = "/api/meta/instagram/post";
-        body = { 
-          igAccountId: "sandbox_ig_id", 
-          imageUrl: extraMedia || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe", 
+        body = {
+          igAccountId: getStored(STORAGE_KEYS.metaIgAccountId),
+          imageUrl: extraMedia,
           caption: textToPost,
           token: metaToken
         };
+        if (!body.igAccountId || !body.imageUrl) {
+          toast.error(
+            !body.igAccountId
+              ? "Elige tu cuenta de Instagram en 'Gestor de Contenido' → 'Cargar mis páginas' primero."
+              : "Instagram necesita una imagen: agrega la URL de la creatividad."
+          );
+          setSocialPublishStatus(prev => ({ ...prev, [network]: "Falta configurar" }));
+          return;
+        }
       }
 
       const response = await fetch(endpoint, {
@@ -212,13 +226,16 @@ export const AutopilotEngine: React.FC = () => {
         setSocialPublishStatus(prev => ({ ...prev, [network]: "¡Publicado con Éxito!" }));
         toast.success(`¡Contenido publicado correctamente en tu cuenta de ${network.toUpperCase()}! 🎉`);
       } else {
-        // Fallback to sandbox simulation success if using demo credentials
-        setSocialPublishStatus(prev => ({ ...prev, [network]: "Sincronizado (Prueba)" }));
-        toast.info(`Sincronización simulada para ${network.toUpperCase()}. Configura tus llaves reales en 'Integración Nube' para publicar en vivo.`);
+        const reason =
+          data?.error?.message || data?.error?.error?.message ||
+          (typeof data?.error === "string" ? data.error : JSON.stringify(data?.error || data || {}).slice(0, 160));
+        setSocialPublishStatus(prev => ({ ...prev, [network]: "Falló — reintentar" }));
+        toast.error(`No se publicó en ${network.toUpperCase()}: ${reason}`);
       }
     } catch (err: any) {
       console.error(err);
-      setSocialPublishStatus(prev => ({ ...prev, [network]: "Sincronizado (Prueba)" }));
+      setSocialPublishStatus(prev => ({ ...prev, [network]: "Falló — reintentar" }));
+      toast.error(`Error de red publicando en ${network.toUpperCase()}: ${err.message || err}`);
     } finally {
       setPublishingToSocial(null);
     }

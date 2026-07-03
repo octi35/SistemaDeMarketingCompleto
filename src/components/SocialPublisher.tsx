@@ -49,23 +49,9 @@ export const SocialPublisher: React.FC = () => {
     } catch (e) {
       console.error(e);
     }
-    // Default mock initial media assets
-    return [
-      {
-        id: "mock-1",
-        name: "grafico_roi_anuncios.png",
-        type: "image",
-        url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
-        dateAdded: "24/06/2026, 09:12"
-      },
-      {
-        id: "mock-2",
-        name: "reunion_equipo_marketing.mp4",
-        type: "video",
-        url: "https://images.unsplash.com/photo-1531538606174-0f90ff5dce83?auto=format&fit=crop&w=800&q=80",
-        dateAdded: "24/06/2026, 11:30"
-      }
-    ];
+    // Starts empty: the library fills with your uploads and the brand assets
+    // generated in the "Marca" tab (no placeholder demo files).
+    return [];
   });
 
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);

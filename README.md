@@ -5,7 +5,16 @@
 
 ---
 
-## ✨ Novedades
+## ✨ Novedades (última actualización)
+
+- **Publicación total con 1 click**: `POST /api/publish-all` publica (o programa) el mismo contenido en **Instagram + Facebook + LinkedIn a la vez**, cada red con su copy optimizado y resultado independiente. Botones en el Gestor de Contenido y en Carruseles.
+- **Fábrica de imágenes de marca 🍌**: planifica y genera hasta **50 imágenes** coherentes con tu Brand Kit (Nano Banana estándar o Pro, con tu logo como referencia), con progreso en vivo, reintentos y **biblioteca persistente** lista para publicar.
+- **Calendario por red**: filtro Instagram/Facebook/LinkedIn, **imagen adjunta por día** desde la biblioteca, y programación real de Instagram desde el calendario.
+- **Tokens de larga duración**: el OAuth de Meta entrega tokens de ~60 días con **aviso de vencimiento** y renovación desde el panel.
+- **API externa + webhooks**: otros sistemas pueden publicar y leer datos con API keys (`/api/ext/*`), y AdTeam avisa a tu CRM/Zapier/Make cuando se publica o falla un post. Ver **[API.md](./API.md)**.
+- **Métricas de Facebook** además de Instagram, e **ideas/calendario guiados por tus datos reales** de engagement.
+
+## ✨ Novedades anteriores
 
 - **Carruseles a partir de un prompt + Nano Banana 🍌**: la IA (Gemini o Claude) escribe los slides y el modelo de imágenes de Gemini (*Nano Banana*, `gemini-2.5-flash-image`) genera la imagen de fondo real de cada diapositiva.
 - **Nano Banana 2.0**: generación de imágenes **en paralelo** (3 a la vez), opción **Nano Banana Pro** (`gemini-3-pro-image`) e **imagen de referencia** (subes tu logo/producto y el modelo lo integra — image-to-image).
@@ -73,6 +82,31 @@ Abre 👉 **http://localhost:3000**
 4. Pulsa **Generar**. La IA escribe los slides; si marcaste la casilla, Nano Banana crea las imágenes.
 5. También puedes pulsar **🍌 Generar imágenes (Nano Banana)** para todo el carrusel, o **Regenerar 🍌** en un slide concreto.
 6. Edita textos/colores y **descarga** el PNG de cada slide o el carrusel completo.
+
+## 🚀 Despliegue (para publicar de verdad)
+
+El programador de publicaciones corre **dentro del servidor Express**, así que necesitas un hosting **siempre encendido** (Railway, Render, Fly.io o un VPS). En serverless (p. ej. Vercel functions) los posts programados no saldrían.
+
+1. `npm run build && npm start` (sirve el frontend compilado y la API en un solo proceso; puerto via `PORT`).
+2. Configura `APP_URL` con tu dominio **HTTPS** — Instagram exige URLs públicas para las imágenes (`/uploads`).
+3. Variables en `.env.local` / panel del hosting: `GEMINI_API_KEY`, `META_APP_ID`, `META_APP_SECRET`, `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, SMTP y (opcional) `EXTERNAL_API_KEYS`.
+4. El disco debe ser **persistente** (carpeta `.data/` guarda proyectos, calendario, biblioteca y cola de publicación).
+5. Meta: con tu propia cuenta (admin/developer de la app) todo funciona en modo desarrollo; para que **otras cuentas** conecten, la app de Meta debe pasar App Review.
+
+## 🧭 Estado honesto del producto
+
+- **Real**: publicación IG/FB/LinkedIn, carruseles Nano Banana, biblioteca de marca, calendario con programación automática, métricas IG/FB, borradores de Meta Ads, email SMTP, API externa y webhooks.
+- **Simulado todavía**: Google Drive y Google Calendar (requieren OAuth de Google), y los datos del tablero de equipo/pipeline.
+
+## 🗺️ Fase 2 (próximo salto): multi-usuario con Supabase
+
+Hoy el sistema es mono-usuario (tokens en tu navegador + datos en `.data/store.json`). Para que **todo tu equipo** trabaje en el mismo espacio:
+
+1. **Supabase Auth** (login por email) + roles (admin / editor / aprobador).
+2. Migrar `serverStore.ts` a **Postgres** (la capa ya está aislada en ese módulo, es un swap directo).
+3. Mover `/uploads` a **Supabase Storage** (URLs públicas estables que sobreviven redeploys).
+4. Tokens de redes guardados **cifrados en el servidor por workspace** (el `secretStore` ya existe) en vez de localStorage.
+5. Flujo editorial: borrador → aprobado → programado → publicado.
 
 ## ⚠️ Seguridad
 

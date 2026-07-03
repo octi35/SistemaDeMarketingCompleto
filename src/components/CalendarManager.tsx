@@ -14,10 +14,6 @@ export const CalendarManager: React.FC = () => {
   const [activeItem, setActiveItem] = useState<CalendarItem | null>(null);
   const [isDemo, setIsDemo] = useState(false);
 
-  // Sync state
-  const [syncing, setSyncing] = useState(false);
-  const [synced, setSynced] = useState(false);
-
   // Form for adding/editing items
   const [editingTitle, setEditingTitle] = useState("");
   const [editingCopy, setEditingCopy] = useState("");
@@ -41,7 +37,6 @@ export const CalendarManager: React.FC = () => {
     setLoading(true);
     setCalendar([]);
     setActiveItem(null);
-    setSynced(false);
     try {
       const data = await apiPost("/api/generate-calendar", { niche, topic });
       if (data.calendar) {
@@ -119,15 +114,6 @@ export const CalendarManager: React.FC = () => {
     setCalendar((prev) => prev.map((item) => (item.day === activeItem.day ? { ...item, ...patch } : item)));
     // update active selection
     setActiveItem({ ...activeItem, ...patch });
-  };
-
-  // Sync with Google Calendar API simulation
-  const handleGoogleCalendarSync = () => {
-    setSyncing(true);
-    setTimeout(() => {
-      setSyncing(false);
-      setSynced(true);
-    }, 2000);
   };
 
   // ---- Real 1-click scheduling: calendar item -> auto-publish queue ----
@@ -599,41 +585,7 @@ export const CalendarManager: React.FC = () => {
                     <span>Programar publicación real (día {activeItem.day})</span>
                   </button>
 
-                  <button
-                    onClick={handleGoogleCalendarSync}
-                    disabled={syncing || synced}
-                    className={`w-full font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition border ${
-                      synced
-                        ? "bg-black/10 border-black/30 text-black"
-                        : "bg-black hover:bg-sidebar text-white border-black"
-                    }`}
-                    id="btn-google-calendar-sync"
-                  >
-                    {syncing ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                        <span>Sincronizando con Google Calendar API...</span>
-                      </>
-                    ) : synced ? (
-                      <>
-                        <Check className="w-4 h-4 text-black" />
-                        <span>Sincronizado con Google Calendar</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Sincronizar Calendario Completo</span>
-                      </>
-                    )}
-                  </button>
                 </div>
-
-                {/* API Sync Request Code Logs */}
-                {synced && (
-                  <div className="bg-sink rounded p-2 border border-line font-mono text-[9px] text-muted space-y-0.5">
-                    <div>POST /calendar/v3/calendars/primary/events/quickAdd HTTP/1.1</div>
-                    <div className="text-green-400">HTTP/1.1 200 OK {"{"} "id": "gcal_event_38402", "status": "confirmed" {"}"}</div>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="bg-surface border border-line rounded-2xl p-12 text-center text-muted text-xs">
