@@ -81,6 +81,17 @@ export interface BrandKit {
   updatedAt?: string;
 }
 
+/** An AI-generated (or uploaded) brand image stored in /uploads. */
+export interface BrandAsset {
+  id: string;
+  /** Filename inside the uploads dir; served as /uploads/<file>. */
+  file: string;
+  prompt?: string;
+  concept?: string;
+  tags?: string[];
+  createdAt: string;
+}
+
 export interface Experiment {
   id: string;
   name: string;
@@ -113,6 +124,7 @@ interface Store {
   metricsAuth?: MetricsAuth;
   pipeline?: { cards: PipelineCard[]; updatedAt: string };
   brand?: BrandKit;
+  assets?: BrandAsset[];
   experiments?: Experiment[];
   reportConfig?: ReportConfig;
 }
@@ -131,6 +143,7 @@ function readStore(): Store {
       metricsAuth: parsed.metricsAuth,
       pipeline: parsed.pipeline,
       brand: parsed.brand,
+      assets: Array.isArray(parsed.assets) ? parsed.assets : [],
       experiments: Array.isArray(parsed.experiments) ? parsed.experiments : [],
       reportConfig: parsed.reportConfig,
     };
@@ -333,6 +346,35 @@ export function saveBrand(patch: BrandKit): BrandKit {
   store.brand = { ...(store.brand || {}), ...patch, updatedAt: new Date().toISOString() };
   writeStore(store);
   return store.brand;
+}
+
+// ---- Brand assets (AI-generated image library) ----
+export function listAssets(): BrandAsset[] {
+  return (readStore().assets || []).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export function addAsset(input: Omit<BrandAsset, "id" | "createdAt">): BrandAsset {
+  const store = readStore();
+  const asset: BrandAsset = {
+    id: `asset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    file: input.file,
+    prompt: input.prompt,
+    concept: input.concept,
+    tags: input.tags,
+    createdAt: new Date().toISOString(),
+  };
+  store.assets = [asset, ...(store.assets || [])].slice(0, 1000);
+  writeStore(store);
+  return asset;
+}
+
+export function deleteAsset(id: string): BrandAsset | null {
+  const store = readStore();
+  const asset = (store.assets || []).find((a) => a.id === id) || null;
+  if (!asset) return null;
+  store.assets = (store.assets || []).filter((a) => a.id !== id);
+  writeStore(store);
+  return asset;
 }
 
 // ---- A/B experiments ----

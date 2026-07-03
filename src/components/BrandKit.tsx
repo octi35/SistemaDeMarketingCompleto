@@ -3,6 +3,7 @@ import { Palette, Save, Mail, Send, RefreshCw, Sparkles } from "lucide-react";
 import { Card, SectionTitle, Field, Input, Textarea, Button, Badge } from "./ui";
 import { apiGet, apiPost } from "../lib/api";
 import { toast } from "../lib/toast";
+import { BrandImageFactory } from "./BrandImageFactory";
 
 interface Brand {
   businessName?: string;
@@ -193,6 +194,9 @@ export const BrandKit: React.FC = () => {
           </ul>
         </Card>
       </div>
+
+      {/* Batch brand image generation + persistent asset library */}
+      <BrandImageFactory />
     </div>
   );
 };

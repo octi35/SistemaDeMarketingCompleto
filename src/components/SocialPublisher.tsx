@@ -142,10 +142,35 @@ export const SocialPublisher: React.FC = () => {
     }
   };
 
-  // Update localStorage when library changes
+  // Update localStorage when library changes (server-side brand assets are
+  // fetched fresh on load, so they are not persisted locally).
   useEffect(() => {
-    localStorage.setItem("adteam_media_library", JSON.stringify(mediaLibrary));
+    localStorage.setItem(
+      "adteam_media_library",
+      JSON.stringify(mediaLibrary.filter((m) => !m.id.startsWith("asset-")))
+    );
   }, [mediaLibrary]);
+
+  // Brand assets generated in "Marca" appear in the library too; their URLs
+  // are already public so they can be published as-is.
+  useEffect(() => {
+    apiGet<{ assets: any[] }>("/api/assets")
+      .then((r) => {
+        const serverItems: MediaItem[] = (r.assets || []).map((a) => ({
+          id: `asset-${a.id}`,
+          name: a.concept || "Imagen de marca 🍌",
+          type: "image" as const,
+          url: a.url,
+          dateAdded: new Date(a.createdAt).toLocaleString(),
+        }));
+        if (!serverItems.length) return;
+        setMediaLibrary((prev) => {
+          const existing = new Set(prev.map((m) => m.id));
+          return [...serverItems.filter((s) => !existing.has(s.id)), ...prev];
+        });
+      })
+      .catch(() => {});
+  }, []);
 
   // Set the first item of the gallery as selected by default if nothing is selected
   useEffect(() => {

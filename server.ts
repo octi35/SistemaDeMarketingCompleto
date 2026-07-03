@@ -19,6 +19,7 @@ import { registerAiRoutes } from "./server/aiRoutes";
 import { registerStoreRoutes } from "./server/storeRoutes";
 import { registerIntegrationRoutes } from "./server/integrationRoutes";
 import { registerSocialRoutes } from "./server/socialRoutes";
+import { registerBrandImageRoutes } from "./server/brandImageRoutes";
 import { startScheduler } from "./server/scheduler";
 
 dotenv.config();
@@ -117,6 +118,7 @@ registerAiRoutes(app, ctx);
 registerStoreRoutes(app, ctx);
 registerIntegrationRoutes(app);
 registerSocialRoutes(app);
+registerBrandImageRoutes(app, ctx);
 
 // Serve static frontend assets in production or integrate Vite in dev
 async function startServer() {

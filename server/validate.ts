@@ -65,6 +65,20 @@ export const reportConfigSchema = z.object({
     .optional(),
 });
 
+export const brandImagePlanSchema = z.object({
+  count: z.number().int().min(1).max(50).optional(),
+  focus: z.string().max(500).optional(),
+});
+
+export const brandImageGenerateSchema = z.object({
+  prompt: z.string().min(3).max(2000),
+  concept: z.string().max(200).optional(),
+  tags: z.array(z.string().max(40)).max(10).optional(),
+  imageModel: z.enum(["standard", "pro"]).optional(),
+  aspect: z.enum(["square", "portrait"]).optional(),
+  referenceImage: z.string().max(15_000_000).optional(),
+});
+
 export const publishAllSchema = z.object({
   caption: z.string().max(5000).optional(),
   captions: z
