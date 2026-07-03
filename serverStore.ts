@@ -41,6 +41,8 @@ export interface ScheduledPost {
   label?: string;
   error?: string;
   resultId?: string;
+  /** Failed publish attempts so far (the scheduler retries with backoff). */
+  attempts?: number;
   createdAt: string;
 }
 
@@ -297,6 +299,19 @@ export function cancelScheduled(id: string): boolean {
   const item = (store.scheduled || []).find((s) => s.id === id);
   if (!item || item.status !== "pending") return false;
   item.status = "canceled";
+  writeStore(store);
+  return true;
+}
+
+/** Re-queues a failed scheduled post for immediate publishing. */
+export function retryScheduled(id: string): boolean {
+  const store = readStore();
+  const item = (store.scheduled || []).find((s) => s.id === id);
+  if (!item || item.status !== "failed") return false;
+  item.status = "pending";
+  item.publishAt = new Date().toISOString();
+  item.attempts = 0;
+  item.error = undefined;
   writeStore(store);
   return true;
 }

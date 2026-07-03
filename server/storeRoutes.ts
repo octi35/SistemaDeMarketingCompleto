@@ -12,6 +12,7 @@ import {
   listPosts,
   addScheduled,
   cancelScheduled,
+  retryScheduled,
   listScheduled,
   getPipeline,
   savePipeline,
@@ -114,6 +115,13 @@ export function registerStoreRoutes(app: express.Express, ctx: ServerContext): v
   app.delete("/api/scheduled/:id", (req, res) => {
     const ok = cancelScheduled(req.params.id);
     if (!ok) return res.status(404).json({ error: "No se encontró o ya no está pendiente." });
+    res.json({ success: true });
+  });
+
+  // Re-queues a FAILED scheduled post for immediate publishing.
+  app.post("/api/scheduled/:id/retry", (req, res) => {
+    const ok = retryScheduled(req.params.id);
+    if (!ok) return res.status(404).json({ error: "Solo se pueden reintentar publicaciones fallidas." });
     res.json({ success: true });
   });
 

@@ -981,12 +981,33 @@ export const SocialPublisher: React.FC = () => {
                             <div key={s.id} className="flex items-center justify-between text-[11px] bg-sink border border-line rounded px-2.5 py-1.5">
                               <span className="uppercase font-mono text-[9px] text-black w-16 shrink-0">{s.network}</span>
                               <span className="flex-1 px-2 text-zinc-400 truncate">{new Date(s.publishAt).toLocaleString()}</span>
-                              <span className={`text-[9px] font-mono shrink-0 ${s.status === "published" ? "text-green-400" : s.status === "failed" ? "text-red-400" : s.status === "canceled" ? "text-zinc-600" : "text-amber-400"}`}>
+                              <span
+                                className={`text-[9px] font-mono shrink-0 ${s.status === "published" ? "text-green-400" : s.status === "failed" ? "text-red-400" : s.status === "canceled" ? "text-zinc-600" : "text-amber-400"}`}
+                                title={s.error || undefined}
+                              >
                                 {s.status}
+                                {s.status === "pending" && s.attempts > 0 && ` (reintento ${s.attempts})`}
                               </span>
                               {s.status === "pending" && (
                                 <button onClick={() => cancelScheduledPost(s.id)} className="ml-2 text-zinc-600 hover:text-red-400 shrink-0">
                                   <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                              {s.status === "failed" && (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await apiPost(`/api/scheduled/${s.id}/retry`, {});
+                                      toast.success("Reintentando ahora (mira el estado en unos segundos).");
+                                      loadScheduled();
+                                    } catch (err: any) {
+                                      toast.error(err.message || "No se pudo reintentar.");
+                                    }
+                                  }}
+                                  className="ml-2 text-zinc-600 hover:text-black shrink-0"
+                                  title="Reintentar ahora"
+                                >
+                                  <RefreshCw className="w-3 h-3" />
                                 </button>
                               )}
                             </div>

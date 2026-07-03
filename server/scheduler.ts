@@ -55,6 +55,28 @@ export function publishScheduled(post: Pick<ScheduledPost, "network" | "payload"
 
 let schedulerRunning = false;
 
+// A failing post is retried a couple of times with backoff before giving up:
+// transient Graph/LinkedIn hiccups shouldn't kill a scheduled campaign.
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 10 * 60 * 1000;
+
+function handleFailure(post: ScheduledPost, error: any): void {
+  const attempts = (post.attempts || 0) + 1;
+  const errorText = typeof error === "string" ? error : JSON.stringify(error).slice(0, 500);
+  if (attempts < MAX_ATTEMPTS) {
+    markScheduled(post.id, {
+      attempts,
+      publishAt: new Date(Date.now() + RETRY_DELAY_MS).toISOString(),
+      error: errorText,
+    });
+    console.warn(`[Scheduler] Post ${post.id} falló (intento ${attempts}/${MAX_ATTEMPTS}); reintento en 10 min.`);
+    return;
+  }
+  markScheduled(post.id, { status: "failed", attempts, error: errorText });
+  console.warn(`[Scheduler] Post ${post.id} falló definitivamente tras ${attempts} intentos.`);
+  fireWebhook("post.failed", { scheduledId: post.id, network: post.network, label: post.label, error });
+}
+
 export async function processScheduledPosts(): Promise<void> {
   if (schedulerRunning) return;
   schedulerRunning = true;
@@ -67,13 +89,10 @@ export async function processScheduledPosts(): Promise<void> {
           markScheduled(post.id, { status: "published", resultId: result.postId });
           console.log(`[Scheduler] Published scheduled post ${post.id} (${post.network}).`);
         } else {
-          markScheduled(post.id, { status: "failed", error: JSON.stringify(result.data).slice(0, 500) });
-          console.warn(`[Scheduler] Failed scheduled post ${post.id}:`, result.data?.error || result.data);
-          fireWebhook("post.failed", { scheduledId: post.id, network: post.network, label: post.label, error: result.data?.error || result.data });
+          handleFailure(post, result.data?.error || result.data);
         }
       } catch (err: any) {
-        markScheduled(post.id, { status: "failed", error: err.message || String(err) });
-        fireWebhook("post.failed", { scheduledId: post.id, network: post.network, label: post.label, error: err.message || String(err) });
+        handleFailure(post, err.message || String(err));
       }
     }
   } finally {
