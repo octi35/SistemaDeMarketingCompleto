@@ -513,6 +513,63 @@ Important: do NOT render any text, words or letters in the image. Photorealistic
     res.json({ image: null, isMock: true, error: friendly });
   }
 });
+// 2.c ENDPOINT: Suggest one rich Nano Banana prompt per slide. The user can
+// edit each suggestion before generating (fills customImagePrompt in the UI).
+app.post("/api/generate-image-prompts", async (req, res) => {
+  const { topic, style, slides } = req.body || {};
+  const list: any[] = Array.isArray(slides) ? slides.slice(0, 10) : [];
+  if (!list.length) {
+    return res.status(400).json({ error: "Envía las diapositivas (slides) del carrusel." });
+  }
+
+  // Offline fallback: compose prompts from the slide's own visual concept.
+  const fallback = () =>
+    list.map(
+      (s: any) =>
+        `${s.visualIdea || s.title || "modern marketing visual"}, ${style || "premium advertising photography, cinematic lighting"}, clean composition, ultra high quality, 4k, no text`
+    );
+
+  const activeAi = getCustomAiClient(req) || ai;
+  if (!activeAi) {
+    return res.json({ prompts: fallback(), isMock: true });
+  }
+
+  try {
+    const slideLines = list
+      .map((s: any, i: number) => `${i + 1}. Title: "${s.title || ""}" — Message: "${s.body || ""}" — Concept: "${s.visualIdea || ""}"`)
+      .join("\n");
+    const prompt = `${brandPreamble()}You are an expert art director writing image-generation prompts for a social media carousel.
+Carousel topic: "${topic || "marketing"}".
+${style ? `Global visual style requested by the user: "${style}".` : ""}
+Slides:
+${slideLines}
+
+For EACH slide write ONE image-generation prompt in English (35-60 words): concrete subject, composition, lighting, mood and color palette. The ${list.length} prompts must feel like one coherent visual series (same style family) while each depicts its slide's specific idea. No text or letters in the images. Return strictly valid JSON conforming to the schema (array of ${list.length} strings, same order as the slides). No markdown wrapping.`;
+
+    const response = await generateContentWithFallback(
+      {
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+      },
+      activeAi
+    );
+    const parsed = JSON.parse(response.text || "[]");
+    const prompts = Array.isArray(parsed) ? parsed.map((p: any) => String(p)).slice(0, list.length) : [];
+    if (prompts.length < list.length) {
+      const fb = fallback();
+      while (prompts.length < list.length) prompts.push(fb[prompts.length]);
+    }
+    res.json({ prompts, isMock: false });
+  } catch (error: any) {
+    console.error("Error generating image prompts:", error);
+    res.json({ prompts: fallback(), isMock: true, error: error?.message || String(error) });
+  }
+});
+
 // 3. ENDPOINT: Generate copies based on Copywriting Frameworks
 app.post("/api/generate-copys", async (req, res) => {
   const { topic, framework, tone } = req.body;

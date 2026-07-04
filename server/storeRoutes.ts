@@ -22,6 +22,9 @@ import {
   addExperiment,
   getReportConfig,
   saveReportConfig,
+  listCarouselTemplates,
+  addCarouselTemplate,
+  deleteCarouselTemplate,
 } from "../serverStore";
 import { collectMetricsOnce, buildMetricsSummary, decideDueExperiments } from "./metricsHistory";
 import { sendWeeklyReport, buildReportText } from "./weeklyReport";
@@ -36,6 +39,7 @@ import {
   brandSchema,
   experimentSchema,
   reportConfigSchema,
+  carouselTemplateSchema,
 } from "./validate";
 import type { ServerContext } from "./context";
 
@@ -138,6 +142,22 @@ export function registerStoreRoutes(app: express.Express, ctx: ServerContext): v
     } catch (error: any) {
       res.status(500).json({ error: error.message || "No se pudo guardar el calendario" });
     }
+  });
+
+  // ---- Carousel design templates (save a look, reuse it on any carousel) ----
+  app.get("/api/templates", (_req, res) => {
+    res.json({ templates: listCarouselTemplates() });
+  });
+
+  app.post("/api/templates", (req, res) => {
+    const body = parseBody(carouselTemplateSchema, req, res);
+    if (!body) return;
+    res.json({ template: addCarouselTemplate(body) });
+  });
+
+  app.delete("/api/templates/:id", (req, res) => {
+    if (!deleteCarouselTemplate(req.params.id)) return res.status(404).json({ error: "Plantilla no encontrada" });
+    res.json({ success: true });
   });
 
   // ---- Calendar export as iCalendar (importable in Google Calendar/Outlook) ----

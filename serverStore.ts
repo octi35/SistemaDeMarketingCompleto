@@ -84,6 +84,15 @@ export interface BrandKit {
   updatedAt?: string;
 }
 
+/** Reusable carousel design template (colors, fonts, layout, watermark...). */
+export interface CarouselTemplate {
+  id: string;
+  name: string;
+  /** Flexible design payload applied over every slide + designer settings. */
+  design: Record<string, any>;
+  createdAt: string;
+}
+
 /** Outgoing webhook subscription (notify external systems). */
 export interface WebhookSub {
   id: string;
@@ -141,6 +150,7 @@ interface Store {
   pipeline?: { cards: PipelineCard[]; updatedAt: string };
   brand?: BrandKit;
   assets?: BrandAsset[];
+  carouselTemplates?: CarouselTemplate[];
   webhooks?: WebhookSub[];
   experiments?: Experiment[];
   reportConfig?: ReportConfig;
@@ -161,6 +171,7 @@ function readStore(): Store {
       pipeline: parsed.pipeline,
       brand: parsed.brand,
       assets: Array.isArray(parsed.assets) ? parsed.assets : [],
+      carouselTemplates: Array.isArray(parsed.carouselTemplates) ? parsed.carouselTemplates : [],
       webhooks: Array.isArray(parsed.webhooks) ? parsed.webhooks : [],
       experiments: Array.isArray(parsed.experiments) ? parsed.experiments : [],
       reportConfig: parsed.reportConfig,
@@ -432,6 +443,33 @@ export function deleteAsset(id: string): BrandAsset | null {
   store.assets = (store.assets || []).filter((a) => a.id !== id);
   writeStore(store);
   return asset;
+}
+
+// ---- Carousel design templates ----
+export function listCarouselTemplates(): CarouselTemplate[] {
+  return (readStore().carouselTemplates || []).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export function addCarouselTemplate(input: { name: string; design: Record<string, any> }): CarouselTemplate {
+  const store = readStore();
+  const tpl: CarouselTemplate = {
+    id: `tpl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    name: input.name,
+    design: input.design,
+    createdAt: new Date().toISOString(),
+  };
+  store.carouselTemplates = [tpl, ...(store.carouselTemplates || [])].slice(0, 50);
+  writeStore(store);
+  return tpl;
+}
+
+export function deleteCarouselTemplate(id: string): boolean {
+  const store = readStore();
+  const before = (store.carouselTemplates || []).length;
+  store.carouselTemplates = (store.carouselTemplates || []).filter((t) => t.id !== id);
+  if ((store.carouselTemplates || []).length === before) return false;
+  writeStore(store);
+  return true;
 }
 
 // ---- Outgoing webhooks ----

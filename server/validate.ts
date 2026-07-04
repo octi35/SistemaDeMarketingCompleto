@@ -65,6 +65,11 @@ export const reportConfigSchema = z.object({
     .optional(),
 });
 
+export const carouselTemplateSchema = z.object({
+  name: z.string().min(1).max(80),
+  design: z.record(z.string(), z.any()),
+});
+
 export const webhookSchema = z.object({
   url: z.string().url().max(500),
   events: z.array(z.enum(["post.published", "post.failed", "asset.created"])).max(10).optional(),

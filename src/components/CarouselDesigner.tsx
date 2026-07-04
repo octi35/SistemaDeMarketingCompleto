@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import JSZip from "jszip";
 import { CarouselSlide } from "../types";
-import { apiPost, apiGet } from "../lib/api";
+import { apiPost, apiGet, apiDelete } from "../lib/api";
 import { toast } from "../lib/toast";
 import { STORAGE_KEYS, getStored } from "../lib/storageKeys";
 import { Sparkles, Download, ArrowLeft, ArrowRight, RefreshCw, Upload, Check, Palette, Image as ImageIcon, Wand2, Trash2, AlertCircle, Paperclip, Save, FolderOpen, Instagram, X } from "lucide-react";
@@ -156,6 +156,121 @@ export const CarouselDesigner: React.FC = () => {
     }
   };
 
+  // ---- AI-suggested Nano Banana prompts (one per slide, user-editable) ----
+  const [suggestingPrompts, setSuggestingPrompts] = useState(false);
+
+  const suggestPrompts = async (onlyIndex?: number) => {
+    if (slides.length === 0) return;
+    setSuggestingPrompts(true);
+    try {
+      const targetSlides = onlyIndex !== undefined ? [slides[onlyIndex]] : slides;
+      const data = await apiPost<{ prompts: string[]; isMock?: boolean }>("/api/generate-image-prompts", {
+        topic,
+        style: imagePrompt || undefined,
+        slides: targetSlides.map((s) => ({ title: s.title, body: s.body, visualIdea: s.visualIdea })),
+      });
+      const prompts = data.prompts || [];
+      setSlides((prev) =>
+        prev.map((s, i) => {
+          if (onlyIndex !== undefined) {
+            return i === onlyIndex && prompts[0] ? { ...s, customImagePrompt: prompts[0] } : s;
+          }
+          return prompts[i] ? { ...s, customImagePrompt: prompts[i] } : s;
+        })
+      );
+      toast.success(
+        onlyIndex !== undefined
+          ? "Prompt sugerido ✨ Edítalo a gusto y regenera la imagen."
+          : `${prompts.length} prompts sugeridos ✨ Revisa cada slide, edítalos y genera las imágenes.`
+      );
+      if (data.isMock) toast.info("Sugerencias básicas (sin API key de IA); con tu key de Gemini salen mucho mejores.");
+    } catch (err: any) {
+      toast.error(`No se pudieron sugerir prompts: ${err.message || err}`);
+    } finally {
+      setSuggestingPrompts(false);
+    }
+  };
+
+  // ---- Reusable design templates (server persistence) ----
+  const [templates, setTemplates] = useState<any[]>([]);
+
+  const loadTemplates = async () => {
+    try {
+      const data = await apiGet<{ templates: any[] }>("/api/templates");
+      setTemplates(data.templates || []);
+    } catch {
+      /* optional */
+    }
+  };
+
+  const saveAsTemplate = async () => {
+    const src = slides[currentSlideIndex];
+    if (!src) return;
+    const name = window.prompt("Nombre de la plantilla (ej: 'Look lanzamiento julio'):", topic.slice(0, 40));
+    if (!name?.trim()) return;
+    try {
+      await apiPost("/api/templates", {
+        name: name.trim(),
+        design: {
+          bgGradientStart: src.bgGradientStart,
+          bgGradientEnd: src.bgGradientEnd,
+          textColor: src.textColor,
+          accentColor: src.accentColor,
+          textPosition: src.textPosition,
+          textAlign: src.textAlign,
+          fontFamily: src.fontFamily,
+          titleSize: src.titleSize,
+          overlayOpacity: src.overlayOpacity,
+          hideSlideNumber: src.hideSlideNumber,
+          watermarkText,
+          showWatermark,
+          imagePrompt,
+          imageModel,
+        },
+      });
+      toast.success(`Plantilla "${name.trim()}" guardada: aplícala a cualquier carrusel nuevo.`);
+      loadTemplates();
+    } catch (err: any) {
+      toast.error(`No se pudo guardar la plantilla: ${err.message || err}`);
+    }
+  };
+
+  const applyTemplate = (id: string) => {
+    const tpl = templates.find((t) => t.id === id);
+    if (!tpl) return;
+    const d = tpl.design || {};
+    setSlides((prev) =>
+      prev.map((s) => ({
+        ...s,
+        ...(d.bgGradientStart ? { bgGradientStart: d.bgGradientStart } : {}),
+        ...(d.bgGradientEnd ? { bgGradientEnd: d.bgGradientEnd } : {}),
+        ...(d.textColor ? { textColor: d.textColor } : {}),
+        ...(d.accentColor ? { accentColor: d.accentColor } : {}),
+        textPosition: d.textPosition,
+        textAlign: d.textAlign,
+        fontFamily: d.fontFamily,
+        titleSize: d.titleSize,
+        overlayOpacity: d.overlayOpacity,
+        hideSlideNumber: d.hideSlideNumber,
+      }))
+    );
+    if (typeof d.watermarkText === "string") setWatermarkText(d.watermarkText);
+    if (typeof d.showWatermark === "boolean") setShowWatermark(d.showWatermark);
+    if (typeof d.imagePrompt === "string") setImagePrompt(d.imagePrompt);
+    if (d.imageModel === "standard" || d.imageModel === "pro") setImageModel(d.imageModel);
+    toast.success(`Plantilla "${tpl.name}" aplicada a todo el carrusel 🎨`);
+  };
+
+  const deleteTemplate = async (id: string) => {
+    try {
+      await apiDelete(`/api/templates/${id}`);
+      setTemplates((prev) => prev.filter((t) => t.id !== id));
+      toast.success("Plantilla eliminada.");
+    } catch (err: any) {
+      toast.error(err.message || "No se pudo eliminar.");
+    }
+  };
+
   // ---- Saved projects (server persistence) ----
   const loadProjects = async () => {
     try {
@@ -169,6 +284,7 @@ export const CarouselDesigner: React.FC = () => {
   useEffect(() => {
     generateCarousel(false);
     loadProjects();
+    loadTemplates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -854,7 +970,7 @@ export const CarouselDesigner: React.FC = () => {
           </button>
         </div>
 
-        {/* Persistence bar: save / load carousels */}
+        {/* Persistence bar: save / load carousels + design templates */}
         <div className="mt-3 flex flex-col sm:flex-row gap-2 sm:items-center">
           <button
             onClick={saveCurrentCarousel}
@@ -878,6 +994,44 @@ export const CarouselDesigner: React.FC = () => {
                 </option>
               ))}
             </select>
+          </div>
+          <button
+            onClick={saveAsTemplate}
+            disabled={slides.length === 0}
+            title="Guarda colores, tipografía, posición del texto, marca de agua y estilo Nano Banana como plantilla reutilizable"
+            className="bg-sink hover:border-black/50 text-muted hover:text-ink text-[11px] px-3 py-2 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50"
+          >
+            <Palette className="w-3.5 h-3.5 text-black" />
+            <span>Guardar plantilla</span>
+          </button>
+          <div className="flex items-center gap-1.5 flex-1">
+            <select
+              value=""
+              onChange={(e) => e.target.value && applyTemplate(e.target.value)}
+              className="flex-1 bg-sink rounded-input px-3 py-2 text-[11px] text-muted outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20"
+            >
+              <option value="">{templates.length ? "Aplicar plantilla de diseño..." : "No hay plantillas guardadas"}</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  🎨 {t.name}
+                </option>
+              ))}
+            </select>
+            {templates.length > 0 && (
+              <select
+                value=""
+                onChange={(e) => e.target.value && deleteTemplate(e.target.value)}
+                title="Eliminar una plantilla"
+                className="bg-sink rounded-input px-2 py-2 text-[11px] text-red-400 outline-none w-9"
+              >
+                <option value="">🗑</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    Borrar: {t.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
@@ -1063,9 +1217,29 @@ export const CarouselDesigner: React.FC = () => {
                 </div>
                 {/* Exact per-slide prompt: full creative control over Nano Banana */}
                 <div className="space-y-1 pt-1">
-                  <label className="text-[10px] font-semibold text-[#B8860B] font-mono uppercase">
-                    ✍️ Tu prompt exacto para este slide (opcional)
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-semibold text-[#B8860B] font-mono uppercase">
+                      ✍️ Tu prompt exacto para este slide (opcional)
+                    </label>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => suggestPrompts(currentSlideIndex)}
+                        disabled={suggestingPrompts}
+                        title="La IA sugiere un prompt para este slide (luego lo editas)"
+                        className="text-[10px] font-bold text-black bg-sink hover:bg-[#eaedf6] border border-line rounded px-2 py-1 transition disabled:opacity-50"
+                      >
+                        {suggestingPrompts ? "..." : "✨ Sugerir"}
+                      </button>
+                      <button
+                        onClick={() => suggestPrompts()}
+                        disabled={suggestingPrompts}
+                        title="La IA sugiere prompts coherentes para TODOS los slides"
+                        className="text-[10px] font-bold text-black bg-sink hover:bg-[#eaedf6] border border-line rounded px-2 py-1 transition disabled:opacity-50"
+                      >
+                        {suggestingPrompts ? "..." : "✨ Todos"}
+                      </button>
+                    </div>
+                  </div>
                   <textarea
                     value={activeSlide.customImagePrompt || ""}
                     onChange={(e) => handleEditActiveSlide("customImagePrompt", e.target.value)}
