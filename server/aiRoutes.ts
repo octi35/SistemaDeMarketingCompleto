@@ -445,7 +445,7 @@ Return strictly valid JSON conforming to the requested schema. No markdown wrapp
 
 // 2.b ENDPOINT: Generate a real AI image for a carousel slide using Nano Banana
 app.post("/api/generate-carousel-image", async (req, res) => {
-  const { prompt, slideTitle, slideBody, visualIdea, platform, topic, accentColor, bgGradientStart, imageModel, referenceImage } = req.body;
+  const { prompt, rawPrompt, slideTitle, slideBody, visualIdea, platform, topic, accentColor, bgGradientStart, imageModel, referenceImage } = req.body;
 
   const activeAi = getCustomAiClient(req) || ai;
   if (!activeAi) {
@@ -458,12 +458,16 @@ app.post("/api/generate-carousel-image", async (req, res) => {
 
   // Compose a rich visual prompt for Nano Banana. We instruct it to leave room
   // for text and to avoid rendering letters (the app overlays the copy itself).
+  // With rawPrompt=true the user's prompt is sent as-is (plus aspect ratio):
+  // full creative control, including images WITH text if the user asks for it.
   const aspect = platform === "Instagram"
     ? "vertical 4:5 portrait composition (1080x1350)"
     : "square 1:1 composition (1080x1080)";
 
   const fullPrompt = (prompt && String(prompt).trim().length > 0)
-    ? `Generate a high-end social media carousel slide background image. ${aspect}. ${prompt}. Premium advertising design, clean composition with generous negative space for overlaid text, no text or letters in the image, ultra high quality, 4k.`
+    ? rawPrompt
+      ? `${String(prompt).trim()}. ${aspect}.`
+      : `Generate a high-end social media carousel slide background image. ${aspect}. ${prompt}. Premium advertising design, clean composition with generous negative space for overlaid text, no text or letters in the image, ultra high quality, 4k.`
     : `Generate a stunning, premium social media carousel slide background image.
 ${aspect}.
 Carousel topic: ${topic || "marketing"}.

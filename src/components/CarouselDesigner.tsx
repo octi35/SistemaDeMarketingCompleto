@@ -14,6 +14,14 @@ export const CarouselDesigner: React.FC = () => {
   const [tone, setTone] = useState("Inspiracional y Práctico");
   const [engine, setEngine] = useState("gemini"); // "gemini" or "claude"
 
+  // Brand watermark drawn at the bottom of every slide (persisted locally).
+  const [watermarkText, setWatermarkText] = useState(() => localStorage.getItem("carousel_watermark") ?? "@tu_cuenta");
+  const [showWatermark, setShowWatermark] = useState(() => localStorage.getItem("carousel_watermark_show") !== "0");
+  useEffect(() => {
+    localStorage.setItem("carousel_watermark", watermarkText);
+    localStorage.setItem("carousel_watermark_show", showWatermark ? "1" : "0");
+  }, [watermarkText, showWatermark]);
+
   // Nano Banana (Gemini image generation) state
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageModel, setImageModel] = useState<"standard" | "pro">("standard");
@@ -66,10 +74,14 @@ export const CarouselDesigner: React.FC = () => {
     if (!slide) return false;
     setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, imageLoading: true } : s)));
     try {
+      // A per-slide custom prompt takes full control (sent verbatim to Nano
+      // Banana); otherwise the global style + the slide's visual concept apply.
+      const usingCustom = !!slide.customImagePrompt?.trim();
       const data = await apiPost<{ image?: string; warning?: string; error?: string }>(
         "/api/generate-carousel-image",
         {
-          prompt: imagePrompt,
+          prompt: usingCustom ? slide.customImagePrompt!.trim() : imagePrompt,
+          rawPrompt: usingCustom,
           slideTitle: slide.title,
           slideBody: slide.body,
           visualIdea: slide.visualIdea,
@@ -218,6 +230,103 @@ export const CarouselDesigner: React.FC = () => {
     );
   };
 
+  // ---- Slide management (add / duplicate / move / delete) ----
+  const renumber = (list: CarouselSlide[]) => list.map((s, i) => ({ ...s, slideNumber: i + 1 }));
+
+  const addSlide = () => {
+    setSlides((prev) => {
+      const base = prev[currentSlideIndex] || prev[prev.length - 1];
+      const fresh: CarouselSlide = {
+        ...(base || {
+          bgGradientStart: "#0f172a",
+          bgGradientEnd: "#1e293b",
+          textColor: "#f8fafc",
+          accentColor: "#fbbf24",
+        }),
+        slideNumber: 0,
+        title: "Nuevo slide",
+        body: "Escribe aquí el mensaje de esta diapositiva.",
+        visualIdea: "",
+        imageUrl: undefined,
+        imageLoading: false,
+        customImagePrompt: "",
+      } as CarouselSlide;
+      const next = [...prev];
+      next.splice(currentSlideIndex + 1, 0, fresh);
+      return renumber(next);
+    });
+    setCurrentSlideIndex((i) => i + 1);
+  };
+
+  const duplicateSlide = () => {
+    setSlides((prev) => {
+      const copy = { ...prev[currentSlideIndex], imageLoading: false };
+      const next = [...prev];
+      next.splice(currentSlideIndex + 1, 0, copy);
+      return renumber(next);
+    });
+    setCurrentSlideIndex((i) => i + 1);
+  };
+
+  const deleteSlide = () => {
+    if (slides.length <= 1) {
+      toast.error("El carrusel necesita al menos 1 diapositiva.");
+      return;
+    }
+    const idx = currentSlideIndex;
+    setSlides((prev) => renumber(prev.filter((_, i) => i !== idx)));
+    setCurrentSlideIndex(Math.max(0, Math.min(idx, slides.length - 2)));
+  };
+
+  const moveSlide = (dir: -1 | 1) => {
+    const target = currentSlideIndex + dir;
+    if (target < 0 || target >= slides.length) return;
+    setSlides((prev) => {
+      const next = [...prev];
+      [next[currentSlideIndex], next[target]] = [next[target], next[currentSlideIndex]];
+      return renumber(next);
+    });
+    setCurrentSlideIndex(target);
+  };
+
+  // Copies the active slide's design settings to every slide.
+  const applyDesignToAll = () => {
+    const src = slides[currentSlideIndex];
+    if (!src) return;
+    setSlides((prev) =>
+      prev.map((s) => ({
+        ...s,
+        bgGradientStart: src.bgGradientStart,
+        bgGradientEnd: src.bgGradientEnd,
+        textColor: src.textColor,
+        accentColor: src.accentColor,
+        textPosition: src.textPosition,
+        textAlign: src.textAlign,
+        fontFamily: src.fontFamily,
+        titleSize: src.titleSize,
+        overlayOpacity: src.overlayOpacity,
+        hideSlideNumber: src.hideSlideNumber,
+      }))
+    );
+    toast.success("Diseño aplicado a todas las diapositivas.");
+  };
+
+  // ---- Style resolution shared by the canvas and the live preview ----
+  const FONT_STACKS = {
+    sans: "system-ui, -apple-system, sans-serif",
+    serif: "Georgia, 'Times New Roman', serif",
+    mono: "'Courier New', monospace",
+  } as const;
+  const TITLE_SIZES = { sm: 44, md: 56, lg: 72 } as const;
+
+  const slideStyle = (slide: CarouselSlide) => ({
+    font: FONT_STACKS[slide.fontFamily || "sans"],
+    titlePx: TITLE_SIZES[slide.titleSize || "md"],
+    align: slide.textAlign || "left",
+    position: slide.textPosition || (slide.imageUrl ? "bottom" : "top"),
+    overlayK: Math.max(0, Math.min(100, slide.overlayOpacity ?? 100)) / 100,
+  });
+
   const handleApplyTheme = (theme: typeof colorThemes[0]) => {
     setSlides((prev) =>
       prev.map((slide) => ({
@@ -252,6 +361,7 @@ export const CarouselDesigner: React.FC = () => {
     canvas.height = isPortrait ? 1350 : 1080;
 
     const hasImage = !!slide.imageUrl;
+    const style = slideStyle(slide);
     const isDarkText = !hasImage && (slide.textColor === "#F3F5FB" || slide.textColor === "#000000" || slide.textColor === "#F3F5FB");
     const textColor = hasImage ? "#ffffff" : slide.textColor;
 
@@ -265,12 +375,19 @@ export const CarouselDesigner: React.FC = () => {
       } catch (err) {
         console.error("Failed to draw Nano Banana image, falling back to gradient:", err);
       }
-      const overlay = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      overlay.addColorStop(0, "rgba(0,0,0,0.20)");
-      overlay.addColorStop(0.55, "rgba(0,0,0,0.45)");
-      overlay.addColorStop(1, "rgba(0,0,0,0.80)");
-      ctx.fillStyle = overlay;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Dark overlay for text readability, scaled by the per-slide intensity
+      // (0 = pure image, 100 = classic gradient).
+      if (style.overlayK > 0 && !slide.hideText) {
+        const overlay = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        overlay.addColorStop(0, `rgba(0,0,0,${0.2 * style.overlayK})`);
+        overlay.addColorStop(0.55, `rgba(0,0,0,${0.45 * style.overlayK})`);
+        overlay.addColorStop(1, `rgba(0,0,0,${0.8 * style.overlayK})`);
+        ctx.fillStyle = overlay;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else if (style.overlayK > 0 && slide.hideText) {
+        ctx.fillStyle = `rgba(0,0,0,${0.12 * style.overlayK})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
     } else {
       const gradient = ctx.createLinearGradient(0, 0, 1080, canvas.height);
       gradient.addColorStop(0, slide.bgGradientStart);
@@ -299,18 +416,60 @@ export const CarouselDesigner: React.FC = () => {
     }
 
     // Slide number counter top right
-    ctx.fillStyle = isDarkText ? "rgba(0,0,0,0.05)" : "rgba(0,0,0,0.25)";
-    ctx.fillRect(880, 60, 140, 50);
-    ctx.fillStyle = slide.accentColor;
-    ctx.font = "bold 24px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText(`${slide.slideNumber} / ${slides.length}`, 950, 92);
+    if (!slide.hideSlideNumber) {
+      ctx.fillStyle = isDarkText ? "rgba(0,0,0,0.05)" : "rgba(0,0,0,0.25)";
+      ctx.fillRect(880, 60, 140, 50);
+      ctx.fillStyle = slide.accentColor;
+      ctx.font = "bold 24px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(`${slide.slideNumber} / ${slides.length}`, 950, 92);
+    }
 
-    // Watermark
-    ctx.fillStyle = isDarkText ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.45)";
-    ctx.font = "18px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(platform === "Instagram" ? "@tu_cuenta • IG Carousel" : "LinkedIn Post • Creado por AdTeam AI", 1080 / 2, canvas.height - 70);
+    // Watermark (customizable brand handle)
+    if (showWatermark && watermarkText.trim()) {
+      ctx.fillStyle = isDarkText ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.45)";
+      ctx.font = `18px ${style.font}`;
+      ctx.textAlign = "center";
+      ctx.fillText(watermarkText.trim(), 1080 / 2, canvas.height - 70);
+    }
+
+    // Image-only slide: nothing else to draw.
+    if (slide.hideText) return;
+
+    // ---- Text block, honoring position / alignment / font / size ----
+    const maxWidth = 900;
+    const titlePx = style.titlePx;
+    const titleLineHeight = Math.round(titlePx * 1.32);
+    const bodyLineHeight = 52;
+    const centerAlign = style.align === "center";
+    const textX = centerAlign ? 1080 / 2 : 90;
+
+    // Measure the block height first so "center"/"bottom" can be positioned.
+    ctx.font = `bold ${titlePx}px ${style.font}`;
+    const countLines = (text: string, font: string): number => {
+      ctx.font = font;
+      const ws = text.split(" ");
+      let ln = "";
+      let count = 1;
+      for (let n = 0; n < ws.length; n++) {
+        const test = ln + ws[n] + " ";
+        if (ctx.measureText(test).width > maxWidth && n > 0) {
+          count++;
+          ln = ws[n] + " ";
+        } else {
+          ln = test;
+        }
+      }
+      return count;
+    };
+    const titleLines = countLines(slide.title, `bold ${titlePx}px ${style.font}`);
+    const bodyLines = countLines(slide.body, `34px ${style.font}`);
+    const blockHeight = titleLines * titleLineHeight + 40 + 90 + (bodyLines - 1) * bodyLineHeight + 40;
+
+    let y: number;
+    if (style.position === "top") y = 260;
+    else if (style.position === "center") y = Math.max(200, (canvas.height - blockHeight) / 2 + titlePx);
+    else y = Math.max(220, canvas.height - 180 - blockHeight + titlePx);
 
     if (hasImage) {
       ctx.shadowColor = "rgba(0,0,0,0.6)";
@@ -320,31 +479,28 @@ export const CarouselDesigner: React.FC = () => {
 
     // Title
     ctx.fillStyle = textColor;
-    ctx.font = "bold 56px system-ui, -apple-system, sans-serif";
-    ctx.textAlign = "left";
+    ctx.font = `bold ${titlePx}px ${style.font}`;
+    ctx.textAlign = centerAlign ? "center" : "left";
     const words = slide.title.split(" ");
     let line = "";
-    let y = hasImage ? 760 : 320;
-    const maxWidth = 900;
-    const lineHeight = 74;
     for (let n = 0; n < words.length; n++) {
       const testLine = line + words[n] + " ";
       if (ctx.measureText(testLine).width > maxWidth && n > 0) {
-        ctx.fillText(line, 90, y);
+        ctx.fillText(line, textX, y);
         line = words[n] + " ";
-        y += lineHeight;
+        y += titleLineHeight;
       } else {
         line = testLine;
       }
     }
-    ctx.fillText(line, 90, y);
+    ctx.fillText(line, textX, y);
 
     // Accent bar
     y += 40;
     ctx.shadowColor = "transparent";
     ctx.shadowBlur = 0;
     ctx.fillStyle = slide.accentColor;
-    ctx.fillRect(90, y, 160, 10);
+    ctx.fillRect(centerAlign ? (1080 - 160) / 2 : 90, y, 160, 10);
 
     // Body
     if (hasImage) {
@@ -353,29 +509,28 @@ export const CarouselDesigner: React.FC = () => {
     }
     y += 90;
     ctx.fillStyle = hasImage ? "rgba(255,255,255,0.92)" : (isDarkText ? "rgba(17,17,18,0.85)" : "rgba(255,255,255,0.85)");
-    ctx.font = "34px sans-serif";
+    ctx.font = `34px ${style.font}`;
     const bodyWords = slide.body.split(" ");
     let bodyLine = "";
-    const bodyLineHeight = 52;
     for (let n = 0; n < bodyWords.length; n++) {
       const testLine = bodyLine + bodyWords[n] + " ";
       if (ctx.measureText(testLine).width > maxWidth && n > 0) {
-        ctx.fillText(bodyLine, 90, y);
+        ctx.fillText(bodyLine, textX, y);
         bodyLine = bodyWords[n] + " ";
         y += bodyLineHeight;
       } else {
         bodyLine = testLine;
       }
     }
-    ctx.fillText(bodyLine, 90, y);
+    ctx.fillText(bodyLine, textX, y);
     ctx.shadowColor = "transparent";
     ctx.shadowBlur = 0;
 
-    if (!hasImage) {
+    if (!hasImage && style.position === "top") {
       ctx.fillStyle = isDarkText ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.15)";
       ctx.fillRect(90, canvas.height - 250, 900, 120);
       ctx.fillStyle = isDarkText ? "rgba(17,17,18,0.7)" : "#6B7280";
-      ctx.font = "italic 22px sans-serif";
+      ctx.font = `italic 22px ${style.font}`;
       ctx.textAlign = "left";
       ctx.fillText(`💡 Concepto Visual Recomendado:`, 110, canvas.height - 210);
       ctx.fillStyle = isDarkText ? "rgba(17,17,18,0.55)" : "#6B7280";
@@ -463,6 +618,7 @@ export const CarouselDesigner: React.FC = () => {
 
     let publishAt: string | undefined;
     if (scheduleAt) {
+      // eslint-disable-next-line react-hooks/purity -- event handler, not render
       if (new Date(scheduleAt).getTime() <= Date.now()) {
         toast.error("La fecha/hora de programación debe ser futura.");
         return;
@@ -763,7 +919,14 @@ export const CarouselDesigner: React.FC = () => {
               {activeSlide.imageUrl && (
                 <>
                   <img src={activeSlide.imageUrl} alt="Imagen generada por Nano Banana" className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.45) 55%, rgba(0,0,0,0.78) 100%)" }} />
+                  {!activeSlide.hideText && (
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background: `linear-gradient(180deg, rgba(0,0,0,${0.15 * slideStyle(activeSlide).overlayK}) 0%, rgba(0,0,0,${0.45 * slideStyle(activeSlide).overlayK}) 55%, rgba(0,0,0,${0.78 * slideStyle(activeSlide).overlayK}) 100%)`,
+                      }}
+                    />
+                  )}
                 </>
               )}
 
@@ -784,23 +947,50 @@ export const CarouselDesigner: React.FC = () => {
                 <span className="text-[10px] font-bold tracking-widest uppercase opacity-75 font-mono" style={activeSlide.imageUrl ? { textShadow: "0 1px 6px rgba(0,0,0,0.8)" } : undefined}>
                   {platform.toUpperCase()} SLIDES
                 </span>
-                <span className="text-xs font-mono font-bold bg-black/30 px-2 py-0.5 rounded-full" style={{ color: activeSlide.accentColor }}>
-                  {activeSlide.slideNumber} / {slides.length}
-                </span>
+                {!activeSlide.hideSlideNumber && (
+                  <span className="text-xs font-mono font-bold bg-black/30 px-2 py-0.5 rounded-full" style={{ color: activeSlide.accentColor }}>
+                    {activeSlide.slideNumber} / {slides.length}
+                  </span>
+                )}
               </div>
 
-              <div className="my-auto space-y-4 relative z-10" style={activeSlide.imageUrl ? { textShadow: "0 2px 12px rgba(0,0,0,0.75)" } : undefined}>
-                <h3 className="text-2xl md:text-3xl font-extrabold leading-tight">
-                  {activeSlide.title}
-                </h3>
-                <div className="h-1.5 w-24 rounded" style={{ backgroundColor: activeSlide.accentColor }} />
-                <p className="text-sm md:text-base leading-relaxed opacity-90 font-medium">
-                  {activeSlide.body}
-                </p>
-              </div>
+              {!activeSlide.hideText && (
+                <div
+                  className={`space-y-4 relative z-10 ${
+                    slideStyle(activeSlide).position === "top"
+                      ? "mb-auto mt-6"
+                      : slideStyle(activeSlide).position === "bottom"
+                        ? "mt-auto mb-6"
+                        : "my-auto"
+                  } ${slideStyle(activeSlide).align === "center" ? "text-center" : ""}`}
+                  style={{
+                    fontFamily: slideStyle(activeSlide).font,
+                    ...(activeSlide.imageUrl ? { textShadow: "0 2px 12px rgba(0,0,0,0.75)" } : {}),
+                  }}
+                >
+                  <h3
+                    className={`font-extrabold leading-tight ${
+                      (activeSlide.titleSize || "md") === "sm"
+                        ? "text-xl md:text-2xl"
+                        : (activeSlide.titleSize || "md") === "lg"
+                          ? "text-3xl md:text-4xl"
+                          : "text-2xl md:text-3xl"
+                    }`}
+                  >
+                    {activeSlide.title}
+                  </h3>
+                  <div
+                    className={`h-1.5 w-24 rounded ${slideStyle(activeSlide).align === "center" ? "mx-auto" : ""}`}
+                    style={{ backgroundColor: activeSlide.accentColor }}
+                  />
+                  <p className="text-sm md:text-base leading-relaxed opacity-90 font-medium">
+                    {activeSlide.body}
+                  </p>
+                </div>
+              )}
 
               <div className="flex justify-between items-center text-[10px] opacity-60 font-mono mt-4 border-t border-white/10 pt-3 relative z-10">
-                <span>{activeSlide.imageUrl ? "IMAGEN POR NANO BANANA 🍌" : "DISEÑO AUTO-SINC • ADTEAM AI"}</span>
+                <span>{showWatermark && watermarkText.trim() ? watermarkText : activeSlide.imageUrl ? "IMAGEN POR NANO BANANA 🍌" : "DISEÑO AUTO-SINC • ADTEAM AI"}</span>
                 <span>DESLIZA 👉</span>
               </div>
             </div>
@@ -871,9 +1061,24 @@ export const CarouselDesigner: React.FC = () => {
                     </button>
                   )}
                 </div>
-                <p className="text-[10px] text-muted leading-snug">
-                  Se genera con el modelo de imágenes de Gemini ({imageModel === "pro" ? "Nano Banana Pro" : "Nano Banana"}) usando el concepto visual del slide y tu estilo.
-                </p>
+                {/* Exact per-slide prompt: full creative control over Nano Banana */}
+                <div className="space-y-1 pt-1">
+                  <label className="text-[10px] font-semibold text-[#B8860B] font-mono uppercase">
+                    ✍️ Tu prompt exacto para este slide (opcional)
+                  </label>
+                  <textarea
+                    value={activeSlide.customImagePrompt || ""}
+                    onChange={(e) => handleEditActiveSlide("customImagePrompt", e.target.value)}
+                    rows={3}
+                    className="w-full bg-sink rounded-input px-2.5 py-1.5 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20 resize-none"
+                    placeholder="Ej: foto macro de una mano sosteniendo un smartphone con gráficas de ventas, luz cálida de atardecer, estilo editorial, colores tierra..."
+                  />
+                  <p className="text-[10px] text-muted leading-snug">
+                    {activeSlide.customImagePrompt?.trim()
+                      ? "🍌 Se enviará TU prompt tal cual a Nano Banana (control total; puede incluir texto en la imagen si lo pides)."
+                      : `Sin prompt propio, se usa el concepto visual del slide + el estilo global (${imageModel === "pro" ? "Nano Banana Pro" : "Nano Banana"}).`}
+                  </p>
+                </div>
               </div>
 
               {/* Theme selectors */}
@@ -928,32 +1133,181 @@ export const CarouselDesigner: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
-                  <div>
-                    <label className="text-[10px] font-semibold text-faint font-mono block mb-1">Color Inicio</label>
-                    <div className="flex items-center gap-1 bg-sink border border-line rounded px-2 py-1">
-                      <input
-                        type="color"
-                        value={activeSlide.bgGradientStart}
-                        onChange={(e) => handleEditActiveSlide("bgGradientStart", e.target.value)}
-                        className="w-5 h-5 rounded border border-line bg-transparent cursor-pointer shrink-0"
-                        aria-label="Color de inicio del degradado"
-                      />
-                      <span className="font-mono text-[10px] text-muted uppercase select-all">{activeSlide.bgGradientStart}</span>
+                  {(
+                    [
+                      { key: "bgGradientStart", label: "Fondo inicio" },
+                      { key: "bgGradientEnd", label: "Fondo fin" },
+                      { key: "textColor", label: "Color de texto" },
+                      { key: "accentColor", label: "Color destacado" },
+                    ] as const
+                  ).map((c) => (
+                    <div key={c.key}>
+                      <label className="text-[10px] font-semibold text-faint font-mono block mb-1">{c.label}</label>
+                      <div className="flex items-center gap-1 bg-sink border border-line rounded px-2 py-1">
+                        <input
+                          type="color"
+                          value={activeSlide[c.key] || "#000000"}
+                          onChange={(e) => handleEditActiveSlide(c.key, e.target.value)}
+                          className="w-5 h-5 rounded border border-line bg-transparent cursor-pointer shrink-0"
+                          aria-label={c.label}
+                        />
+                        <span className="font-mono text-[10px] text-muted uppercase select-all">{activeSlide[c.key]}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ---- Design controls (per slide, with apply-to-all) ---- */}
+              <div className="space-y-3 pt-3 border-t border-line">
+                <label className="text-[10px] font-semibold text-faint font-mono uppercase block">🎨 Diseño del slide</label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-faint font-mono block">Posición del texto</span>
+                    <div className="grid grid-cols-3 gap-1">
+                      {(["top", "center", "bottom"] as const).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => handleEditActiveSlide("textPosition", p)}
+                          className={`py-1.5 text-[10px] rounded border font-semibold transition ${
+                            slideStyle(activeSlide).position === p
+                              ? "bg-black text-white border-black"
+                              : "bg-sink border-line text-muted hover:text-ink"
+                          }`}
+                        >
+                          {p === "top" ? "Arriba" : p === "center" ? "Centro" : "Abajo"}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-faint font-mono block mb-1">Color Destacado</label>
-                    <div className="flex items-center gap-1 bg-sink border border-line rounded px-2 py-1">
-                      <input
-                        type="color"
-                        value={activeSlide.accentColor}
-                        onChange={(e) => handleEditActiveSlide("accentColor", e.target.value)}
-                        className="w-5 h-5 rounded border border-line bg-transparent cursor-pointer shrink-0"
-                        aria-label="Color destacado"
-                      />
-                      <span className="font-mono text-[10px] text-muted uppercase select-all">{activeSlide.accentColor}</span>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-faint font-mono block">Alineación</span>
+                    <div className="grid grid-cols-2 gap-1">
+                      {(["left", "center"] as const).map((a) => (
+                        <button
+                          key={a}
+                          onClick={() => handleEditActiveSlide("textAlign", a)}
+                          className={`py-1.5 text-[10px] rounded border font-semibold transition ${
+                            slideStyle(activeSlide).align === a
+                              ? "bg-black text-white border-black"
+                              : "bg-sink border-line text-muted hover:text-ink"
+                          }`}
+                        >
+                          {a === "left" ? "Izquierda" : "Centrado"}
+                        </button>
+                      ))}
                     </div>
                   </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-faint font-mono block">Tipografía</span>
+                    <select
+                      value={activeSlide.fontFamily || "sans"}
+                      onChange={(e) => handleEditActiveSlide("fontFamily", e.target.value)}
+                      className="w-full bg-sink border border-line rounded px-2 py-1.5 text-[11px] text-ink outline-none"
+                    >
+                      <option value="sans">Moderna (Sans)</option>
+                      <option value="serif">Elegante (Serif)</option>
+                      <option value="mono">Técnica (Mono)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-faint font-mono block">Tamaño del título</span>
+                    <div className="grid grid-cols-3 gap-1">
+                      {(["sm", "md", "lg"] as const).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => handleEditActiveSlide("titleSize", s)}
+                          className={`py-1.5 text-[10px] rounded border font-semibold transition ${
+                            (activeSlide.titleSize || "md") === s
+                              ? "bg-black text-white border-black"
+                              : "bg-sink border-line text-muted hover:text-ink"
+                          }`}
+                        >
+                          {s.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] text-faint font-mono flex items-center justify-between">
+                    <span>Oscurecido sobre la imagen (legibilidad)</span>
+                    <span className="font-bold text-ink">{activeSlide.overlayOpacity ?? 100}%</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={activeSlide.overlayOpacity ?? 100}
+                    onChange={(e) => handleEditActiveSlide("overlayOpacity", Number(e.target.value))}
+                    className="w-full accent-black"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  <label className="flex items-center gap-1.5 text-[11px] text-muted cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!activeSlide.hideText}
+                      onChange={(e) => handleEditActiveSlide("hideText", e.target.checked)}
+                    />
+                    Solo imagen (sin texto encima)
+                  </label>
+                  <label className="flex items-center gap-1.5 text-[11px] text-muted cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!activeSlide.hideSlideNumber}
+                      onChange={(e) => handleEditActiveSlide("hideSlideNumber", e.target.checked)}
+                    />
+                    Ocultar contador
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 text-[11px] text-muted cursor-pointer shrink-0">
+                    <input type="checkbox" checked={showWatermark} onChange={(e) => setShowWatermark(e.target.checked)} />
+                    Marca de agua
+                  </label>
+                  <input
+                    type="text"
+                    value={watermarkText}
+                    onChange={(e) => setWatermarkText(e.target.value)}
+                    disabled={!showWatermark}
+                    className="flex-1 bg-sink border border-line rounded px-2 py-1.5 text-[11px] text-ink outline-none disabled:opacity-40"
+                    placeholder="@tu_cuenta"
+                  />
+                </div>
+
+                <button
+                  onClick={applyDesignToAll}
+                  className="w-full bg-sink hover:bg-[#eaedf6] border border-line text-ink font-semibold text-[11px] px-3 py-2 rounded transition"
+                >
+                  Aplicar este diseño a TODAS las diapositivas
+                </button>
+              </div>
+
+              {/* ---- Slide management ---- */}
+              <div className="space-y-2 pt-3 border-t border-line">
+                <label className="text-[10px] font-semibold text-faint font-mono uppercase block">🗂 Diapositivas</label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  <button onClick={addSlide} title="Añadir slide después de este" className="bg-sink hover:bg-[#eaedf6] border border-line rounded py-2 text-[11px] text-ink font-bold transition">
+                    + Nuevo
+                  </button>
+                  <button onClick={duplicateSlide} title="Duplicar slide" className="bg-sink hover:bg-[#eaedf6] border border-line rounded py-2 text-[11px] text-ink transition">
+                    Duplicar
+                  </button>
+                  <button onClick={() => moveSlide(-1)} disabled={currentSlideIndex === 0} title="Mover a la izquierda" className="bg-sink hover:bg-[#eaedf6] border border-line rounded py-2 text-[11px] text-ink transition disabled:opacity-30">
+                    ←
+                  </button>
+                  <button onClick={() => moveSlide(1)} disabled={currentSlideIndex === slides.length - 1} title="Mover a la derecha" className="bg-sink hover:bg-[#eaedf6] border border-line rounded py-2 text-[11px] text-ink transition disabled:opacity-30">
+                    →
+                  </button>
+                  <button onClick={deleteSlide} disabled={slides.length <= 1} title="Eliminar slide" className="bg-sink hover:bg-red-50 border border-line rounded py-2 text-[11px] text-red-500 transition disabled:opacity-30">
+                    Borrar
+                  </button>
                 </div>
               </div>
             </div>
