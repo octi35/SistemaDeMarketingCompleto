@@ -36,7 +36,8 @@ const isProduction = process.env.NODE_ENV === "production";
 // In production only allow the configured app origin (same-origin requests
 // don't need CORS at all); in dev stay permissive for tooling.
 app.use(isProduction ? cors({ origin: process.env.APP_URL || false }) : cors());
-app.use(express.json({ limit: "25mb" }));
+// 100mb: video uploads (IG Reels / FB video) travel as base64 data URLs.
+app.use(express.json({ limit: "100mb" }));
 
 // Basic rate limit on the expensive AI generation endpoints.
 app.use(

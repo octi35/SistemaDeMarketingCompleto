@@ -43,6 +43,8 @@ curl -X POST https://tu-app.com/api/ext/publish-all \
 
 - `caption`: texto común; `captions.{red}` lo sobreescribe por red.
 - `imageUrls`: URLs **públicas HTTPS** (Instagram lo exige; 2–10 imágenes = carrusel en IG).
+- `videoUrl` (opcional, excluye a `imageUrls`): publica **video** — Reel en Instagram (espera el procesamiento, ~15-60s) y video de página en Facebook; LinkedIn se omite.
+- `networks.instagram.firstComment` (opcional): se publica como **primer comentario** del post de IG (práctica típica: los hashtags).
 - `publishAt` (opcional): si viene, en vez de publicar crea posts programados (el scheduler del servidor los publica solo; los tokens se guardan cifrados).
 - Respuesta inmediata: `{ mode: "published", ok, results: { instagram: { ok, postId | error }, ... } }` (HTTP 207 si alguna red falló).
 - Respuesta programada: `{ mode: "scheduled", scheduled: [{network, id}], skipped: [...] }`.

@@ -14,7 +14,7 @@ export interface PublishAllResponse {
 }
 
 export async function runPublishAll(body: PublishAllBody): Promise<PublishAllResponse> {
-  const { networks, caption, captions, imageUrls, publishAt, label } = body;
+  const { networks, caption, captions, imageUrls, videoUrl, publishAt, label } = body;
 
   if (!networks.instagram && !networks.facebook && !networks.linkedin) {
     return { status: 400, body: { error: "Incluye credenciales de al menos una red en 'networks'." } };
@@ -30,8 +30,8 @@ export async function runPublishAll(body: PublishAllBody): Promise<PublishAllRes
     const skipped: { network: NetworkName; reason: string }[] = [];
 
     if (networks.instagram) {
-      if (images.length === 0) {
-        skipped.push({ network: "instagram", reason: "Instagram requiere al menos una imagen." });
+      if (images.length === 0 && !videoUrl) {
+        skipped.push({ network: "instagram", reason: "Instagram requiere al menos una imagen o un video." });
       } else {
         const post = addScheduled({
           network: "instagram",
@@ -39,6 +39,8 @@ export async function runPublishAll(body: PublishAllBody): Promise<PublishAllRes
             igAccountId: networks.instagram.igAccountId,
             token: networks.instagram.token,
             imageUrls: images,
+            videoUrl,
+            firstComment: networks.instagram.firstComment,
             caption: captions?.instagram ?? caption,
           }),
           publishAt,
@@ -54,6 +56,7 @@ export async function runPublishAll(body: PublishAllBody): Promise<PublishAllRes
           pageId: networks.facebook.pageId,
           token: networks.facebook.token,
           imageUrls: images,
+          videoUrl,
           message: captions?.facebook ?? caption,
         }),
         publishAt,
@@ -62,23 +65,27 @@ export async function runPublishAll(body: PublishAllBody): Promise<PublishAllRes
       scheduled.push({ network: "facebook", id: post.id });
     }
     if (networks.linkedin) {
-      const post = addScheduled({
-        network: "linkedin",
-        payload: sealPayloadTokens({
-          token: networks.linkedin.token,
-          authorUrn: networks.linkedin.authorUrn,
-          imageUrls: images,
-          text: captions?.linkedin ?? caption,
-        }),
-        publishAt,
-        label,
-      });
-      scheduled.push({ network: "linkedin", id: post.id });
+      if (videoUrl) {
+        skipped.push({ network: "linkedin", reason: "Video en LinkedIn aún no soportado." });
+      } else {
+        const post = addScheduled({
+          network: "linkedin",
+          payload: sealPayloadTokens({
+            token: networks.linkedin.token,
+            authorUrn: networks.linkedin.authorUrn,
+            imageUrls: images,
+            text: captions?.linkedin ?? caption,
+          }),
+          publishAt,
+          label,
+        });
+        scheduled.push({ network: "linkedin", id: post.id });
+      }
     }
     return { status: 200, body: { ok: scheduled.length > 0, mode: "scheduled", publishAt, scheduled, skipped } };
   }
 
   // ---- Immediate mode: publish to every network in parallel ----
-  const outcome = await publishToAllNetworks({ caption, captions, imageUrls, targets: networks });
+  const outcome = await publishToAllNetworks({ caption, captions, imageUrls, videoUrl, targets: networks });
   return { status: outcome.ok ? 200 : 207, body: { mode: "published", ...outcome } };
 }

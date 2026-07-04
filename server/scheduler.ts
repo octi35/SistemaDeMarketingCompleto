@@ -6,7 +6,9 @@ import { unsealPayloadTokens } from "./secretStore";
 import {
   publishInstagramPost,
   publishInstagramCarousel,
+  publishInstagramReel,
   publishFacebookPost,
+  publishFacebookVideo,
   publishLinkedInPost,
   PublishResult,
 } from "./publish";
@@ -22,11 +24,21 @@ export function publishScheduled(post: Pick<ScheduledPost, "network" | "payload"
   }
 
   if (post.network === "instagram") {
+    if (payload.videoUrl) {
+      return publishInstagramReel({
+        igAccountId: payload.igAccountId,
+        videoUrl: payload.videoUrl,
+        caption: payload.caption,
+        firstComment: payload.firstComment,
+        token,
+      });
+    }
     if (Array.isArray(payload.imageUrls) && payload.imageUrls.length >= 2) {
       return publishInstagramCarousel({
         igAccountId: payload.igAccountId,
         imageUrls: payload.imageUrls,
         caption: payload.caption,
+        firstComment: payload.firstComment,
         token,
       });
     }
@@ -34,10 +46,19 @@ export function publishScheduled(post: Pick<ScheduledPost, "network" | "payload"
       igAccountId: payload.igAccountId,
       imageUrl: payload.imageUrl || payload.imageUrls?.[0],
       caption: payload.caption,
+      firstComment: payload.firstComment,
       token,
     });
   }
   if (post.network === "facebook") {
+    if (payload.videoUrl) {
+      return publishFacebookVideo({
+        pageId: payload.pageId,
+        videoUrl: payload.videoUrl,
+        description: payload.message ?? payload.caption,
+        token,
+      });
+    }
     return publishFacebookPost({
       pageId: payload.pageId,
       message: payload.message ?? payload.caption,

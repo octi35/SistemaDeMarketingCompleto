@@ -95,8 +95,17 @@ export const publishAllSchema = z.object({
     })
     .optional(),
   imageUrls: z.array(z.string().url()).max(10).optional(),
+  // Video mode: IG publishes a Reel and FB a page video (LinkedIn is skipped).
+  videoUrl: z.string().url().optional(),
   networks: z.object({
-    instagram: z.object({ igAccountId: z.string().min(3), token: z.string().min(10) }).optional(),
+    instagram: z
+      .object({
+        igAccountId: z.string().min(3),
+        token: z.string().min(10),
+        // Posted as first comment right after publishing (e.g. hashtags).
+        firstComment: z.string().max(2200).optional(),
+      })
+      .optional(),
     facebook: z.object({ pageId: z.string().min(3), token: z.string().min(10) }).optional(),
     linkedin: z.object({ authorUrn: z.string().optional(), token: z.string().min(10) }).optional(),
   }),

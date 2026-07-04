@@ -44,11 +44,27 @@ async function graphJson(res: Response): Promise<any> {
   }
 }
 
+// Posts a first comment on a just-published IG media (best-effort): the
+// common "hashtags in the first comment" growth practice.
+async function postFirstComment(mediaId: string, message: string, token: string): Promise<void> {
+  try {
+    await fetch(`${GRAPH}/${mediaId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, access_token: token }),
+    });
+  } catch (err) {
+    console.warn("[publish] No se pudo publicar el primer comentario:", err);
+  }
+}
+
 // ---- Instagram ----
 export async function publishInstagramPost(args: {
   igAccountId: string;
   imageUrl: string;
   caption?: string;
+  /** Posted as the first comment right after publishing (e.g. hashtags). */
+  firstComment?: string;
   token: string;
 }): Promise<PublishResult> {
   const { igAccountId, imageUrl, caption, token } = args;
@@ -74,6 +90,7 @@ export async function publishInstagramPost(args: {
   }
 
   recordPublished("instagram", publishData.id, caption);
+  if (args.firstComment) await postFirstComment(publishData.id, args.firstComment, token);
   rememberMetricsAuth("instagram", igAccountId, token);
   return { ok: true, status: 200, data: { success: true, result: publishData }, postId: publishData.id };
 }
@@ -82,6 +99,8 @@ export async function publishInstagramCarousel(args: {
   igAccountId: string;
   imageUrls: string[];
   caption?: string;
+  /** Posted as the first comment right after publishing (e.g. hashtags). */
+  firstComment?: string;
   token: string;
 }): Promise<PublishResult> {
   const { igAccountId, imageUrls, caption, token } = args;
@@ -125,6 +144,7 @@ export async function publishInstagramCarousel(args: {
   }
 
   recordPublished("instagram", publishData.id, caption);
+  if (args.firstComment) await postFirstComment(publishData.id, args.firstComment, token);
   rememberMetricsAuth("instagram", igAccountId, token);
   return {
     ok: true,
@@ -132,6 +152,92 @@ export async function publishInstagramCarousel(args: {
     data: { success: true, result: publishData, postId: publishData.id },
     postId: publishData.id,
   };
+}
+
+// ---- Instagram Reels (video) ----
+// Reels need server-side processing: create the container, poll status_code
+// until FINISHED, then publish. Typically ready in 15-60s.
+export async function publishInstagramReel(args: {
+  igAccountId: string;
+  videoUrl: string;
+  caption?: string;
+  firstComment?: string;
+  token: string;
+}): Promise<PublishResult> {
+  const { igAccountId, videoUrl, caption, token } = args;
+
+  const containerRes = await fetch(`${GRAPH}/${igAccountId}/media`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      media_type: "REELS",
+      video_url: videoUrl,
+      caption: caption || "",
+      share_to_feed: true,
+      access_token: token,
+    }),
+  });
+  const containerData = await graphJson(containerRes);
+  if (!containerRes.ok) {
+    return { ok: false, status: containerRes.status, data: { step: "create_reel_container", error: containerData } };
+  }
+
+  // Poll processing status (max ~4 min).
+  const deadline = Date.now() + 4 * 60 * 1000;
+  let status = "IN_PROGRESS";
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 5000));
+    const st = await fetch(`${GRAPH}/${containerData.id}?fields=status_code&access_token=${token}`);
+    const stData = await graphJson(st);
+    status = stData.status_code || status;
+    if (status === "FINISHED") break;
+    if (status === "ERROR" || status === "EXPIRED") {
+      return { ok: false, status: 502, data: { step: "processing", error: stData } };
+    }
+  }
+  if (status !== "FINISHED") {
+    return {
+      ok: false,
+      status: 504,
+      data: { step: "processing", error: "El video sigue procesándose; Instagram tardó más de 4 minutos. Reintenta." },
+    };
+  }
+
+  const publishRes = await fetch(`${GRAPH}/${igAccountId}/media_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ creation_id: containerData.id, access_token: token }),
+  });
+  const publishData = await graphJson(publishRes);
+  if (!publishRes.ok) {
+    return { ok: false, status: publishRes.status, data: { step: "publish", error: publishData } };
+  }
+
+  recordPublished("instagram", publishData.id, caption);
+  if (args.firstComment) await postFirstComment(publishData.id, args.firstComment, token);
+  rememberMetricsAuth("instagram", igAccountId, token);
+  return { ok: true, status: 200, data: { success: true, result: publishData }, postId: publishData.id };
+}
+
+// ---- Facebook Page video ----
+export async function publishFacebookVideo(args: {
+  pageId: string;
+  videoUrl: string;
+  description?: string;
+  token: string;
+}): Promise<PublishResult> {
+  const { pageId, videoUrl, description, token } = args;
+  const r = await fetch(`${GRAPH}/${pageId}/videos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file_url: videoUrl, description: description || "", access_token: token }),
+  });
+  const result = await graphJson(r);
+  if (!r.ok) return { ok: false, status: r.status, data: { step: "upload_video", error: result } };
+
+  recordPublished("facebook", result.id || "", description);
+  rememberMetricsAuth("facebook", pageId, token);
+  return { ok: true, status: 200, data: { success: true, result }, postId: result.id };
 }
 
 // ---- Facebook Page ----
@@ -193,7 +299,7 @@ export async function publishFacebookPost(args: {
 export type NetworkName = "instagram" | "facebook" | "linkedin";
 
 export interface MultiPublishTargets {
-  instagram?: { igAccountId: string; token: string };
+  instagram?: { igAccountId: string; token: string; firstComment?: string };
   facebook?: { pageId: string; token: string };
   linkedin?: { authorUrn?: string; token: string };
 }
@@ -210,14 +316,18 @@ export interface NetworkOutcome {
 /**
  * Publishes the same content to every network with credentials, in parallel.
  * Each network fails independently: one bad token never blocks the others.
+ * With videoUrl set, Instagram gets a Reel and Facebook a page video
+ * (LinkedIn video isn't supported yet and is skipped).
  */
 export async function publishToAllNetworks(args: {
   caption?: string;
   captions?: Partial<Record<NetworkName, string>>;
   imageUrls?: string[];
+  videoUrl?: string;
   targets: MultiPublishTargets;
 }): Promise<{ ok: boolean; results: Record<NetworkName, NetworkOutcome> }> {
   const images = (args.imageUrls || []).filter(Boolean);
+  const videoUrl = args.videoUrl || "";
   const captionFor = (n: NetworkName) => args.captions?.[n] ?? args.caption ?? "";
   const { targets } = args;
 
@@ -234,46 +344,70 @@ export async function publishToAllNetworks(args: {
     }
   };
 
+  const skip = (reason: string): Promise<NetworkOutcome> =>
+    Promise.resolve({ ok: false, skipped: true, error: reason });
+
   const [instagram, facebook, linkedin] = await Promise.all([
     !targets.instagram
-      ? Promise.resolve<NetworkOutcome>({ ok: false, skipped: true, error: "Sin credenciales de Instagram." })
-      : images.length === 0
-        ? Promise.resolve<NetworkOutcome>({ ok: false, skipped: true, error: "Instagram requiere al menos una imagen." })
-        : run(() =>
-            images.length >= 2
-              ? publishInstagramCarousel({
-                  igAccountId: targets.instagram!.igAccountId,
-                  imageUrls: images,
-                  caption: captionFor("instagram"),
-                  token: targets.instagram!.token,
-                })
-              : publishInstagramPost({
-                  igAccountId: targets.instagram!.igAccountId,
-                  imageUrl: images[0],
-                  caption: captionFor("instagram"),
-                  token: targets.instagram!.token,
-                })
-          ),
+      ? skip("Sin credenciales de Instagram.")
+      : videoUrl
+        ? run(() =>
+            publishInstagramReel({
+              igAccountId: targets.instagram!.igAccountId,
+              videoUrl,
+              caption: captionFor("instagram"),
+              firstComment: targets.instagram!.firstComment,
+              token: targets.instagram!.token,
+            })
+          )
+        : images.length === 0
+          ? skip("Instagram requiere al menos una imagen o un video.")
+          : run(() =>
+              images.length >= 2
+                ? publishInstagramCarousel({
+                    igAccountId: targets.instagram!.igAccountId,
+                    imageUrls: images,
+                    caption: captionFor("instagram"),
+                    firstComment: targets.instagram!.firstComment,
+                    token: targets.instagram!.token,
+                  })
+                : publishInstagramPost({
+                    igAccountId: targets.instagram!.igAccountId,
+                    imageUrl: images[0],
+                    caption: captionFor("instagram"),
+                    firstComment: targets.instagram!.firstComment,
+                    token: targets.instagram!.token,
+                  })
+            ),
     !targets.facebook
-      ? Promise.resolve<NetworkOutcome>({ ok: false, skipped: true, error: "Sin credenciales de Facebook." })
+      ? skip("Sin credenciales de Facebook.")
       : run(() =>
-          publishFacebookPost({
-            pageId: targets.facebook!.pageId,
-            message: captionFor("facebook"),
-            imageUrls: images,
-            token: targets.facebook!.token,
-          })
+          videoUrl
+            ? publishFacebookVideo({
+                pageId: targets.facebook!.pageId,
+                videoUrl,
+                description: captionFor("facebook"),
+                token: targets.facebook!.token,
+              })
+            : publishFacebookPost({
+                pageId: targets.facebook!.pageId,
+                message: captionFor("facebook"),
+                imageUrls: images,
+                token: targets.facebook!.token,
+              })
         ),
     !targets.linkedin
-      ? Promise.resolve<NetworkOutcome>({ ok: false, skipped: true, error: "Sin credenciales de LinkedIn." })
-      : run(() =>
-          publishLinkedInPost({
-            text: captionFor("linkedin"),
-            authorUrn: targets.linkedin!.authorUrn,
-            imageUrls: images,
-            token: targets.linkedin!.token,
-          })
-        ),
+      ? skip("Sin credenciales de LinkedIn.")
+      : videoUrl
+        ? skip("Video en LinkedIn aún no soportado; publícalo manualmente allí.")
+        : run(() =>
+            publishLinkedInPost({
+              text: captionFor("linkedin"),
+              authorUrn: targets.linkedin!.authorUrn,
+              imageUrls: images,
+              token: targets.linkedin!.token,
+            })
+          ),
   ]);
 
   const results = { instagram, facebook, linkedin };

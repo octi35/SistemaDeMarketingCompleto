@@ -107,6 +107,10 @@ export const SocialPublisher: React.FC = () => {
   const [isPublishing, setIsPublishing] = useState<string | null>(null);
   const [publishStatus, setPublishStatus] = useState<{ [key: string]: { status: string; link?: string } }>({});
 
+  // IG growth practice: publish the hashtags as the first comment instead of
+  // inside the caption.
+  const [igHashtagsAsComment, setIgHashtagsAsComment] = useState(false);
+
   // One-click multi-network publishing
   const [isPublishingAll, setIsPublishingAll] = useState(false);
   const [publishAllResults, setPublishAllResults] = useState<
@@ -293,13 +297,52 @@ export const SocialPublisher: React.FC = () => {
     }
   };
 
+  /** Full copy for a network; for IG the hashtags can move to the first comment. */
+  const networkText = (network: "linkedin" | "facebook" | "instagram") => {
+    const c = generatedResult![network];
+    const base = `${c.hook}\n\n${c.body}\n\n${c.cta}`;
+    if (network === "instagram" && igHashtagsAsComment) {
+      return { text: base, firstComment: c.hashtags.join(" ") };
+    }
+    return { text: `${base}\n\n${c.hashtags.join(" ")}`, firstComment: undefined };
+  };
+
+  const isVideoSelected = selectedIds.length === 0 && selectedMedia?.type === "video";
+
+  /** Uploads the active video (data URL) and returns its public URL. */
+  const uploadVideoToPublish = async (): Promise<string> => {
+    const raw = selectedMedia?.data || selectedMedia?.url || "";
+    if (!raw.startsWith("data:")) return raw;
+    const up = await apiPost<{ urls: string[] }>("/api/upload-image", { dataUrl: raw });
+    return up.urls?.[0] || "";
+  };
+
   // Builds the {endpoint, body} for a given network, uploading the selected
-  // image(s) to public URLs when needed. Shared by publish-now and scheduling.
-  // 2+ selected images become an IG carousel / FB multi-photo automatically.
+  // media to public URLs when needed. Shared by publish-now and scheduling.
+  // 2+ selected images become an IG carousel / FB multi-photo automatically;
+  // a selected video becomes an IG Reel / FB page video.
   const buildNetworkBody = async (network: "linkedin" | "facebook" | "instagram") => {
-    const copyNode = generatedResult![network];
-    const fullText = `${copyNode.hook}\n\n${copyNode.body}\n\n${copyNode.cta}\n\n${copyNode.hashtags.join(" ")}`;
+    const { text: fullText, firstComment } = networkText(network);
     const metaPublishToken = selectedPageToken || metaToken;
+
+    if (isVideoSelected) {
+      if (network === "linkedin") {
+        throw new Error("Video en LinkedIn aún no está soportado; publícalo manualmente allí.");
+      }
+      const videoUrl = await uploadVideoToPublish();
+      if (!videoUrl) throw new Error("No se pudo obtener la URL pública del video.");
+      if (network === "instagram") {
+        return {
+          endpoint: "/api/meta/instagram/reel",
+          body: { igAccountId: selectedIgId, videoUrl, caption: fullText, firstComment, token: metaPublishToken },
+        };
+      }
+      return {
+        endpoint: "/api/meta/facebook/video",
+        body: { pageId: selectedPageId, videoUrl, description: fullText, token: metaPublishToken },
+      };
+    }
+
     const imageUrls = await uploadImagesToPublish();
 
     if (network === "linkedin") {
@@ -314,7 +357,7 @@ export const SocialPublisher: React.FC = () => {
     if (imageUrls.length >= 2) {
       return {
         endpoint: "/api/meta/instagram/carousel",
-        body: { igAccountId: selectedIgId, imageUrls, caption: fullText, token: metaPublishToken },
+        body: { igAccountId: selectedIgId, imageUrls, caption: fullText, firstComment, token: metaPublishToken },
       };
     }
     return {
@@ -323,6 +366,7 @@ export const SocialPublisher: React.FC = () => {
         igAccountId: selectedIgId,
         imageUrl: imageUrls[0] || "",
         caption: fullText,
+        firstComment,
         token: metaPublishToken,
       },
     };
@@ -375,21 +419,26 @@ export const SocialPublisher: React.FC = () => {
 
   // ---- One click -> the 3 networks at once (immediate or scheduled) ----
   const buildPublishAllBody = async (publishAt?: string) => {
-    const netText = (n: "linkedin" | "instagram" | "facebook") => {
-      const c = generatedResult![n];
-      return `${c.hook}\n\n${c.body}\n\n${c.cta}\n\n${c.hashtags.join(" ")}`;
-    };
     const metaPublishToken = selectedPageToken || metaToken;
-    const imageUrls = await uploadImagesToPublish();
+    const ig = networkText("instagram");
+    const videoUrl = isVideoSelected ? await uploadVideoToPublish() : undefined;
+    const imageUrls = isVideoSelected ? [] : await uploadImagesToPublish();
 
     const networks: any = {};
-    if (metaPublishToken && selectedIgId) networks.instagram = { igAccountId: selectedIgId, token: metaPublishToken };
+    if (metaPublishToken && selectedIgId) {
+      networks.instagram = { igAccountId: selectedIgId, token: metaPublishToken, firstComment: ig.firstComment };
+    }
     if (metaPublishToken && selectedPageId) networks.facebook = { pageId: selectedPageId, token: metaPublishToken };
     if (linkedinToken) networks.linkedin = { token: linkedinToken };
 
     return {
-      captions: { instagram: netText("instagram"), facebook: netText("facebook"), linkedin: netText("linkedin") },
+      captions: {
+        instagram: ig.text,
+        facebook: networkText("facebook").text,
+        linkedin: networkText("linkedin").text,
+      },
       imageUrls,
+      videoUrl: videoUrl || undefined,
       networks,
       publishAt,
       label: productName.slice(0, 60),
@@ -851,7 +900,23 @@ export const SocialPublisher: React.FC = () => {
                     {/* Copy Box container */}
                     <div className="bg-sink border border-line rounded-xl p-4 space-y-3 relative overflow-hidden select-text">
                       <div className="flex items-center justify-between border-b border-line pb-2">
-                        <span className="text-[9px] text-faint uppercase font-mono tracking-wider font-bold">Copy Optimizado</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-faint uppercase font-mono tracking-wider font-bold">Copy Optimizado</span>
+                          {(() => {
+                            const limits = { instagram: 2200, facebook: 5000, linkedin: 3000 } as const;
+                            const limit = limits[activeNetworkTab];
+                            const len = networkText(activeNetworkTab).text.length;
+                            const over = len > limit;
+                            return (
+                              <span
+                                className={`text-[9px] font-mono ${over ? "text-red-500 font-bold" : "text-faint"}`}
+                                title={over ? "El texto supera el límite de la red y puede ser rechazado o truncado." : "Caracteres del copy (con el límite de la red)"}
+                              >
+                                {len}/{limit}{over ? " ⚠" : ""}
+                              </span>
+                            );
+                          })()}
+                        </div>
                         <button
                           onClick={() => {
                             const copyNode = generatedResult[activeNetworkTab];
@@ -959,8 +1024,18 @@ export const SocialPublisher: React.FC = () => {
                         <span className="text-[10px] text-lime-300 uppercase font-mono font-bold">Publicación total — 1 click</span>
                       </div>
                       <p className="text-[11px] text-zinc-300">
-                        Publica este contenido en Instagram, Facebook y LinkedIn al mismo tiempo, cada red con su copy optimizado.
+                        {isVideoSelected
+                          ? "Video seleccionado: se publica como Reel en Instagram y video en Facebook (LinkedIn se omite)."
+                          : "Publica este contenido en Instagram, Facebook y LinkedIn al mismo tiempo, cada red con su copy optimizado."}
                       </p>
+                      <label className="flex items-center gap-2 text-[11px] text-zinc-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={igHashtagsAsComment}
+                          onChange={(e) => setIgHashtagsAsComment(e.target.checked)}
+                        />
+                        Hashtags de Instagram como primer comentario (caption más limpio)
+                      </label>
                       <button
                         onClick={() => handlePublishAll()}
                         disabled={isPublishingAll || isPublishing !== null}

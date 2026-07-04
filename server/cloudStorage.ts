@@ -12,8 +12,8 @@ function cfg(): { url: string; key: string } {
 }
 
 function parseDataUrl(dataUrl: string): { mimeType: string; buffer: Buffer } {
-  const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/s.exec(dataUrl || "");
-  if (!match) throw new Error("Formato de imagen inválido (se espera un data URL base64).");
+  const match = /^data:((?:image|video)\/[a-zA-Z0-9.+-]+);base64,(.+)$/s.exec(dataUrl || "");
+  if (!match) throw new Error("Formato de archivo inválido (se espera un data URL base64 de imagen o video).");
   return { mimeType: match[1], buffer: Buffer.from(match[2], "base64") };
 }
 
@@ -33,14 +33,15 @@ export async function storeImagePublic(
 
   const { url, key } = cfg();
   const { mimeType, buffer } = parseDataUrl(dataUrl);
-  const ext = (mimeType.split("/")[1] || "png").replace(/[^a-z0-9]/gi, "") || "png";
-  const file = `img_${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
+  const kind = mimeType.startsWith("video/") ? "vid" : "img";
+  const ext = (mimeType.split("/")[1] || "png").replace(/[^a-z0-9]/gi, "") || (kind === "vid" ? "mp4" : "png");
+  const file = `${kind}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
 
   const res = await fetch(`${url}/storage/v1/object/${BUCKET}/${file}`, {
     method: "POST",
     headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": mimeType },
     body: buffer,
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(120_000), // videos can take a while
   });
   if (!res.ok) {
     throw new Error(`Supabase Storage upload failed (${res.status}): ${await res.text().catch(() => "")}`);

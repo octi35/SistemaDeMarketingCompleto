@@ -12,14 +12,16 @@ export function ensureUploadsDir(): string {
   return UPLOADS_DIR;
 }
 
-// Persists a data URL (data:image/png;base64,...) to disk and returns the filename.
+// Persists a media data URL (data:image/png;base64,... or data:video/mp4;...)
+// to disk and returns the filename. Videos are needed for IG Reels / FB video.
 export function saveDataUrlImage(dataUrl: string): string {
   ensureUploadsDir();
-  const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/s.exec(dataUrl || "");
-  if (!match) throw new Error("Formato de imagen inválido (se espera un data URL base64).");
-  const ext = (match[1].split("/")[1] || "png").replace(/[^a-z0-9]/gi, "") || "png";
+  const match = /^data:((?:image|video)\/[a-zA-Z0-9.+-]+);base64,(.+)$/s.exec(dataUrl || "");
+  if (!match) throw new Error("Formato de archivo inválido (se espera un data URL base64 de imagen o video).");
+  const kind = match[1].startsWith("video/") ? "vid" : "img";
+  const ext = (match[1].split("/")[1] || "png").replace(/[^a-z0-9]/gi, "") || (kind === "vid" ? "mp4" : "png");
   const buffer = Buffer.from(match[2], "base64");
-  const name = `img_${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
+  const name = `${kind}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
   fs.writeFileSync(path.join(UPLOADS_DIR, name), buffer);
   return name;
 }

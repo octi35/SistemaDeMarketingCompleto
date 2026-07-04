@@ -75,6 +75,29 @@ export const RealMetricsPanel: React.FC = () => {
     }
   };
 
+  // Best posting slots computed from YOUR real posts: average engagement
+  // grouped by weekday + 3-hour block (needs a few posts to be meaningful).
+  const bestSlots = React.useMemo(() => {
+    const withTs = media.filter((m) => m.timestamp);
+    if (withTs.length < 5) return [];
+    const days = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+    const buckets = new Map<string, { total: number; count: number; label: string }>();
+    for (const m of withTs) {
+      const d = new Date(m.timestamp!);
+      const slotStart = Math.floor(d.getHours() / 3) * 3;
+      const key = `${d.getDay()}-${slotStart}`;
+      const label = `${days[d.getDay()]} ${String(slotStart).padStart(2, "0")}:00–${String(slotStart + 3).padStart(2, "0")}:00`;
+      const b = buckets.get(key) || { total: 0, count: 0, label };
+      b.total += m.engagement;
+      b.count += 1;
+      buckets.set(key, b);
+    }
+    return [...buckets.values()]
+      .map((b) => ({ label: b.label, avg: Math.round(b.total / b.count), count: b.count }))
+      .sort((a, b) => b.avg - a.avg)
+      .slice(0, 3);
+  }, [media]);
+
   const analyze = async () => {
     setAnalyzing(true);
     try {
@@ -178,6 +201,30 @@ export const RealMetricsPanel: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {bestSlots.length > 0 && (
+        <div className="bg-sink border border-line rounded-lg p-3">
+          <span className="text-[10px] uppercase tracking-wider text-faint font-mono block mb-2">
+            ⏰ Mejores momentos para publicar (según tus posts)
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {bestSlots.map((s, i) => (
+              <div key={s.label} className="bg-surface border border-line rounded-lg px-3 py-2">
+                <p className="text-[12px] font-semibold text-ink capitalize">
+                  {i === 0 ? "🥇 " : i === 1 ? "🥈 " : "🥉 "}
+                  {s.label}
+                </p>
+                <p className="text-[10px] text-muted mt-0.5">
+                  ~{s.avg} interacciones/post ({s.count} publicaciones)
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-faint mt-2">
+            Usa estas franjas al programar el calendario o las publicaciones del Gestor.
+          </p>
         </div>
       )}
 

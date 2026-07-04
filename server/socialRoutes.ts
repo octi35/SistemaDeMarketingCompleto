@@ -6,7 +6,9 @@ import { issueOAuthState, consumeOAuthState } from "../oauthState";
 import {
   publishInstagramPost,
   publishInstagramCarousel,
+  publishInstagramReel,
   publishFacebookPost,
+  publishFacebookVideo,
   publishLinkedInPost,
 } from "./publish";
 import { runPublishAll } from "./publishAllCore";
@@ -403,7 +405,7 @@ app.post("/api/linkedin/post", async (req, res) => {
 
 // 8. POST /api/meta/instagram/post - Publishes to IG Business
 app.post("/api/meta/instagram/post", async (req, res) => {
-  const { igAccountId, imageUrl, caption, token } = req.body || {};
+  const { igAccountId, imageUrl, caption, firstComment, token } = req.body || {};
   const activeToken = token || req.headers.authorization?.replace("Bearer ", "");
   if (!activeToken) {
     return res.status(401).json({ error: "Missing active Meta access token" });
@@ -412,16 +414,53 @@ app.post("/api/meta/instagram/post", async (req, res) => {
     return res.status(400).json({ error: "Missing required fields (igAccountId, imageUrl)" });
   }
   try {
-    const result = await publishInstagramPost({ igAccountId, imageUrl, caption, token: activeToken });
+    const result = await publishInstagramPost({ igAccountId, imageUrl, caption, firstComment, token: activeToken });
     res.status(result.ok ? 200 : result.status).json(result.data);
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to publish on Instagram Business" });
   }
 });
 
+// 8.c POST /api/meta/instagram/reel - Publishes a video as an IG Reel
+// (waits for Instagram's server-side processing, usually 15-60s).
+app.post("/api/meta/instagram/reel", async (req, res) => {
+  const { igAccountId, videoUrl, caption, firstComment, token } = req.body || {};
+  const activeToken = token || req.headers.authorization?.replace("Bearer ", "");
+  if (!activeToken) {
+    return res.status(401).json({ error: "Falta el token de acceso de Meta." });
+  }
+  if (!igAccountId || !videoUrl) {
+    return res.status(400).json({ error: "Se requieren igAccountId y videoUrl (URL pública del video)." });
+  }
+  try {
+    const result = await publishInstagramReel({ igAccountId, videoUrl, caption, firstComment, token: activeToken });
+    res.status(result.ok ? 200 : result.status).json(result.data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo publicar el Reel" });
+  }
+});
+
+// 9.b POST /api/meta/facebook/video - Publishes a video on a Facebook Page
+app.post("/api/meta/facebook/video", async (req, res) => {
+  const { pageId, videoUrl, description, pageToken, token } = req.body || {};
+  const activeToken = pageToken || token || req.headers.authorization?.replace("Bearer ", "");
+  if (!activeToken) {
+    return res.status(401).json({ error: "Falta el token de la página de Facebook." });
+  }
+  if (!pageId || !videoUrl) {
+    return res.status(400).json({ error: "Se requieren pageId y videoUrl (URL pública del video)." });
+  }
+  try {
+    const result = await publishFacebookVideo({ pageId, videoUrl, description, token: activeToken });
+    res.status(result.ok ? 200 : result.status).json(result.data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo publicar el video en Facebook" });
+  }
+});
+
 // 8.b POST /api/meta/instagram/carousel - Publishes a multi-image carousel
 app.post("/api/meta/instagram/carousel", async (req, res) => {
-  const { igAccountId, imageUrls, caption, token } = req.body || {};
+  const { igAccountId, imageUrls, caption, firstComment, token } = req.body || {};
   const activeToken = token || req.headers.authorization?.replace("Bearer ", "");
   if (!activeToken) {
     return res.status(401).json({ error: "Falta el token de acceso de Meta." });
@@ -430,7 +469,7 @@ app.post("/api/meta/instagram/carousel", async (req, res) => {
     return res.status(400).json({ error: "Se requieren igAccountId y al menos 2 imágenes (máx 10)." });
   }
   try {
-    const result = await publishInstagramCarousel({ igAccountId, imageUrls, caption, token: activeToken });
+    const result = await publishInstagramCarousel({ igAccountId, imageUrls, caption, firstComment, token: activeToken });
     res.status(result.ok ? 200 : result.status).json(result.data);
   } catch (error: any) {
     console.error("Error publishing IG carousel:", error);
