@@ -96,6 +96,31 @@ export const SocialPublisher: React.FC = () => {
   const [productName, setProductName] = useState("AdTeam AI - Agencia Autónoma de Marketing Multiagente");
   const [targetTone, setTargetTone] = useState("Professional");
   const [additionalNotes, setAdditionalNotes] = useState("Enfocarse en la facilidad de subir videos y fotos para que la IA se encargue de todo.");
+
+  // Destination link appended to every copy, tagged with UTMs per network so
+  // conversions are attributable in Analytics (utm_source = red).
+  const [destinationUrl, setDestinationUrl] = useState(() => getStored(STORAGE_KEYS.destinationUrl));
+  const [utmEnabled, setUtmEnabled] = useState(true);
+  useEffect(() => {
+    setStored(STORAGE_KEYS.destinationUrl, destinationUrl);
+  }, [destinationUrl]);
+
+  const linkFor = (network: "linkedin" | "instagram" | "facebook"): string => {
+    const raw = destinationUrl.trim();
+    if (!raw) return "";
+    try {
+      const u = new URL(raw.startsWith("http") ? raw : `https://${raw}`);
+      if (utmEnabled) {
+        u.searchParams.set("utm_source", network);
+        u.searchParams.set("utm_medium", "social");
+        const campaign = productName.trim().toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 50);
+        u.searchParams.set("utm_campaign", campaign || "adteam");
+      }
+      return u.toString();
+    } catch {
+      return raw;
+    }
+  };
   
   // Generation & Publishing States
   const [isGenerating, setIsGenerating] = useState(false);
@@ -300,7 +325,8 @@ export const SocialPublisher: React.FC = () => {
   /** Full copy for a network; for IG the hashtags can move to the first comment. */
   const networkText = (network: "linkedin" | "facebook" | "instagram") => {
     const c = generatedResult![network];
-    const base = `${c.hook}\n\n${c.body}\n\n${c.cta}`;
+    const link = linkFor(network);
+    const base = `${c.hook}\n\n${c.body}\n\n${c.cta}${link ? `\n\n🔗 ${link}` : ""}`;
     if (network === "instagram" && igHashtagsAsComment) {
       return { text: base, firstComment: c.hashtags.join(" ") };
     }
@@ -760,6 +786,27 @@ export const SocialPublisher: React.FC = () => {
                   <option value="Educational">Educativo y de Alto Valor</option>
                   <option value="Bold">Atrevido, Disruptivo y Divertido</option>
                 </select>
+              </div>
+
+              {/* Destination link with automatic UTMs */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-faint uppercase tracking-wider block">
+                  Link de destino (tu funnel / página de venta)
+                </label>
+                <input
+                  type="url"
+                  value={destinationUrl}
+                  onChange={(e) => setDestinationUrl(e.target.value)}
+                  className="w-full bg-sink border border-line rounded-input p-2.5 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20 font-mono"
+                  placeholder="https://tunegocio.com/curso"
+                />
+                <label className="flex items-center gap-1.5 text-[10px] text-muted cursor-pointer pt-0.5">
+                  <input type="checkbox" checked={utmEnabled} onChange={(e) => setUtmEnabled(e.target.checked)} />
+                  Agregar UTMs automáticos (utm_source por red + utm_campaign del producto) para medir conversiones
+                </label>
+                {destinationUrl.trim() && utmEnabled && (
+                  <p className="text-[9px] text-faint font-mono break-all">Ej: {linkFor("instagram")}</p>
+                )}
               </div>
 
               {/* Additional notes */}

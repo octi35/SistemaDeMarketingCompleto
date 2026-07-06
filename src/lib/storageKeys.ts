@@ -30,6 +30,7 @@ export const STORAGE_KEYS = {
   calendarApiKey: "custom_calendar_api_key",
 
   mediaLibrary: "adteam_media_library",
+  destinationUrl: "adteam_destination_url",
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

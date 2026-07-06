@@ -41,6 +41,7 @@ export const CarouselDesigner: React.FC = () => {
   // Facebook (multi-photo) and LinkedIn (multi-image) in the same click.
   const [publishTarget, setPublishTarget] = useState<"instagram" | "all">("instagram");
   const [zipping, setZipping] = useState(false);
+  const [pdfing, setPdfing] = useState(false);
 
   // Saved projects (server-side persistence)
   const [savedProjects, setSavedProjects] = useState<any[]>([]);
@@ -664,6 +665,40 @@ export const CarouselDesigner: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Builds a real PDF (one page per slide, exact slide size). LinkedIn treats
+  // carousels as PDF documents, so this file can be uploaded there as-is.
+  // jsPDF loads on demand to keep it out of the initial bundle.
+  const downloadAsPDF = async () => {
+    if (slides.length === 0) return;
+    setPdfing(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const isPortrait = platform === "Instagram";
+      const w = 1080;
+      const h = isPortrait ? 1350 : 1080;
+      const pdf = new jsPDF({
+        orientation: h >= w ? "portrait" : "landscape",
+        unit: "px",
+        format: [w, h],
+        hotfixes: ["px_scaling"],
+        compress: true,
+      });
+      for (let i = 0; i < slides.length; i++) {
+        await drawSlide(slides[i]);
+        const dataUrl = canvasRef.current!.toDataURL("image/jpeg", 0.92);
+        if (i > 0) pdf.addPage([w, h], h >= w ? "portrait" : "landscape");
+        pdf.addImage(dataUrl, "JPEG", 0, 0, w, h);
+      }
+      pdf.save(`carrusel_${platform.toLowerCase()}_${slides.length}_slides.pdf`);
+      toast.success("PDF descargado 📄 — súbelo a LinkedIn como documento y se ve como carrusel nativo.");
+    } catch (err: any) {
+      console.error("Error building PDF:", err);
+      toast.error("No se pudo crear el PDF del carrusel.");
+    } finally {
+      setPdfing(false);
+    }
   };
 
   // Render every slide and bundle them into a real .zip download.
@@ -1504,6 +1539,17 @@ export const CarouselDesigner: React.FC = () => {
               >
                 {zipping ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 <span>{zipping ? "Creando ZIP..." : "Descargar Carrusel Completo (ZIP)"}</span>
+              </button>
+
+              <button
+                onClick={downloadAsPDF}
+                disabled={pdfing}
+                className="w-full bg-[#0a66c2] hover:bg-[#004182] disabled:opacity-50 text-white font-bold text-xs px-4 py-3 rounded-full flex items-center justify-center gap-2 transition"
+                id="btn-download-carousel-pdf"
+                title="LinkedIn muestra los PDF subidos como carruseles nativos (documento)"
+              >
+                {pdfing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                <span>{pdfing ? "Creando PDF..." : "Descargar PDF (documento LinkedIn)"}</span>
               </button>
 
               {platform === "Instagram" && (
