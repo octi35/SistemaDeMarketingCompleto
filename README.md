@@ -1,123 +1,123 @@
 <div align="center">
-<h1>🚀 ADTEAM.AI — Agencia de Marketing Autónoma con IA</h1>
-<p>Suite full-stack (React + Express) con un equipo de 6 agentes de IA para crear creativos de Meta Ads, carruseles para Instagram/LinkedIn con imágenes reales generadas por <strong>Nano Banana 🍌</strong>, copys persuasivos, calendarios de contenido y analíticas.</p>
+
+# 🚀 AdTeam AI
+
+### Suite full-stack de marketing autónomo con IA para creadores e infoproductores
+
+Crea contenido real con IA (carruseles, imágenes de marca, copys, videos), publícalo o prográmalo en **Instagram, Facebook y LinkedIn con un solo click**, mide qué funcionó y deja que los datos guíen el próximo contenido.
+
+[![CI](https://github.com/octi35/SistemaDeMarketingCompleto/actions/workflows/ci.yml/badge.svg)](https://github.com/octi35/SistemaDeMarketingCompleto/actions/workflows/ci.yml)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Tests](https://img.shields.io/badge/tests-32%20passing-brightgreen)
+
 </div>
 
 ---
 
-## ✨ Novedades (última actualización)
+## ✨ Qué hace
 
-- **Publicación total con 1 click**: `POST /api/publish-all` publica (o programa) el mismo contenido en **Instagram + Facebook + LinkedIn a la vez**, cada red con su copy optimizado y resultado independiente. Botones en el Gestor de Contenido y en Carruseles.
-- **Fábrica de imágenes de marca 🍌**: planifica y genera hasta **50 imágenes** coherentes con tu Brand Kit (Nano Banana estándar o Pro, con tu logo como referencia), con progreso en vivo, reintentos y **biblioteca persistente** lista para publicar.
-- **Calendario por red**: filtro Instagram/Facebook/LinkedIn, **imagen adjunta por día** desde la biblioteca, y programación real de Instagram desde el calendario.
-- **Tokens de larga duración**: el OAuth de Meta entrega tokens de ~60 días con **aviso de vencimiento** y renovación desde el panel.
-- **API externa + webhooks**: otros sistemas pueden publicar y leer datos con API keys (`/api/ext/*`), y AdTeam avisa a tu CRM/Zapier/Make cuando se publica o falla un post. Ver **[API.md](./API.md)**.
-- **Métricas de Facebook** además de Instagram, e **ideas/calendario guiados por tus datos reales** de engagement.
-- **Carruseles programables**: elige fecha/hora en el modal de publicación y el servidor lo publica solo (en una red o en todas).
-- **Scheduler resiliente**: los posts programados que fallan se reintentan hasta 3 veces con backoff, con botón de reintento manual.
-- **Export .ics real**: descarga el plan de 30 días e impórtalo en Google Calendar / Outlook.
-- **Webhooks con reintentos** ante caídas transitorias del receptor.
+| Capacidad | Detalle |
+| --- | --- |
+| 🎨 **Carruseles con IA** | La IA escribe los slides y **Nano Banana** (modelo de imágenes de Gemini) genera los fondos. Diseño 100% personalizable por slide: prompt exacto propio, tipografía, posición/alineación del texto, 4 colores, overlay, marca de agua. Plantillas de diseño reutilizables. |
+| 🖼 **Fábrica de imágenes de marca** | Planifica y genera hasta **50 imágenes coherentes con tu Brand Kit** en lote (concurrencia limitada, reintentos, progreso en vivo), guardadas en una biblioteca lista para publicar. |
+| 📤 **Publicación 1-click multi-red** | Un endpoint orquesta Instagram (post/carrusel/**Reel**), Facebook (foto/multi-foto/video) y LinkedIn en paralelo; cada red falla de forma independiente y reporta su resultado. |
+| ⏰ **Programación real** | Scheduler en el servidor con tokens **cifrados AES-256-GCM**, reintentos con backoff y re-encolado manual. Calendario de 30 días generado por IA, con vista por red, creatividades adjuntas y export **.ics**. |
+| 📊 **Métricas y decisiones** | Métricas reales de IG/FB (Graph API), histórico automático cada 6h, experimentos A/B, mejores horarios calculados de **tus** posts, e ideas/calendarios que la IA genera alimentada por tu engagement medido. |
+| 🔗 **Integrable** | API externa con API keys (`/api/ext/*`) y **webhooks firmados** (HMAC-SHA256) para conectar CRMs, funnels o Zapier/Make/n8n. [Documentación de la API](./API.md). |
+| ☁️ **Persistencia opcional en la nube** | Con dos variables de entorno, el estado se respalda en **Supabase** (Postgres + Storage) y sobrevive redeploys; sin ellas todo funciona local. |
 
-## ✨ Novedades anteriores
+## 🏗 Arquitectura
 
-- **Carruseles a partir de un prompt + Nano Banana 🍌**: la IA (Gemini o Claude) escribe los slides y el modelo de imágenes de Gemini (*Nano Banana*, `gemini-2.5-flash-image`) genera la imagen de fondo real de cada diapositiva.
-- **Nano Banana 2.0**: generación de imágenes **en paralelo** (3 a la vez), opción **Nano Banana Pro** (`gemini-3-pro-image`) e **imagen de referencia** (subes tu logo/producto y el modelo lo integra — image-to-image).
-- **Estilo visual configurable** y regeneración por slide; **descarga ZIP real** de todo el carrusel (no PNGs sueltos).
-- **Guardar / cargar carruseles**: persistencia en el servidor (`/api/projects`); recupera tus carruseles aunque cierres el navegador.
-- **Publicación real a Meta/Instagram**: selector de Página de Facebook + cuenta de Instagram Business (usa `/api/meta/accounts` y el token de página).
-- **Correo real (SMTP / Nodemailer)** desde el panel de Integraciones (Drive y Calendar siguen simulados — requieren OAuth de Google).
-- **Seguridad**: OAuth con `state` aleatorio verificado (anti‑CSRF) y callbacks sin XSS; se eliminaron las API keys hardcodeadas del cliente.
-- **Calidad**: ESLint + Prettier + tests (Vitest) + CI en GitHub Actions; notificaciones tipo *toast* en vez de `alert()`.
-- **Modelos corregidos**: IDs reales de Gemini (`gemini-2.5-flash`, `gemini-flash-latest`, `gemini-2.5-flash-lite`) con reintentos y fallback automático.
+```mermaid
+flowchart LR
+  subgraph Frontend["React 19 + Vite + Tailwind"]
+    UI[12 módulos: Carruseles · Marca · Gestor · Calendario · Métricas ...]
+  end
 
-## 🔑 Configuración mínima (lo más simple posible)
+  subgraph Backend["Express + TypeScript"]
+    AI[aiRoutes<br/>Gemini · Claude · Nano Banana]
+    PUB[publish + publishAllCore<br/>orquestador multi-red]
+    SCHED[scheduler<br/>reintentos + métricas 6h]
+    STORE[serverStore<br/>persistencia + secretStore AES-256-GCM]
+    EXT[externalApi<br/>API keys + webhooks HMAC]
+  end
 
-Solo necesitas **una** clave para que funcione todo (carruseles, copys, calendarios e imágenes Nano Banana): tu **API Key de Google AI Studio (Gemini)**.
+  subgraph Terceros
+    META[Meta Graph API<br/>IG · FB · Ads]
+    LI[LinkedIn API]
+    GEM[Google Gemini]
+    SB[(Supabase<br/>opcional)]
+  end
 
-Hay dos formas de cargarla:
+  UI --> AI & PUB & STORE
+  AI --> GEM
+  PUB --> META & LI
+  SCHED --> PUB
+  STORE <--> SB
+  EXT --> PUB
+  CRM[CRM / Zapier / n8n] <--> EXT
+```
 
-1. **Desde la app (recomendado, sin tocar archivos):**
-   - Abre la pestaña **"Integración Nube"**.
-   - Pega tu key de Gemini en el panel *IA Gemini API Key* y pulsa **Conectar Key**.
-   - (Opcional) Pega tu key de Claude para usar el motor alternativo Claude 3.5 Haiku.
-   - La clave se guarda **solo en tu navegador** (localStorage) y se envía por cabecera en cada petición. No se sube a ningún lado.
+**Decisiones de diseño destacables:**
+- El scheduler llama a las funciones de publicación **directamente** (sin HTTP a sí mismo) y resuelve los tokens cifrados just-in-time.
+- La lógica de "publicar en todas" vive en un solo módulo (`publishAllCore`) compartido por la ruta interna, la API externa y el scheduler.
+- La capa de persistencia está aislada en `serverStore.ts`: file-based por defecto, espejada a Postgres cuando Supabase está configurado (mismo API síncrono, push debounced en background).
+- Todos los endpoints de escritura validan con **Zod**; los flujos OAuth usan `state` anti-CSRF y serialización XSS-safe en las páginas de callback.
 
-2. **Por variable de entorno (para despliegue):** crea un archivo `.env.local` en la raíz:
-   ```env
-   GEMINI_API_KEY="tu_api_key_de_gemini"
-   # Opcional:
-   ANTHROPIC_API_KEY="tu_api_key_de_anthropic"
-   ```
+## 🔐 Seguridad
 
-> Consigue tu clave gratis en: https://aistudio.google.com/app/apikey
+Cifrado de tokens en reposo, rate limiting por capas, cabeceras de seguridad, comparación de API keys en tiempo constante, guardas anti-SSRF en webhooks y protección XSS/CSRF en OAuth. Detalle completo en **[SECURITY.md](./SECURITY.md)**.
 
-Si no configuras ninguna clave, la app funciona en **Modo Demo** con contenido de ejemplo (sin generar imágenes reales).
-
-## ▶️ Correr en local
+## 🚀 Empezar
 
 **Requisitos:** Node.js 18+
 
 ```bash
 npm install
-npm run dev
+npm run dev        # http://localhost:3000
 ```
 
-Abre 👉 **http://localhost:3000**
+Solo necesitas **una** clave para que todo funcione (carruseles, imágenes, copys, calendario): tu API key de [Google AI Studio (Gemini)](https://aistudio.google.com/app/apikey). Se carga desde la pestaña **"Integración Nube"** de la app (queda en tu navegador) o por `.env.local`:
 
-## 🛠️ Scripts
+```env
+GEMINI_API_KEY="tu_api_key"
+```
+
+Sin clave, la app corre en **modo demo** claramente señalizado. Para publicar de verdad en redes: crea una app en [Meta Developers](https://developers.facebook.com/apps/) y/o [LinkedIn Developers](https://www.linkedin.com/developers/) y completa las variables de `.env.example`.
+
+### Scripts
 
 | Comando | Descripción |
 | --- | --- |
-| `npm run dev` | Levanta el servidor Express + Vite en desarrollo (puerto 3000, configurable con `PORT`) |
-| `npm run build` | Compila el frontend (Vite) y empaqueta el servidor |
-| `npm run start` | Sirve el build de producción |
-| `npm run lint` | Chequeo de tipos con TypeScript |
-| `npm run lint:eslint` | Linter ESLint sobre `src` |
-| `npm test` | Tests unitarios con Vitest |
-| `npm run format` | Formatea el código con Prettier |
+| `npm run dev` | Servidor Express + Vite en desarrollo |
+| `npm run build` / `npm start` | Build y servidor de producción |
+| `npm test` | Tests unitarios (Vitest) |
+| `npm run lint` / `npm run lint:eslint` | Typecheck estricto / ESLint |
 
-> ¿El puerto 3000 ocupado? Usa otro: `PORT=3001 npm run dev` (o en PowerShell `$env:PORT=3001; npm run dev`).
+## ☁️ Despliegue
 
-## 🍌 Cómo generar un carrusel con imágenes
+El scheduler corre dentro del proceso Express, así que necesita un hosting **siempre encendido** (Railway, Render, Fly.io o VPS) con HTTPS:
 
-1. Ve a la pestaña **"Carruseles"**.
-2. Escribe el **Tema / Prompt** del carrusel, elige nº de slides, canal y tono.
-3. (Opcional) Escribe un **Estilo Visual** para las imágenes y marca *"Generar imágenes con Nano Banana"*.
-4. Pulsa **Generar**. La IA escribe los slides; si marcaste la casilla, Nano Banana crea las imágenes.
-5. También puedes pulsar **🍌 Generar imágenes (Nano Banana)** para todo el carrusel, o **Regenerar 🍌** en un slide concreto.
-6. Edita textos/colores y **descarga** el PNG de cada slide o el carrusel completo.
+1. `npm run build && npm start` (un solo proceso sirve frontend + API; puerto vía `PORT`).
+2. `APP_URL` con tu dominio HTTPS (Instagram exige URLs públicas para las imágenes).
+3. Variables de `.env.example` en el panel del hosting.
+4. Disco persistente para `.data/`, **o** conecta Supabase: ejecuta [`supabase/migration.sql`](./supabase/migration.sql) una vez y define `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` — el estado y las imágenes pasan a la nube y sobreviven redeploys.
 
-## 🚀 Despliegue (para publicar de verdad)
+## 🧪 Calidad
 
-El programador de publicaciones corre **dentro del servidor Express**, así que necesitas un hosting **siempre encendido** (Railway, Render, Fly.io o un VPS). En serverless (p. ej. Vercel functions) los posts programados no saldrían.
+- **CI en GitHub Actions**: typecheck estricto de TypeScript, ESLint, 32 tests unitarios y build en cada push.
+- Tests cubren utilidades críticas: cifrado de secretos, validación Zod, guardas SSRF, serialización XSS-safe, stores.
+- Modo demo honesto: lo simulado está señalizado; lo publicado es real (Graph API / LinkedIn API).
 
-1. `npm run build && npm start` (sirve el frontend compilado y la API en un solo proceso; puerto via `PORT`).
-2. Configura `APP_URL` con tu dominio **HTTPS** — Instagram exige URLs públicas para las imágenes (`/uploads`).
-3. Variables en `.env.local` / panel del hosting: `GEMINI_API_KEY`, `META_APP_ID`, `META_APP_SECRET`, `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, SMTP y (opcional) `EXTERNAL_API_KEYS`.
-4. El disco debe ser **persistente** (carpeta `.data/` guarda proyectos, calendario, biblioteca y cola de publicación).
-5. Meta: con tu propia cuenta (admin/developer de la app) todo funciona en modo desarrollo; para que **otras cuentas** conecten, la app de Meta debe pasar App Review.
+## 🗺 Roadmap
 
-## 🧭 Estado honesto del producto
+- **Multi-usuario** (Supabase Auth + roles + flujo editorial borrador→aprobado→publicado).
+- Export **PDF nativo** para carruseles de LinkedIn.
+- UTMs automáticos + métricas de conversión.
+- Video en LinkedIn (flujo de upload propio de su API).
 
-- **Real**: publicación IG/FB/LinkedIn, carruseles Nano Banana, biblioteca de marca, calendario con programación automática, métricas IG/FB, borradores de Meta Ads, email SMTP, API externa y webhooks.
-- **Simulado todavía**: Google Drive y Google Calendar (requieren OAuth de Google), y los datos del tablero de equipo/pipeline.
+## 📄 Licencia
 
-## ☁️ Persistencia en la nube con Supabase (fase 2, parte 1 — ya disponible)
-
-Por defecto todo vive en `.data/` (disco local). Si tu hosting tiene disco efímero, conecta Supabase y tus datos e imágenes sobreviven cualquier redeploy:
-
-1. Ejecuta **`supabase/migration.sql`** una vez en tu proyecto (Dashboard → SQL Editor).
-2. Define `SUPABASE_URL` y `SUPABASE_SERVICE_KEY` (Settings → API → service_role) en el servidor.
-
-Con eso: el store completo (calendario, programados, biblioteca, brand kit, webhooks) se respalda en Postgres al instante y se restaura solo al arrancar, y las imágenes nuevas se suben a **Supabase Storage** con URL pública estable (ideal para Instagram). Sin esas variables, la app funciona igual que siempre en local.
-
-## 🗺️ Fase 2 (parte 2, pendiente): multi-usuario
-
-1. **Supabase Auth** (login por email) + roles (admin / editor / aprobador).
-2. Tokens de redes guardados **cifrados en el servidor por workspace** (el `secretStore` ya existe) en vez de localStorage.
-3. Flujo editorial: borrador → aprobado → programado → publicado.
-
-## ⚠️ Seguridad
-
-- **Nunca** subas API keys reales al repositorio. Las claves se cargan desde la app (localStorage) o desde `.env.local`, que está ignorado por `.gitignore`.
-- Si en algún momento una clave quedó expuesta en el código o en el historial de git, **rótala** (genera una nueva) en el panel correspondiente de Google AI Studio / Anthropic.
+[MIT](./LICENSE)

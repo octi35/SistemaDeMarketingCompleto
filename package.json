@@ -1,7 +1,24 @@
 {
   "name": "adteam-ai",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "Suite full-stack de marketing autónomo con IA: crea carruseles e imágenes de marca con Gemini/Nano Banana y publica o programa en Instagram, Facebook y LinkedIn con un click.",
+  "license": "MIT",
+  "author": "octi35",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/octi35/SistemaDeMarketingCompleto.git"
+  },
+  "keywords": [
+    "marketing-automation",
+    "ai",
+    "gemini",
+    "instagram-api",
+    "social-media-scheduler",
+    "react",
+    "express",
+    "typescript"
+  ],
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
