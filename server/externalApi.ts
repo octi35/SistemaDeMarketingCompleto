@@ -3,6 +3,8 @@
 // Webhook subscriptions (outgoing notifications) are managed here too.
 // Full reference: API.md at the repo root.
 import express from "express";
+import crypto from "crypto";
+import rateLimit from "express-rate-limit";
 import { runPublishAll } from "./publishAllCore";
 import { parseBody, publishAllSchema, webhookSchema } from "./validate";
 import { listPosts, listScheduled, getCalendar, listAssets, listWebhooks, addWebhook, deleteWebhook } from "../serverStore";
@@ -17,6 +19,18 @@ function configuredKeys(): string[] {
     .filter((k) => k.length >= 16);
 }
 
+// Constant-time comparison via SHA-256 digests: same-length buffers for
+// timingSafeEqual and no early-exit on the first differing character.
+function safeKeyMatch(provided: string, keys: string[]): boolean {
+  const providedHash = crypto.createHash("sha256").update(provided).digest();
+  let match = false;
+  for (const key of keys) {
+    const keyHash = crypto.createHash("sha256").update(key).digest();
+    if (crypto.timingSafeEqual(providedHash, keyHash)) match = true;
+  }
+  return match;
+}
+
 function requireApiKey(req: express.Request, res: express.Response, next: express.NextFunction): void {
   const keys = configuredKeys();
   if (keys.length === 0) {
@@ -27,7 +41,7 @@ function requireApiKey(req: express.Request, res: express.Response, next: expres
     return;
   }
   const provided = (req.headers["x-api-key"] as string) || "";
-  if (!provided || !keys.includes(provided)) {
+  if (!provided || !safeKeyMatch(provided, keys)) {
     res.status(401).json({ error: "API key inválida o ausente (cabecera X-Api-Key)." });
     return;
   }
@@ -36,6 +50,7 @@ function requireApiKey(req: express.Request, res: express.Response, next: expres
 
 export function registerExternalApi(app: express.Express, ctx: ServerContext): void {
   const ext = express.Router();
+  ext.use(rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false }));
   ext.use(requireApiKey);
 
   // Publish (or schedule with publishAt) to every network in one call.

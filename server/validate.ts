@@ -70,8 +70,36 @@ export const carouselTemplateSchema = z.object({
   design: z.record(z.string(), z.any()),
 });
 
+/**
+ * Guards webhook URLs against SSRF: the server POSTs to these URLs, so
+ * loopback/link-local/private targets are rejected (the metadata endpoint
+ * 169.254.169.254 is the classic cloud-credentials theft vector). Set
+ * ALLOW_PRIVATE_WEBHOOKS=1 in dev to test against a local n8n/webhook.site.
+ */
+export function isSafeWebhookUrl(raw: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+  if (process.env.ALLOW_PRIVATE_WEBHOOKS === "1") return true;
+  // URL.hostname keeps brackets around IPv6 literals ("[::1]"): strip them.
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host === "0.0.0.0" || host.endsWith(".local") || host.endsWith(".internal")) return false;
+  // IPv4 private / loopback / link-local ranges + IPv6 loopback/ULA.
+  if (/^127\.|^10\.|^192\.168\.|^169\.254\.|^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+  if (host === "::1" || host.startsWith("fd") || host.startsWith("fe80")) return false;
+  return true;
+}
+
 export const webhookSchema = z.object({
-  url: z.string().url().max(500),
+  url: z
+    .string()
+    .url()
+    .max(500)
+    .refine(isSafeWebhookUrl, { message: "URL de webhook no permitida (destinos internos/privados bloqueados)." }),
   events: z.array(z.enum(["post.published", "post.failed", "asset.created"])).max(10).optional(),
   secret: z.string().max(200).optional(),
 });

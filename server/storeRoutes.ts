@@ -351,6 +351,9 @@ export function registerStoreRoutes(app: express.Express, ctx: ServerContext): v
       if (list.length === 0) {
         return res.status(400).json({ error: "No hay imágenes para subir." });
       }
+      if (list.length > 12) {
+        return res.status(400).json({ error: "Máximo 12 archivos por petición." });
+      }
       const base = ctx.publicBaseUrl(req);
       const stored = await Promise.all(list.map((d) => storeImagePublic(d, base)));
       res.json({ urls: stored.map((s) => s.url), publicBase: base });

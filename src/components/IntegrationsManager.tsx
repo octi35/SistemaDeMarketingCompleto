@@ -644,7 +644,10 @@ export const IntegrationsManager: React.FC = () => {
   // Listen to OAuth Success Message from Popups
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
-      if (!e.origin.endsWith(".run.app") && !e.origin.includes("localhost") && !e.origin.includes("127.0.0.1")) {
+      // The OAuth popups are served by THIS app, so only same-origin messages
+      // are trusted. (Suffix checks like ".run.app" would accept messages from
+      // any other app on the same platform.)
+      if (e.origin !== window.location.origin) {
         return;
       }
 

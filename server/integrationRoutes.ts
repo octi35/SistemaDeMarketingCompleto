@@ -64,7 +64,11 @@ app.get(["/api/auth/meta/callback", "/api/auth/meta/callback/"], async (req, res
 
 // Live / Simulated Proxy Endpoint for Integration Actions
 app.post("/api/integrations/test", async (req, res) => {
-  const { provider, action, payload, token, accountId } = req.body;
+  const { provider, action, payload, token } = req.body;
+  // accountId gets interpolated into Graph API paths: restrict it to id-safe
+  // characters so it can't alter the request path.
+  const accountId =
+    typeof req.body.accountId === "string" ? req.body.accountId.replace(/[^\w:.-]/g, "").slice(0, 64) : "";
   const logs: any[] = [];
   
   const addLog = (dir: "REQ" | "RES", method: string, url: string, headers: any, data: any) => {

@@ -33,16 +33,35 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const isProduction = process.env.NODE_ENV === "production";
 
+// Behind a reverse proxy (Railway/Render/Fly/Cloud Run) this makes req.ip and
+// the rate limiter see the real client IP instead of the proxy's.
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+
+// Security headers on every response (CSP is intentionally omitted: the OAuth
+// popup pages use small inline scripts and Vite injects dev tooling).
+app.use((_req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+});
+
 // In production only allow the configured app origin (same-origin requests
 // don't need CORS at all); in dev stay permissive for tooling.
 app.use(isProduction ? cors({ origin: process.env.APP_URL || false }) : cors());
 // 100mb: video uploads (IG Reels / FB video) travel as base64 data URLs.
 app.use(express.json({ limit: "100mb" }));
 
-// Basic rate limit on the expensive AI generation endpoints.
+// Layered rate limits (per IP): a global ceiling for the whole API, plus
+// tighter budgets for the expensive AI endpoints and disk-writing uploads.
+const limiter = (limit: number) => rateLimit({ windowMs: 60_000, limit, standardHeaders: true, legacyHeaders: false });
+app.use("/api", limiter(300));
+app.use("/api/upload-image", limiter(30));
 app.use(
   ["/api/generate-", "/api/recommendations"].map((p) => `${p}*`),
-  rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: true, legacyHeaders: false })
+  limiter(30)
 );
 
 // Serve uploaded carousel images publicly (needed for Instagram publishing).

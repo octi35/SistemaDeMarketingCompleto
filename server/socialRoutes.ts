@@ -2,7 +2,7 @@
 // publishing (delegated to ./publish so the scheduler can reuse it) and
 // Instagram metrics. OAuth flows extracted verbatim from the original server.ts.
 import express from "express";
-import { issueOAuthState, consumeOAuthState } from "../oauthState";
+import { issueOAuthState, consumeOAuthState, jsonForInlineScript } from "../oauthState";
 import {
   publishInstagramPost,
   publishInstagramCarousel,
@@ -83,8 +83,8 @@ app.get(["/api/linkedin/callback", "/api/linkedin/callback/"], async (req, res) 
               if (window.opener) {
                 window.opener.postMessage({ 
                   type: 'OAUTH_LINKEDIN_SUCCESS', 
-                  token: ${JSON.stringify(accessToken)},
-                  expires_in: ${JSON.stringify(data.expires_in)}
+                  token: ${jsonForInlineScript(accessToken)},
+                  expires_in: ${jsonForInlineScript(data.expires_in)}
                 }, window.location.origin);
                 setTimeout(() => window.close(), 1000);
               } else {
@@ -220,8 +220,8 @@ app.get(["/api/meta/callback", "/api/meta/callback/"], async (req, res) => {
               if (window.opener) {
                 window.opener.postMessage({ 
                   type: 'OAUTH_META_SUCCESS', 
-                  token: ${JSON.stringify(accessToken)},
-                  expires_in: ${JSON.stringify(data.expires_in)}
+                  token: ${jsonForInlineScript(accessToken)},
+                  expires_in: ${jsonForInlineScript(data.expires_in)}
                 }, window.location.origin);
                 setTimeout(() => window.close(), 1000);
               } else {
