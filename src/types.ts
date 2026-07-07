@@ -26,6 +26,24 @@ export interface CarouselSlide {
   imageUrl?: string;
   /** Per-slide loading flag while Nano Banana renders the image. */
   imageLoading?: boolean;
+
+  // ---- Per-slide customization (all optional; defaults keep the classic look) ----
+  /** Exact prompt sent to Nano Banana for THIS slide (overrides the auto prompt). */
+  customImagePrompt?: string;
+  /** Vertical position of the text block. Default: "bottom" over image, "top" over gradient. */
+  textPosition?: "top" | "center" | "bottom";
+  /** Text alignment. Default "left". */
+  textAlign?: "left" | "center";
+  /** Font family for the slide. Default "sans". */
+  fontFamily?: "sans" | "serif" | "mono";
+  /** Title size preset. Default "md". */
+  titleSize?: "sm" | "md" | "lg";
+  /** Dark overlay intensity over the image, 0-100. Default 100 (classic). */
+  overlayOpacity?: number;
+  /** Hides title/body/accent bar (image-only slide). Default false. */
+  hideText?: boolean;
+  /** Hides the "n / total" counter. Default false. */
+  hideSlideNumber?: boolean;
 }
 
 export interface CalendarItem {
@@ -37,6 +55,8 @@ export interface CalendarItem {
   time: string;
   status: "Publicado" | "Programado" | "Borrador";
   copy: string;
+  /** Public URL of the attached creative (required to schedule Instagram). */
+  imageUrl?: string;
 }
 
 export interface CopyOption {

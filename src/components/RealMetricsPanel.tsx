@@ -43,18 +43,28 @@ export const RealMetricsPanel: React.FC = () => {
       .catch(() => {});
   }, []);
 
+  const [network, setNetwork] = useState<"instagram" | "facebook">("instagram");
+
   const igId = getStored(STORAGE_KEYS.metaIgAccountId);
+  const pageId = getStored(STORAGE_KEYS.metaPageId);
   const token = getStored(STORAGE_KEYS.metaAccessToken);
-  const connected = !!(igId && token);
+  const connected = network === "instagram" ? !!(igId && token) : !!(pageId && token);
 
   const loadMetrics = async () => {
     if (!connected) {
-      toast.error("Conecta tu Instagram en 'Gestor de Contenido' → 'Cargar mis páginas' para ver métricas reales.");
+      toast.error(
+        network === "instagram"
+          ? "Conecta tu Instagram en 'Gestor de Contenido' → 'Cargar mis páginas' para ver métricas reales."
+          : "Conecta tu página de Facebook en 'Gestor de Contenido' → 'Cargar mis páginas' primero."
+      );
       return;
     }
     setLoading(true);
     try {
-      const data = await apiPost<{ media: MediaMetric[] }>("/api/metrics/instagram", { igUserId: igId, token });
+      const data =
+        network === "instagram"
+          ? await apiPost<{ media: MediaMetric[] }>("/api/metrics/instagram", { igUserId: igId, token })
+          : await apiPost<{ media: MediaMetric[] }>("/api/metrics/facebook", { pageId, token });
       setMedia(data.media || []);
       if ((data.media || []).length === 0) toast.info("La cuenta no tiene publicaciones todavía.");
       else toast.success(`${data.media.length} publicaciones cargadas.`);
@@ -64,6 +74,29 @@ export const RealMetricsPanel: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Best posting slots computed from YOUR real posts: average engagement
+  // grouped by weekday + 3-hour block (needs a few posts to be meaningful).
+  const bestSlots = React.useMemo(() => {
+    const withTs = media.filter((m) => m.timestamp);
+    if (withTs.length < 5) return [];
+    const days = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+    const buckets = new Map<string, { total: number; count: number; label: string }>();
+    for (const m of withTs) {
+      const d = new Date(m.timestamp!);
+      const slotStart = Math.floor(d.getHours() / 3) * 3;
+      const key = `${d.getDay()}-${slotStart}`;
+      const label = `${days[d.getDay()]} ${String(slotStart).padStart(2, "0")}:00–${String(slotStart + 3).padStart(2, "0")}:00`;
+      const b = buckets.get(key) || { total: 0, count: 0, label };
+      b.total += m.engagement;
+      b.count += 1;
+      buckets.set(key, b);
+    }
+    return [...buckets.values()]
+      .map((b) => ({ label: b.label, avg: Math.round(b.total / b.count), count: b.count }))
+      .sort((a, b) => b.avg - a.avg)
+      .slice(0, 3);
+  }, [media]);
 
   const analyze = async () => {
     setAnalyzing(true);
@@ -89,13 +122,30 @@ export const RealMetricsPanel: React.FC = () => {
             <BarChart3 className="w-4 h-4 text-black" />
           </span>
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink">Métricas reales de Instagram</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink">Métricas reales</h3>
             <p className="text-[10px] text-muted">
-              {connected ? "Cuenta conectada — datos en vivo vía Graph API." : "Conecta tu Instagram para ver datos reales."}
+              {connected ? "Cuenta conectada — datos en vivo vía Graph API." : "Conecta tu cuenta para ver datos reales."}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
+          <div className="flex bg-sink border border-line rounded-lg p-0.5">
+            {(["instagram", "facebook"] as const).map((n) => (
+              <button
+                key={n}
+                onClick={() => {
+                  setNetwork(n);
+                  setMedia([]);
+                  setRecommendations([]);
+                }}
+                className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold uppercase transition ${
+                  network === n ? "bg-black text-white" : "text-muted hover:text-ink"
+                }`}
+              >
+                {n === "instagram" ? "IG" : "FB"}
+              </button>
+            ))}
+          </div>
           <button
             onClick={loadMetrics}
             disabled={loading}
@@ -151,6 +201,30 @@ export const RealMetricsPanel: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {bestSlots.length > 0 && (
+        <div className="bg-sink border border-line rounded-lg p-3">
+          <span className="text-[10px] uppercase tracking-wider text-faint font-mono block mb-2">
+            ⏰ Mejores momentos para publicar (según tus posts)
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {bestSlots.map((s, i) => (
+              <div key={s.label} className="bg-surface border border-line rounded-lg px-3 py-2">
+                <p className="text-[12px] font-semibold text-ink capitalize">
+                  {i === 0 ? "🥇 " : i === 1 ? "🥈 " : "🥉 "}
+                  {s.label}
+                </p>
+                <p className="text-[10px] text-muted mt-0.5">
+                  ~{s.avg} interacciones/post ({s.count} publicaciones)
+                </p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-faint mt-2">
+            Usa estas franjas al programar el calendario o las publicaciones del Gestor.
+          </p>
         </div>
       )}
 

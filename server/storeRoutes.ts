@@ -12,6 +12,7 @@ import {
   listPosts,
   addScheduled,
   cancelScheduled,
+  retryScheduled,
   listScheduled,
   getPipeline,
   savePipeline,
@@ -21,10 +22,13 @@ import {
   addExperiment,
   getReportConfig,
   saveReportConfig,
+  listCarouselTemplates,
+  addCarouselTemplate,
+  deleteCarouselTemplate,
 } from "../serverStore";
 import { collectMetricsOnce, buildMetricsSummary, decideDueExperiments } from "./metricsHistory";
 import { sendWeeklyReport, buildReportText } from "./weeklyReport";
-import { saveDataUrlImage } from "../imageStore";
+import { storeImagePublic } from "./cloudStorage";
 import { sealPayloadTokens, storeSecret } from "./secretStore";
 import {
   parseBody,
@@ -35,6 +39,7 @@ import {
   brandSchema,
   experimentSchema,
   reportConfigSchema,
+  carouselTemplateSchema,
 } from "./validate";
 import type { ServerContext } from "./context";
 
@@ -117,6 +122,13 @@ export function registerStoreRoutes(app: express.Express, ctx: ServerContext): v
     res.json({ success: true });
   });
 
+  // Re-queues a FAILED scheduled post for immediate publishing.
+  app.post("/api/scheduled/:id/retry", (req, res) => {
+    const ok = retryScheduled(req.params.id);
+    if (!ok) return res.status(404).json({ error: "Solo se pueden reintentar publicaciones fallidas." });
+    res.json({ success: true });
+  });
+
   // ---- Calendar plan persistence (single current plan) ----
   app.get("/api/calendar", (_req, res) => {
     res.json({ calendar: getCalendar() });
@@ -130,6 +142,70 @@ export function registerStoreRoutes(app: express.Express, ctx: ServerContext): v
     } catch (error: any) {
       res.status(500).json({ error: error.message || "No se pudo guardar el calendario" });
     }
+  });
+
+  // ---- Carousel design templates (save a look, reuse it on any carousel) ----
+  app.get("/api/templates", (_req, res) => {
+    res.json({ templates: listCarouselTemplates() });
+  });
+
+  app.post("/api/templates", (req, res) => {
+    const body = parseBody(carouselTemplateSchema, req, res);
+    if (!body) return;
+    res.json({ template: addCarouselTemplate(body) });
+  });
+
+  app.delete("/api/templates/:id", (req, res) => {
+    if (!deleteCarouselTemplate(req.params.id)) return res.status(404).json({ error: "Plantilla no encontrada" });
+    res.json({ success: true });
+  });
+
+  // ---- Calendar export as iCalendar (importable in Google Calendar/Outlook) ----
+  app.get("/api/calendar.ics", (_req, res) => {
+    const cal = getCalendar();
+    const items: any[] = cal?.items || [];
+    if (!items.length) {
+      return res.status(404).type("text/plain").send("No hay plan de calendario guardado. Genera y guarda el plan primero.");
+    }
+
+    const esc = (s: string) =>
+      String(s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+    const pad = (n: number) => String(n).padStart(2, "0");
+    // Same convention as the UI scheduler: day 1 of the plan = tomorrow.
+    const fmtLocal = (d: Date) =>
+      `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+    const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+
+    const events = items.map((item) => {
+      const d = new Date();
+      d.setDate(d.getDate() + Math.max(1, Number(item.day) || 1));
+      const [hh, mm] = String(item.time || "10:00").split(":").map((n: string) => parseInt(n, 10));
+      d.setHours(isNaN(hh) ? 10 : hh, isNaN(mm) ? 0 : mm, 0, 0);
+      const end = new Date(d.getTime() + 30 * 60 * 1000);
+      return [
+        "BEGIN:VEVENT",
+        `UID:adteam-day-${item.day}-${cal?.updatedAt || "plan"}@adteam.ai`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART:${fmtLocal(d)}`,
+        `DTEND:${fmtLocal(end)}`,
+        `SUMMARY:${esc(`[${item.platform || "Post"}] ${item.title || `Día ${item.day}`}`)}`,
+        `DESCRIPTION:${esc(item.copy || item.description || "")}`,
+        "END:VEVENT",
+      ].join("\r\n");
+    });
+
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//AdTeam AI//Calendario de Contenido//ES",
+      "CALSCALE:GREGORIAN",
+      ...events,
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+    res.setHeader("Content-Disposition", 'attachment; filename="adteam-calendario.ics"');
+    res.send(ics);
   });
 
   // ---- Real email via SMTP (Nodemailer) ----
@@ -267,16 +343,20 @@ export function registerStoreRoutes(app: express.Express, ctx: ServerContext): v
   });
 
   // ---- Upload base64 images -> public URLs (needed for IG publishing) ----
-  app.post("/api/upload-image", (req, res) => {
+  // Uses Supabase Storage when configured (stable CDN URLs); local /uploads otherwise.
+  app.post("/api/upload-image", async (req, res) => {
     try {
       const { images, dataUrl } = req.body || {};
       const list: string[] = Array.isArray(images) ? images : dataUrl ? [dataUrl] : [];
       if (list.length === 0) {
         return res.status(400).json({ error: "No hay imágenes para subir." });
       }
+      if (list.length > 12) {
+        return res.status(400).json({ error: "Máximo 12 archivos por petición." });
+      }
       const base = ctx.publicBaseUrl(req);
-      const urls = list.map((d) => `${base}/uploads/${saveDataUrlImage(d)}`);
-      res.json({ urls, publicBase: base });
+      const stored = await Promise.all(list.map((d) => storeImagePublic(d, base)));
+      res.json({ urls: stored.map((s) => s.url), publicBase: base });
     } catch (error: any) {
       console.error("Error uploading image:", error);
       res.status(500).json({ error: error.message || "No se pudo subir la imagen" });

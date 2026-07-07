@@ -3,6 +3,7 @@
 // (gitignored). For multi-user / production, swap this for Supabase/Postgres.
 import fs from "fs";
 import path from "path";
+import { queueCloudPush } from "./server/cloudStore";
 
 const DATA_DIR = path.join(process.cwd(), ".data");
 const STORE_FILE = path.join(DATA_DIR, "store.json");
@@ -41,6 +42,8 @@ export interface ScheduledPost {
   label?: string;
   error?: string;
   resultId?: string;
+  /** Failed publish attempts so far (the scheduler retries with backoff). */
+  attempts?: number;
   createdAt: string;
 }
 
@@ -81,6 +84,39 @@ export interface BrandKit {
   updatedAt?: string;
 }
 
+/** Reusable carousel design template (colors, fonts, layout, watermark...). */
+export interface CarouselTemplate {
+  id: string;
+  name: string;
+  /** Flexible design payload applied over every slide + designer settings. */
+  design: Record<string, any>;
+  createdAt: string;
+}
+
+/** Outgoing webhook subscription (notify external systems). */
+export interface WebhookSub {
+  id: string;
+  url: string;
+  /** Empty = all events. */
+  events?: string[];
+  /** Shared secret used to sign payloads (HMAC-SHA256). */
+  secret?: string;
+  createdAt: string;
+}
+
+/** An AI-generated (or uploaded) brand image stored in /uploads or the cloud. */
+export interface BrandAsset {
+  id: string;
+  /** Filename inside the uploads dir (or the cloud bucket). */
+  file: string;
+  /** Absolute public URL when stored in cloud storage (Supabase). */
+  url?: string;
+  prompt?: string;
+  concept?: string;
+  tags?: string[];
+  createdAt: string;
+}
+
 export interface Experiment {
   id: string;
   name: string;
@@ -113,6 +149,9 @@ interface Store {
   metricsAuth?: MetricsAuth;
   pipeline?: { cards: PipelineCard[]; updatedAt: string };
   brand?: BrandKit;
+  assets?: BrandAsset[];
+  carouselTemplates?: CarouselTemplate[];
+  webhooks?: WebhookSub[];
   experiments?: Experiment[];
   reportConfig?: ReportConfig;
 }
@@ -131,6 +170,9 @@ function readStore(): Store {
       metricsAuth: parsed.metricsAuth,
       pipeline: parsed.pipeline,
       brand: parsed.brand,
+      assets: Array.isArray(parsed.assets) ? parsed.assets : [],
+      carouselTemplates: Array.isArray(parsed.carouselTemplates) ? parsed.carouselTemplates : [],
+      webhooks: Array.isArray(parsed.webhooks) ? parsed.webhooks : [],
       experiments: Array.isArray(parsed.experiments) ? parsed.experiments : [],
       reportConfig: parsed.reportConfig,
     };
@@ -146,6 +188,31 @@ function writeStore(store: Store): void {
     fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2));
   } catch (err) {
     console.error("[store] Failed to persist store:", err);
+  }
+  // Mirrors the snapshot to Supabase when configured (debounced, background).
+  queueCloudPush(store);
+}
+
+// ---- Cloud sync helpers (used by server/cloudStore at boot) ----
+export function exportStoreSnapshot(): Store {
+  return readStore();
+}
+
+export function hasLocalStoreData(): boolean {
+  const s = readStore();
+  return Boolean(
+    s.projects.length || s.posts?.length || s.scheduled?.length || s.calendar?.items?.length ||
+    s.assets?.length || s.brand || s.webhooks?.length || s.metrics?.length
+  );
+}
+
+/** Overwrites the local store with a cloud snapshot (no cloud re-push). */
+export function replaceStoreFromCloud(snapshot: any): void {
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(STORE_FILE, JSON.stringify(snapshot ?? { projects: [] }, null, 2));
+  } catch (err) {
+    console.error("[store] Failed to restore store from cloud:", err);
   }
 }
 
@@ -275,6 +342,19 @@ export function cancelScheduled(id: string): boolean {
   return true;
 }
 
+/** Re-queues a failed scheduled post for immediate publishing. */
+export function retryScheduled(id: string): boolean {
+  const store = readStore();
+  const item = (store.scheduled || []).find((s) => s.id === id);
+  if (!item || item.status !== "failed") return false;
+  item.status = "pending";
+  item.publishAt = new Date().toISOString();
+  item.attempts = 0;
+  item.error = undefined;
+  writeStore(store);
+  return true;
+}
+
 export function getDuePending(nowIso: string): ScheduledPost[] {
   return (readStore().scheduled || []).filter((s) => s.status === "pending" && s.publishAt <= nowIso);
 }
@@ -333,6 +413,91 @@ export function saveBrand(patch: BrandKit): BrandKit {
   store.brand = { ...(store.brand || {}), ...patch, updatedAt: new Date().toISOString() };
   writeStore(store);
   return store.brand;
+}
+
+// ---- Brand assets (AI-generated image library) ----
+export function listAssets(): BrandAsset[] {
+  return (readStore().assets || []).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export function addAsset(input: Omit<BrandAsset, "id" | "createdAt">): BrandAsset {
+  const store = readStore();
+  const asset: BrandAsset = {
+    id: `asset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    file: input.file,
+    url: input.url,
+    prompt: input.prompt,
+    concept: input.concept,
+    tags: input.tags,
+    createdAt: new Date().toISOString(),
+  };
+  store.assets = [asset, ...(store.assets || [])].slice(0, 1000);
+  writeStore(store);
+  return asset;
+}
+
+export function deleteAsset(id: string): BrandAsset | null {
+  const store = readStore();
+  const asset = (store.assets || []).find((a) => a.id === id) || null;
+  if (!asset) return null;
+  store.assets = (store.assets || []).filter((a) => a.id !== id);
+  writeStore(store);
+  return asset;
+}
+
+// ---- Carousel design templates ----
+export function listCarouselTemplates(): CarouselTemplate[] {
+  return (readStore().carouselTemplates || []).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+}
+
+export function addCarouselTemplate(input: { name: string; design: Record<string, any> }): CarouselTemplate {
+  const store = readStore();
+  const tpl: CarouselTemplate = {
+    id: `tpl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    name: input.name,
+    design: input.design,
+    createdAt: new Date().toISOString(),
+  };
+  store.carouselTemplates = [tpl, ...(store.carouselTemplates || [])].slice(0, 50);
+  writeStore(store);
+  return tpl;
+}
+
+export function deleteCarouselTemplate(id: string): boolean {
+  const store = readStore();
+  const before = (store.carouselTemplates || []).length;
+  store.carouselTemplates = (store.carouselTemplates || []).filter((t) => t.id !== id);
+  if ((store.carouselTemplates || []).length === before) return false;
+  writeStore(store);
+  return true;
+}
+
+// ---- Outgoing webhooks ----
+export function listWebhooks(): WebhookSub[] {
+  return readStore().webhooks || [];
+}
+
+export function addWebhook(input: { url: string; events?: string[]; secret?: string }): WebhookSub {
+  const store = readStore();
+  const hook: WebhookSub = {
+    id: `hook_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    url: input.url,
+    events: input.events,
+    secret: input.secret,
+    createdAt: new Date().toISOString(),
+  };
+  store.webhooks = [hook, ...(store.webhooks || [])].slice(0, 20);
+  writeStore(store);
+  return hook;
+}
+
+export function deleteWebhook(id: string): boolean {
+  const store = readStore();
+  const before = (store.webhooks || []).length;
+  store.webhooks = (store.webhooks || []).filter((w) => w.id !== id);
+  if ((store.webhooks || []).length === before) return false;
+  writeStore(store);
+  return true;
 }
 
 // ---- A/B experiments ----

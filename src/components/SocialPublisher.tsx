@@ -49,31 +49,78 @@ export const SocialPublisher: React.FC = () => {
     } catch (e) {
       console.error(e);
     }
-    // Default mock initial media assets
-    return [
-      {
-        id: "mock-1",
-        name: "grafico_roi_anuncios.png",
-        type: "image",
-        url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80",
-        dateAdded: "24/06/2026, 09:12"
-      },
-      {
-        id: "mock-2",
-        name: "reunion_equipo_marketing.mp4",
-        type: "video",
-        url: "https://images.unsplash.com/photo-1531538606174-0f90ff5dce83?auto=format&fit=crop&w=800&q=80",
-        dateAdded: "24/06/2026, 11:30"
-      }
-    ];
+    // Starts empty: the library fills with your uploads and the brand assets
+    // generated in the "Marca" tab (no placeholder demo files).
+    return [];
   });
 
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+
+  // Multi-selection (images only): 2+ selected images publish as an
+  // Instagram carousel / Facebook multi-photo / LinkedIn multi-image post.
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const toggleMultiSelect = (item: MediaItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (item.type !== "image") return;
+    setSelectedIds((prev) => (prev.includes(item.id) ? prev.filter((i) => i !== item.id) : [...prev, item.id]));
+  };
+
+  /** Images to publish, in selection order; falls back to the active item. */
+  const imagesToPublish = (): MediaItem[] => {
+    const byId = new Map(mediaLibrary.map((m) => [m.id, m]));
+    const multi = selectedIds.map((id) => byId.get(id)).filter((m): m is MediaItem => !!m && m.type === "image");
+    if (multi.length > 0) return multi.slice(0, 10);
+    return selectedMedia && selectedMedia.type === "image" ? [selectedMedia] : [];
+  };
+
+  /** Resolves the selected images to public URLs (uploads data: URLs in one batch). */
+  const uploadImagesToPublish = async (): Promise<string[]> => {
+    const items = imagesToPublish();
+    const dataUrls = items.filter((m) => (m.data || m.url).startsWith("data:")).map((m) => m.data || m.url);
+    let uploaded: string[] = [];
+    if (dataUrls.length > 0) {
+      const up = await apiPost<{ urls: string[] }>("/api/upload-image", { images: dataUrls });
+      uploaded = up.urls || [];
+    }
+    let di = 0;
+    return items
+      .map((m) => {
+        const raw = m.data || m.url;
+        return raw.startsWith("data:") ? uploaded[di++] : raw;
+      })
+      .filter(Boolean);
+  };
   
   // AI Generator Inputs
   const [productName, setProductName] = useState("AdTeam AI - Agencia Autónoma de Marketing Multiagente");
   const [targetTone, setTargetTone] = useState("Professional");
   const [additionalNotes, setAdditionalNotes] = useState("Enfocarse en la facilidad de subir videos y fotos para que la IA se encargue de todo.");
+
+  // Destination link appended to every copy, tagged with UTMs per network so
+  // conversions are attributable in Analytics (utm_source = red).
+  const [destinationUrl, setDestinationUrl] = useState(() => getStored(STORAGE_KEYS.destinationUrl));
+  const [utmEnabled, setUtmEnabled] = useState(true);
+  useEffect(() => {
+    setStored(STORAGE_KEYS.destinationUrl, destinationUrl);
+  }, [destinationUrl]);
+
+  const linkFor = (network: "linkedin" | "instagram" | "facebook"): string => {
+    const raw = destinationUrl.trim();
+    if (!raw) return "";
+    try {
+      const u = new URL(raw.startsWith("http") ? raw : `https://${raw}`);
+      if (utmEnabled) {
+        u.searchParams.set("utm_source", network);
+        u.searchParams.set("utm_medium", "social");
+        const campaign = productName.trim().toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 50);
+        u.searchParams.set("utm_campaign", campaign || "adteam");
+      }
+      return u.toString();
+    } catch {
+      return raw;
+    }
+  };
   
   // Generation & Publishing States
   const [isGenerating, setIsGenerating] = useState(false);
@@ -84,6 +131,16 @@ export const SocialPublisher: React.FC = () => {
   // Publishing progress
   const [isPublishing, setIsPublishing] = useState<string | null>(null);
   const [publishStatus, setPublishStatus] = useState<{ [key: string]: { status: string; link?: string } }>({});
+
+  // IG growth practice: publish the hashtags as the first comment instead of
+  // inside the caption.
+  const [igHashtagsAsComment, setIgHashtagsAsComment] = useState(false);
+
+  // One-click multi-network publishing
+  const [isPublishingAll, setIsPublishingAll] = useState(false);
+  const [publishAllResults, setPublishAllResults] = useState<
+    { network: string; ok: boolean; skipped?: boolean; detail: string }[] | null
+  >(null);
   
   // OAuth Token check from localStorage
   const [linkedinToken, setLinkedinToken] = useState(() => localStorage.getItem("linkedin_access_token") || "");
@@ -136,10 +193,35 @@ export const SocialPublisher: React.FC = () => {
     }
   };
 
-  // Update localStorage when library changes
+  // Update localStorage when library changes (server-side brand assets are
+  // fetched fresh on load, so they are not persisted locally).
   useEffect(() => {
-    localStorage.setItem("adteam_media_library", JSON.stringify(mediaLibrary));
+    localStorage.setItem(
+      "adteam_media_library",
+      JSON.stringify(mediaLibrary.filter((m) => !m.id.startsWith("asset-")))
+    );
   }, [mediaLibrary]);
+
+  // Brand assets generated in "Marca" appear in the library too; their URLs
+  // are already public so they can be published as-is.
+  useEffect(() => {
+    apiGet<{ assets: any[] }>("/api/assets")
+      .then((r) => {
+        const serverItems: MediaItem[] = (r.assets || []).map((a) => ({
+          id: `asset-${a.id}`,
+          name: a.concept || "Imagen de marca 🍌",
+          type: "image" as const,
+          url: a.url,
+          dateAdded: new Date(a.createdAt).toLocaleString(),
+        }));
+        if (!serverItems.length) return;
+        setMediaLibrary((prev) => {
+          const existing = new Set(prev.map((m) => m.id));
+          return [...serverItems.filter((s) => !existing.has(s.id)), ...prev];
+        });
+      })
+      .catch(() => {});
+  }, []);
 
   // Set the first item of the gallery as selected by default if nothing is selected
   useEffect(() => {
@@ -240,39 +322,77 @@ export const SocialPublisher: React.FC = () => {
     }
   };
 
+  /** Full copy for a network; for IG the hashtags can move to the first comment. */
+  const networkText = (network: "linkedin" | "facebook" | "instagram") => {
+    const c = generatedResult![network];
+    const link = linkFor(network);
+    const base = `${c.hook}\n\n${c.body}\n\n${c.cta}${link ? `\n\n🔗 ${link}` : ""}`;
+    if (network === "instagram" && igHashtagsAsComment) {
+      return { text: base, firstComment: c.hashtags.join(" ") };
+    }
+    return { text: `${base}\n\n${c.hashtags.join(" ")}`, firstComment: undefined };
+  };
+
+  const isVideoSelected = selectedIds.length === 0 && selectedMedia?.type === "video";
+
+  /** Uploads the active video (data URL) and returns its public URL. */
+  const uploadVideoToPublish = async (): Promise<string> => {
+    const raw = selectedMedia?.data || selectedMedia?.url || "";
+    if (!raw.startsWith("data:")) return raw;
+    const up = await apiPost<{ urls: string[] }>("/api/upload-image", { dataUrl: raw });
+    return up.urls?.[0] || "";
+  };
+
   // Builds the {endpoint, body} for a given network, uploading the selected
-  // image to a public URL when needed. Shared by publish-now and scheduling.
+  // media to public URLs when needed. Shared by publish-now and scheduling.
+  // 2+ selected images become an IG carousel / FB multi-photo automatically;
+  // a selected video becomes an IG Reel / FB page video.
   const buildNetworkBody = async (network: "linkedin" | "facebook" | "instagram") => {
-    const copyNode = generatedResult![network];
-    const fullText = `${copyNode.hook}\n\n${copyNode.body}\n\n${copyNode.cta}\n\n${copyNode.hashtags.join(" ")}`;
+    const { text: fullText, firstComment } = networkText(network);
     const metaPublishToken = selectedPageToken || metaToken;
 
-    const rawImage = selectedMedia?.data || selectedMedia?.url || "";
-    let publicImageUrl = rawImage;
-    if (rawImage.startsWith("data:")) {
-      try {
-        const upData = await apiPost<{ urls: string[] }>("/api/upload-image", { dataUrl: rawImage });
-        if (upData.urls?.[0]) publicImageUrl = upData.urls[0];
-      } catch {
-        /* fall back to the raw value */
+    if (isVideoSelected) {
+      if (network === "linkedin") {
+        throw new Error("Video en LinkedIn aún no está soportado; publícalo manualmente allí.");
       }
+      const videoUrl = await uploadVideoToPublish();
+      if (!videoUrl) throw new Error("No se pudo obtener la URL pública del video.");
+      if (network === "instagram") {
+        return {
+          endpoint: "/api/meta/instagram/reel",
+          body: { igAccountId: selectedIgId, videoUrl, caption: fullText, firstComment, token: metaPublishToken },
+        };
+      }
+      return {
+        endpoint: "/api/meta/facebook/video",
+        body: { pageId: selectedPageId, videoUrl, description: fullText, token: metaPublishToken },
+      };
     }
 
+    const imageUrls = await uploadImagesToPublish();
+
     if (network === "linkedin") {
-      return { endpoint: "/api/linkedin/post", body: { text: fullText, token: linkedinToken, imageUrls: publicImageUrl ? [publicImageUrl] : [] } };
+      return { endpoint: "/api/linkedin/post", body: { text: fullText, token: linkedinToken, imageUrls } };
     }
     if (network === "facebook") {
       return {
         endpoint: "/api/meta/facebook/post",
-        body: { pageId: selectedPageId || "sandbox_page_id", message: fullText, token: metaPublishToken, imageUrls: publicImageUrl ? [publicImageUrl] : [] },
+        body: { pageId: selectedPageId, message: fullText, token: metaPublishToken, imageUrls },
+      };
+    }
+    if (imageUrls.length >= 2) {
+      return {
+        endpoint: "/api/meta/instagram/carousel",
+        body: { igAccountId: selectedIgId, imageUrls, caption: fullText, firstComment, token: metaPublishToken },
       };
     }
     return {
       endpoint: "/api/meta/instagram/post",
       body: {
-        igAccountId: selectedIgId || "sandbox_ig_id",
-        imageUrl: publicImageUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe",
+        igAccountId: selectedIgId,
+        imageUrl: imageUrls[0] || "",
         caption: fullText,
+        firstComment,
         token: metaPublishToken,
       },
     };
@@ -308,27 +428,101 @@ export const SocialPublisher: React.FC = () => {
         }));
         toast.success(`¡Subido con éxito a tu canal oficial de ${network.toUpperCase()}! 🎉`);
       } else {
-        // Fallback simulation status
-        setPublishStatus(prev => ({
-          ...prev,
-          [network]: {
-            status: "Simulado con Éxito (Sandbox)",
-            link: "#"
-          }
-        }));
-        toast.info("Simulación completada. Conecta tu cuenta y elige tu página/IG en 'Integración Nube' para publicar de forma real.");
+        const reason =
+          data?.error?.message || data?.error?.error?.message ||
+          (typeof data?.error === "string" ? data.error : JSON.stringify(data?.error || data || {}).slice(0, 160));
+        setPublishStatus(prev => ({ ...prev, [network]: { status: "Falló — reintentar" } }));
+        toast.error(`No se publicó en ${network.toUpperCase()}: ${reason}. Revisa tu conexión en 'Integración Nube'.`);
       }
     } catch (err: any) {
       console.error(err);
-      setPublishStatus(prev => ({ 
-        ...prev, 
-        [network]: { 
-          status: "Simulado con Éxito (Sandbox)", 
-          link: "#" 
-        } 
-      }));
+      setPublishStatus(prev => ({ ...prev, [network]: { status: "Falló — reintentar" } }));
+      toast.error(`Error de red publicando en ${network.toUpperCase()}: ${err.message || err}`);
     } finally {
       setIsPublishing(null);
+    }
+  };
+
+  // ---- One click -> the 3 networks at once (immediate or scheduled) ----
+  const buildPublishAllBody = async (publishAt?: string) => {
+    const metaPublishToken = selectedPageToken || metaToken;
+    const ig = networkText("instagram");
+    const videoUrl = isVideoSelected ? await uploadVideoToPublish() : undefined;
+    const imageUrls = isVideoSelected ? [] : await uploadImagesToPublish();
+
+    const networks: any = {};
+    if (metaPublishToken && selectedIgId) {
+      networks.instagram = { igAccountId: selectedIgId, token: metaPublishToken, firstComment: ig.firstComment };
+    }
+    if (metaPublishToken && selectedPageId) networks.facebook = { pageId: selectedPageId, token: metaPublishToken };
+    if (linkedinToken) networks.linkedin = { token: linkedinToken };
+
+    return {
+      captions: {
+        instagram: ig.text,
+        facebook: networkText("facebook").text,
+        linkedin: networkText("linkedin").text,
+      },
+      imageUrls,
+      videoUrl: videoUrl || undefined,
+      networks,
+      publishAt,
+      label: productName.slice(0, 60),
+    };
+  };
+
+  const NETWORK_LABELS: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn" };
+
+  const handlePublishAll = async (publishAt?: string) => {
+    if (!generatedResult) return;
+    setIsPublishingAll(true);
+    setPublishAllResults(null);
+    try {
+      const body = await buildPublishAllBody(publishAt);
+      if (Object.keys(body.networks).length === 0) {
+        toast.error("Conecta Meta y/o LinkedIn en 'Integración Nube' (y carga tus páginas) antes de publicar.");
+        return;
+      }
+      const res = await fetch("/api/publish-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok && data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data.mode === "scheduled") {
+        const nets = (data.scheduled || []).map((s: any) => NETWORK_LABELS[s.network]).join(", ");
+        setPublishAllResults([
+          ...(data.scheduled || []).map((s: any) => ({ network: s.network, ok: true, detail: `Programado para ${new Date(data.publishAt).toLocaleString()}` })),
+          ...(data.skipped || []).map((s: any) => ({ network: s.network, ok: false, skipped: true, detail: s.reason })),
+        ]);
+        toast.success(`Programado en: ${nets || "ninguna red"}.`);
+        loadScheduled();
+      } else {
+        const rows = (["instagram", "facebook", "linkedin"] as const).map((n) => {
+          const r = data.results?.[n] || {};
+          return {
+            network: n,
+            ok: !!r.ok,
+            skipped: !!r.skipped,
+            detail: r.ok ? `Publicado ✓ (id ${r.postId || "?"})` : r.error || "Sin detalle",
+          };
+        });
+        setPublishAllResults(rows);
+        const okCount = rows.filter((r) => r.ok).length;
+        const failed = rows.filter((r) => !r.ok && !r.skipped);
+        if (failed.length === 0 && okCount > 0) toast.success(`¡Publicado en ${okCount} red(es)! 🎉`);
+        else if (okCount > 0) toast.info(`Publicado en ${okCount} red(es); falló en ${failed.map((f) => NETWORK_LABELS[f.network]).join(", ")}.`);
+        else toast.error("No se pudo publicar en ninguna red. Revisa los detalles.");
+      }
+    } catch (err: any) {
+      toast.error(`Error publicando en todas las redes: ${err.message || err}`);
+    } finally {
+      setIsPublishingAll(false);
     }
   };
 
@@ -467,7 +661,23 @@ export const SocialPublisher: React.FC = () => {
 
             {/* Media Gallery Grid */}
             <div className="space-y-2">
-              <span className="text-[10px] font-bold tracking-wider text-faint uppercase block">Archivos Subidos ({mediaLibrary.length})</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold tracking-wider text-faint uppercase block">Archivos Subidos ({mediaLibrary.length})</span>
+                {selectedIds.length > 0 && (
+                  <button
+                    onClick={() => setSelectedIds([])}
+                    className="text-[10px] font-bold text-black hover:underline"
+                  >
+                    {selectedIds.length} para carrusel · limpiar
+                  </button>
+                )}
+              </div>
+              {selectedIds.length >= 2 && (
+                <p className="text-[10px] text-muted bg-sink border border-line rounded px-2 py-1.5">
+                  🎠 Al publicar irán las {Math.min(selectedIds.length, 10)} imágenes juntas: carrusel en Instagram y multi-foto en
+                  Facebook/LinkedIn (en el orden numerado).
+                </p>
+              )}
               {mediaLibrary.length === 0 ? (
                 <div className="text-center py-6 border border-line rounded-xl bg-sink">
                   <p className="text-xs text-muted">No hay contenidos guardados en tu biblioteca.</p>
@@ -502,13 +712,28 @@ export const SocialPublisher: React.FC = () => {
                               {item.type}
                             </span>
                           </div>
-                          
-                          <button
-                            onClick={(e) => deleteMediaItem(item.id, e)}
-                            className="text-zinc-600 hover:text-red-400 p-0.5 rounded transition"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+
+                          <div className="flex items-center gap-1">
+                            {item.type === "image" && (
+                              <button
+                                onClick={(e) => toggleMultiSelect(item, e)}
+                                title="Agregar/quitar del carrusel multi-imagen"
+                                className={`w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded border text-[9px] font-bold flex items-center justify-center transition ${
+                                  selectedIds.includes(item.id)
+                                    ? "bg-black text-white border-black"
+                                    : "bg-white/70 text-transparent border-zinc-400 hover:border-black"
+                                }`}
+                              >
+                                {selectedIds.includes(item.id) ? selectedIds.indexOf(item.id) + 1 : "•"}
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => deleteMediaItem(item.id, e)}
+                              className="text-zinc-600 hover:text-red-400 p-0.5 rounded transition"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
 
                         <div className="z-10 space-y-0.5">
@@ -561,6 +786,27 @@ export const SocialPublisher: React.FC = () => {
                   <option value="Educational">Educativo y de Alto Valor</option>
                   <option value="Bold">Atrevido, Disruptivo y Divertido</option>
                 </select>
+              </div>
+
+              {/* Destination link with automatic UTMs */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-faint uppercase tracking-wider block">
+                  Link de destino (tu funnel / página de venta)
+                </label>
+                <input
+                  type="url"
+                  value={destinationUrl}
+                  onChange={(e) => setDestinationUrl(e.target.value)}
+                  className="w-full bg-sink border border-line rounded-input p-2.5 text-xs text-ink outline-none focus:bg-accent-soft focus:ring-2 focus:ring-accent/20 font-mono"
+                  placeholder="https://tunegocio.com/curso"
+                />
+                <label className="flex items-center gap-1.5 text-[10px] text-muted cursor-pointer pt-0.5">
+                  <input type="checkbox" checked={utmEnabled} onChange={(e) => setUtmEnabled(e.target.checked)} />
+                  Agregar UTMs automáticos (utm_source por red + utm_campaign del producto) para medir conversiones
+                </label>
+                {destinationUrl.trim() && utmEnabled && (
+                  <p className="text-[9px] text-faint font-mono break-all">Ej: {linkFor("instagram")}</p>
+                )}
               </div>
 
               {/* Additional notes */}
@@ -701,7 +947,23 @@ export const SocialPublisher: React.FC = () => {
                     {/* Copy Box container */}
                     <div className="bg-sink border border-line rounded-xl p-4 space-y-3 relative overflow-hidden select-text">
                       <div className="flex items-center justify-between border-b border-line pb-2">
-                        <span className="text-[9px] text-faint uppercase font-mono tracking-wider font-bold">Copy Optimizado</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] text-faint uppercase font-mono tracking-wider font-bold">Copy Optimizado</span>
+                          {(() => {
+                            const limits = { instagram: 2200, facebook: 5000, linkedin: 3000 } as const;
+                            const limit = limits[activeNetworkTab];
+                            const len = networkText(activeNetworkTab).text.length;
+                            const over = len > limit;
+                            return (
+                              <span
+                                className={`text-[9px] font-mono ${over ? "text-red-500 font-bold" : "text-faint"}`}
+                                title={over ? "El texto supera el límite de la red y puede ser rechazado o truncado." : "Caracteres del copy (con el límite de la red)"}
+                              >
+                                {len}/{limit}{over ? " ⚠" : ""}
+                              </span>
+                            );
+                          })()}
+                        </div>
                         <button
                           onClick={() => {
                             const copyNode = generatedResult[activeNetworkTab];
@@ -802,6 +1064,62 @@ export const SocialPublisher: React.FC = () => {
                       </button>
                     </div>
 
+                    {/* One-click multi-network publishing */}
+                    <div className="bg-black rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <CloudLightning className="w-4 h-4 text-lime-300" />
+                        <span className="text-[10px] text-lime-300 uppercase font-mono font-bold">Publicación total — 1 click</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-300">
+                        {isVideoSelected
+                          ? "Video seleccionado: se publica como Reel en Instagram y video en Facebook (LinkedIn se omite)."
+                          : "Publica este contenido en Instagram, Facebook y LinkedIn al mismo tiempo, cada red con su copy optimizado."}
+                      </p>
+                      <label className="flex items-center gap-2 text-[11px] text-zinc-300 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={igHashtagsAsComment}
+                          onChange={(e) => setIgHashtagsAsComment(e.target.checked)}
+                        />
+                        Hashtags de Instagram como primer comentario (caption más limpio)
+                      </label>
+                      <button
+                        onClick={() => handlePublishAll()}
+                        disabled={isPublishingAll || isPublishing !== null}
+                        className="w-full bg-lime-300 hover:bg-lime-200 text-black font-bold text-xs uppercase py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition tracking-wider disabled:opacity-50"
+                      >
+                        {isPublishingAll ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Publicando en todas las redes...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Share2 className="w-4 h-4" />
+                            <span>Publicar en TODAS las redes</span>
+                          </>
+                        )}
+                      </button>
+
+                      {publishAllResults && (
+                        <div className="space-y-1 pt-1">
+                          {publishAllResults.map((r) => (
+                            <div key={r.network} className="flex items-start gap-2 text-[11px] bg-white/5 border border-white/10 rounded px-2.5 py-1.5">
+                              {r.ok ? (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-lime-300 shrink-0 mt-0.5" />
+                              ) : r.skipped ? (
+                                <HelpCircle className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
+                              ) : (
+                                <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+                              )}
+                              <span className="uppercase font-mono text-[9px] text-zinc-300 w-16 shrink-0 mt-0.5">{NETWORK_LABELS[r.network]}</span>
+                              <span className={`flex-1 break-words ${r.ok ? "text-lime-200" : r.skipped ? "text-zinc-400" : "text-red-300"}`}>{r.detail}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Scheduling controls */}
                     <div className="bg-sink/60 border border-line rounded-xl p-4 space-y-3">
                       <div className="flex items-center gap-2">
@@ -823,6 +1141,18 @@ export const SocialPublisher: React.FC = () => {
                           {scheduling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock className="w-3.5 h-3.5 text-black" />}
                           <span>Programar en {activeNetworkTab}</span>
                         </button>
+                        <button
+                          onClick={() => {
+                            if (!scheduleAt) return toast.error("Elige fecha y hora para programar.");
+                            if (new Date(scheduleAt).getTime() <= Date.now()) return toast.error("La fecha/hora debe ser futura.");
+                            handlePublishAll(new Date(scheduleAt).toISOString());
+                          }}
+                          disabled={isPublishingAll || !scheduleAt}
+                          className="bg-black text-white hover:bg-sidebar text-[11px] px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50 shrink-0 font-bold"
+                        >
+                          {isPublishingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CloudLightning className="w-3.5 h-3.5 text-lime-300" />}
+                          <span>Programar en TODAS</span>
+                        </button>
                       </div>
 
                       {scheduledList.length > 0 && (
@@ -831,12 +1161,33 @@ export const SocialPublisher: React.FC = () => {
                             <div key={s.id} className="flex items-center justify-between text-[11px] bg-sink border border-line rounded px-2.5 py-1.5">
                               <span className="uppercase font-mono text-[9px] text-black w-16 shrink-0">{s.network}</span>
                               <span className="flex-1 px-2 text-zinc-400 truncate">{new Date(s.publishAt).toLocaleString()}</span>
-                              <span className={`text-[9px] font-mono shrink-0 ${s.status === "published" ? "text-green-400" : s.status === "failed" ? "text-red-400" : s.status === "canceled" ? "text-zinc-600" : "text-amber-400"}`}>
+                              <span
+                                className={`text-[9px] font-mono shrink-0 ${s.status === "published" ? "text-green-400" : s.status === "failed" ? "text-red-400" : s.status === "canceled" ? "text-zinc-600" : "text-amber-400"}`}
+                                title={s.error || undefined}
+                              >
                                 {s.status}
+                                {s.status === "pending" && s.attempts > 0 && ` (reintento ${s.attempts})`}
                               </span>
                               {s.status === "pending" && (
                                 <button onClick={() => cancelScheduledPost(s.id)} className="ml-2 text-zinc-600 hover:text-red-400 shrink-0">
                                   <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                              {s.status === "failed" && (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await apiPost(`/api/scheduled/${s.id}/retry`, {});
+                                      toast.success("Reintentando ahora (mira el estado en unos segundos).");
+                                      loadScheduled();
+                                    } catch (err: any) {
+                                      toast.error(err.message || "No se pudo reintentar.");
+                                    }
+                                  }}
+                                  className="ml-2 text-zinc-600 hover:text-black shrink-0"
+                                  title="Reintentar ahora"
+                                >
+                                  <RefreshCw className="w-3 h-3" />
                                 </button>
                               )}
                             </div>

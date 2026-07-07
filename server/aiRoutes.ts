@@ -10,7 +10,8 @@ import {
   NANO_BANANA_MODELS,
   NANO_BANANA_PRO_MODELS,
 } from "../aiHelpers";
-import { getBrand } from "../serverStore";
+import { getBrand, listPosts } from "../serverStore";
+import { buildMetricsSummary } from "./metricsHistory";
 import type { ServerContext } from "./context";
 
 // Brand kit context automatically prepended to every AI generation prompt so
@@ -28,6 +29,27 @@ function brandPreamble(): string {
   if (brand.hashtags) parts.push(`Preferred hashtags: ${brand.hashtags}`);
   if (!parts.length) return "";
   return `[BRAND KIT — always respect this brand identity]\n${parts.join("\n")}\n\n`;
+}
+
+// Real performance data (measured engagement of published posts) prepended to
+// idea/calendar prompts so the AI doubles down on what already worked.
+function performanceContext(): string {
+  try {
+    const summary = buildMetricsSummary();
+    if (!summary.totalPosts) return "";
+    const captions = new Map(listPosts().map((p) => [p.postId, p.caption || ""]));
+    const top = [...summary.latestPerPost].sort((a, b) => b.engagement - a.engagement).slice(0, 5);
+    const lines = top.map(
+      (s) =>
+        `- [${s.network}] engagement ${s.engagement} (${s.likes} likes, ${s.comments} comments): "${(captions.get(s.postId) || "").replace(/\s+/g, " ").slice(0, 140)}"`
+    );
+    const nets = Object.entries(summary.byNetwork)
+      .map(([n, v]) => `${n}: ${v.posts} posts, ${v.engagement} engagement total`)
+      .join("; ");
+    return `[REAL PERFORMANCE DATA — measured on this account, lean into what already works]\nNetwork totals: ${nets}\nTop posts by measured engagement:\n${lines.join("\n")}\n\n`;
+  } catch {
+    return "";
+  }
 }
 
 export function registerAiRoutes(app: express.Express, ctx: ServerContext): void {
@@ -423,7 +445,7 @@ Return strictly valid JSON conforming to the requested schema. No markdown wrapp
 
 // 2.b ENDPOINT: Generate a real AI image for a carousel slide using Nano Banana
 app.post("/api/generate-carousel-image", async (req, res) => {
-  const { prompt, slideTitle, slideBody, visualIdea, platform, topic, accentColor, bgGradientStart, imageModel, referenceImage } = req.body;
+  const { prompt, rawPrompt, slideTitle, slideBody, visualIdea, platform, topic, accentColor, bgGradientStart, imageModel, referenceImage } = req.body;
 
   const activeAi = getCustomAiClient(req) || ai;
   if (!activeAi) {
@@ -436,12 +458,16 @@ app.post("/api/generate-carousel-image", async (req, res) => {
 
   // Compose a rich visual prompt for Nano Banana. We instruct it to leave room
   // for text and to avoid rendering letters (the app overlays the copy itself).
+  // With rawPrompt=true the user's prompt is sent as-is (plus aspect ratio):
+  // full creative control, including images WITH text if the user asks for it.
   const aspect = platform === "Instagram"
     ? "vertical 4:5 portrait composition (1080x1350)"
     : "square 1:1 composition (1080x1080)";
 
   const fullPrompt = (prompt && String(prompt).trim().length > 0)
-    ? `Generate a high-end social media carousel slide background image. ${aspect}. ${prompt}. Premium advertising design, clean composition with generous negative space for overlaid text, no text or letters in the image, ultra high quality, 4k.`
+    ? rawPrompt
+      ? `${String(prompt).trim()}. ${aspect}.`
+      : `Generate a high-end social media carousel slide background image. ${aspect}. ${prompt}. Premium advertising design, clean composition with generous negative space for overlaid text, no text or letters in the image, ultra high quality, 4k.`
     : `Generate a stunning, premium social media carousel slide background image.
 ${aspect}.
 Carousel topic: ${topic || "marketing"}.
@@ -487,6 +513,63 @@ Important: do NOT render any text, words or letters in the image. Photorealistic
     res.json({ image: null, isMock: true, error: friendly });
   }
 });
+// 2.c ENDPOINT: Suggest one rich Nano Banana prompt per slide. The user can
+// edit each suggestion before generating (fills customImagePrompt in the UI).
+app.post("/api/generate-image-prompts", async (req, res) => {
+  const { topic, style, slides } = req.body || {};
+  const list: any[] = Array.isArray(slides) ? slides.slice(0, 10) : [];
+  if (!list.length) {
+    return res.status(400).json({ error: "Envía las diapositivas (slides) del carrusel." });
+  }
+
+  // Offline fallback: compose prompts from the slide's own visual concept.
+  const fallback = () =>
+    list.map(
+      (s: any) =>
+        `${s.visualIdea || s.title || "modern marketing visual"}, ${style || "premium advertising photography, cinematic lighting"}, clean composition, ultra high quality, 4k, no text`
+    );
+
+  const activeAi = getCustomAiClient(req) || ai;
+  if (!activeAi) {
+    return res.json({ prompts: fallback(), isMock: true });
+  }
+
+  try {
+    const slideLines = list
+      .map((s: any, i: number) => `${i + 1}. Title: "${s.title || ""}" — Message: "${s.body || ""}" — Concept: "${s.visualIdea || ""}"`)
+      .join("\n");
+    const prompt = `${brandPreamble()}You are an expert art director writing image-generation prompts for a social media carousel.
+Carousel topic: "${topic || "marketing"}".
+${style ? `Global visual style requested by the user: "${style}".` : ""}
+Slides:
+${slideLines}
+
+For EACH slide write ONE image-generation prompt in English (35-60 words): concrete subject, composition, lighting, mood and color palette. The ${list.length} prompts must feel like one coherent visual series (same style family) while each depicts its slide's specific idea. No text or letters in the images. Return strictly valid JSON conforming to the schema (array of ${list.length} strings, same order as the slides). No markdown wrapping.`;
+
+    const response = await generateContentWithFallback(
+      {
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+      },
+      activeAi
+    );
+    const parsed = JSON.parse(response.text || "[]");
+    const prompts = Array.isArray(parsed) ? parsed.map((p: any) => String(p)).slice(0, list.length) : [];
+    if (prompts.length < list.length) {
+      const fb = fallback();
+      while (prompts.length < list.length) prompts.push(fb[prompts.length]);
+    }
+    res.json({ prompts, isMock: false });
+  } catch (error: any) {
+    console.error("Error generating image prompts:", error);
+    res.json({ prompts: fallback(), isMock: true, error: error?.message || String(error) });
+  }
+});
+
 // 3. ENDPOINT: Generate copies based on Copywriting Frameworks
 app.post("/api/generate-copys", async (req, res) => {
   const { topic, framework, tone } = req.body;
@@ -611,7 +694,7 @@ app.post("/api/generate-calendar", async (req, res) => {
   }
 
   try {
-    const prompt = `${brandPreamble()}You are Cami (Ideadora) and Facu (Encargado de Publicación).
+    const prompt = `${brandPreamble()}${performanceContext()}You are Cami (Ideadora) and Facu (Encargado de Publicación).
 Generate a custom monthly publication calendar (exactly 30 days) for a brand in this niche: "${niche || "Servicios Digitales"}" focusing on "${topic || "Crecimiento y Ventas"}".
 
 Generate a list of 15 highly detailed unique calendar entries. We will interpolate them to make a 30-day calendar. For each entry, provide:
@@ -727,7 +810,7 @@ app.post("/api/generate-ideas", async (req, res) => {
   }
 
   try {
-    const prompt = `${brandPreamble()}You are Cami (Ideadora), who is playful, fast-paced, and generates highly innovative content angles.
+    const prompt = `${brandPreamble()}${performanceContext()}You are Cami (Ideadora), who is playful, fast-paced, and generates highly innovative content angles.
 Generate exactly 30 unique, winning social media content ideas / angles for a business in the niche: "${niche || "e-commerce"}".
 Goal of the content: "${goal || "Get clients and increase views"}".
 

@@ -15,6 +15,8 @@ export const STORAGE_KEYS = {
   metaCode: "meta_code",
   metaIgAccountId: "meta_ig_account_id",
   metaPageId: "meta_page_id",
+  metaTokenExpiresAt: "meta_token_expires_at",
+  linkedinTokenExpiresAt: "linkedin_token_expires_at",
 
   driveFolderId: "custom_drive_folder_id",
   driveApiKey: "custom_drive_api_key",
@@ -28,6 +30,7 @@ export const STORAGE_KEYS = {
   calendarApiKey: "custom_calendar_api_key",
 
   mediaLibrary: "adteam_media_library",
+  destinationUrl: "adteam_destination_url",
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

@@ -26,3 +26,18 @@ export function consumeOAuthState(state: unknown): boolean {
 export function sanitizeOAuthCode(code: unknown): string {
   return typeof code === "string" ? code.replace(/[^A-Za-z0-9._\-]/g, "").slice(0, 512) : "";
 }
+
+/**
+ * Serializes a value for safe embedding inside an inline <script> block.
+ * Plain JSON.stringify is NOT enough: a value containing "</script>" would
+ * close the tag and inject markup (XSS). Escaping "<" prevents that, and the
+ * U+2028/U+2029 escapes keep the output valid JS string syntax.
+ */
+export function jsonForInlineScript(value: unknown): string {
+  // JSON.stringify(undefined) returns undefined; emit valid JS ("null") instead.
+  const json = JSON.stringify(value) ?? "null";
+  return json
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}

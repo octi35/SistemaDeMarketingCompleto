@@ -65,6 +65,91 @@ export const reportConfigSchema = z.object({
     .optional(),
 });
 
+export const carouselTemplateSchema = z.object({
+  name: z.string().min(1).max(80),
+  design: z.record(z.string(), z.any()),
+});
+
+/**
+ * Guards webhook URLs against SSRF: the server POSTs to these URLs, so
+ * loopback/link-local/private targets are rejected (the metadata endpoint
+ * 169.254.169.254 is the classic cloud-credentials theft vector). Set
+ * ALLOW_PRIVATE_WEBHOOKS=1 in dev to test against a local n8n/webhook.site.
+ */
+export function isSafeWebhookUrl(raw: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+  if (process.env.ALLOW_PRIVATE_WEBHOOKS === "1") return true;
+  // URL.hostname keeps brackets around IPv6 literals ("[::1]"): strip them.
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host === "0.0.0.0" || host.endsWith(".local") || host.endsWith(".internal")) return false;
+  // IPv4 private / loopback / link-local ranges + IPv6 loopback/ULA.
+  if (/^127\.|^10\.|^192\.168\.|^169\.254\.|^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+  if (host === "::1" || host.startsWith("fd") || host.startsWith("fe80")) return false;
+  return true;
+}
+
+export const webhookSchema = z.object({
+  url: z
+    .string()
+    .url()
+    .max(500)
+    .refine(isSafeWebhookUrl, { message: "URL de webhook no permitida (destinos internos/privados bloqueados)." }),
+  events: z.array(z.enum(["post.published", "post.failed", "asset.created"])).max(10).optional(),
+  secret: z.string().max(200).optional(),
+});
+
+export const brandImagePlanSchema = z.object({
+  count: z.number().int().min(1).max(50).optional(),
+  focus: z.string().max(500).optional(),
+});
+
+export const brandImageGenerateSchema = z.object({
+  prompt: z.string().min(3).max(2000),
+  concept: z.string().max(200).optional(),
+  tags: z.array(z.string().max(40)).max(10).optional(),
+  imageModel: z.enum(["standard", "pro"]).optional(),
+  aspect: z.enum(["square", "portrait"]).optional(),
+  referenceImage: z.string().max(15_000_000).optional(),
+});
+
+export const publishAllSchema = z.object({
+  caption: z.string().max(5000).optional(),
+  captions: z
+    .object({
+      instagram: z.string().max(2200).optional(),
+      facebook: z.string().max(5000).optional(),
+      linkedin: z.string().max(3000).optional(),
+    })
+    .optional(),
+  imageUrls: z.array(z.string().url()).max(10).optional(),
+  // Video mode: IG publishes a Reel and FB a page video (LinkedIn is skipped).
+  videoUrl: z.string().url().optional(),
+  networks: z.object({
+    instagram: z
+      .object({
+        igAccountId: z.string().min(3),
+        token: z.string().min(10),
+        // Posted as first comment right after publishing (e.g. hashtags).
+        firstComment: z.string().max(2200).optional(),
+      })
+      .optional(),
+    facebook: z.object({ pageId: z.string().min(3), token: z.string().min(10) }).optional(),
+    linkedin: z.object({ authorUrn: z.string().optional(), token: z.string().min(10) }).optional(),
+  }),
+  // Optional: schedule for later instead of publishing right away.
+  publishAt: z
+    .string()
+    .refine((v) => !isNaN(Date.parse(v)), { message: "publishAt debe ser una fecha/hora válida (ISO)." })
+    .optional(),
+  label: z.string().max(200).optional(),
+});
+
 export const metaAdsDraftSchema = z.object({
   adAccountId: z.string().min(3),
   token: z.string().min(10),

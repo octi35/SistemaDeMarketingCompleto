@@ -2,15 +2,18 @@
 // publishing (delegated to ./publish so the scheduler can reuse it) and
 // Instagram metrics. OAuth flows extracted verbatim from the original server.ts.
 import express from "express";
-import { issueOAuthState, consumeOAuthState } from "../oauthState";
+import { issueOAuthState, consumeOAuthState, jsonForInlineScript } from "../oauthState";
 import {
   publishInstagramPost,
   publishInstagramCarousel,
+  publishInstagramReel,
   publishFacebookPost,
+  publishFacebookVideo,
   publishLinkedInPost,
 } from "./publish";
+import { runPublishAll } from "./publishAllCore";
 import { createMetaAdsDraft } from "./metaAds";
-import { parseBody, metaAdsDraftSchema } from "./validate";
+import { parseBody, metaAdsDraftSchema, publishAllSchema } from "./validate";
 
 export function registerSocialRoutes(app: express.Express): void {
 
@@ -80,8 +83,8 @@ app.get(["/api/linkedin/callback", "/api/linkedin/callback/"], async (req, res) 
               if (window.opener) {
                 window.opener.postMessage({ 
                   type: 'OAUTH_LINKEDIN_SUCCESS', 
-                  token: ${JSON.stringify(accessToken)},
-                  expires_in: ${JSON.stringify(data.expires_in)}
+                  token: ${jsonForInlineScript(accessToken)},
+                  expires_in: ${jsonForInlineScript(data.expires_in)}
                 }, window.location.origin);
                 setTimeout(() => window.close(), 1000);
               } else {
@@ -183,7 +186,30 @@ app.get(["/api/meta/callback", "/api/meta/callback/"], async (req, res) => {
       return res.status(tokenRes.status).send(`Failed to exchange Meta token: ${JSON.stringify(data)}`);
     }
 
-    const accessToken = data.access_token;
+    // Upgrade the short-lived token (hours) to a long-lived one (~60 days)
+    // so scheduled posts keep working; fall back to the short token on error.
+    let accessToken = data.access_token;
+    let expiresIn = data.expires_in;
+    try {
+      const llRes = await fetch(
+        `https://graph.facebook.com/v18.0/oauth/access_token?` +
+          new URLSearchParams({
+            grant_type: "fb_exchange_token",
+            client_id: appId,
+            client_secret: appSecret,
+            fb_exchange_token: accessToken,
+          }).toString()
+      );
+      const llData = (await llRes.json()) as any;
+      if (llRes.ok && llData.access_token) {
+        accessToken = llData.access_token;
+        expiresIn = llData.expires_in || 60 * 24 * 60 * 60;
+        console.log("[Meta OAuth] Token intercambiado por uno de larga duración (~60 días).");
+      }
+    } catch (err) {
+      console.warn("[Meta OAuth] No se pudo obtener token de larga duración; se usa el corto:", err);
+    }
+    data.expires_in = expiresIn;
     res.send(`
       <html>
         <body style="font-family: sans-serif; background: #0A0A0B; color: #fff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center;">
@@ -194,8 +220,8 @@ app.get(["/api/meta/callback", "/api/meta/callback/"], async (req, res) => {
               if (window.opener) {
                 window.opener.postMessage({ 
                   type: 'OAUTH_META_SUCCESS', 
-                  token: ${JSON.stringify(accessToken)},
-                  expires_in: ${JSON.stringify(data.expires_in)}
+                  token: ${jsonForInlineScript(accessToken)},
+                  expires_in: ${jsonForInlineScript(data.expires_in)}
                 }, window.location.origin);
                 setTimeout(() => window.close(), 1000);
               } else {
@@ -208,6 +234,36 @@ app.get(["/api/meta/callback", "/api/meta/callback/"], async (req, res) => {
     `);
   } catch (error: any) {
     res.status(500).send(`Error exchanging Meta credentials: ${error.message || error}`);
+  }
+});
+
+// 6.b POST /api/meta/refresh-token - Re-exchanges a (still valid) token for a
+// fresh long-lived one, so the 60-day window can be renewed from the panel.
+app.post("/api/meta/refresh-token", async (req, res) => {
+  const token = req.body?.token || req.headers.authorization?.replace("Bearer ", "");
+  if (!token) return res.status(400).json({ error: "Falta el token de Meta a renovar." });
+  const appId = process.env.META_APP_ID || "";
+  const appSecret = process.env.META_APP_SECRET || "";
+  if (!appId || !appSecret) {
+    return res.status(400).json({ error: "Faltan META_APP_ID / META_APP_SECRET en el servidor." });
+  }
+  try {
+    const r = await fetch(
+      `https://graph.facebook.com/v18.0/oauth/access_token?` +
+        new URLSearchParams({
+          grant_type: "fb_exchange_token",
+          client_id: appId,
+          client_secret: appSecret,
+          fb_exchange_token: String(token),
+        }).toString()
+    );
+    const d = (await r.json()) as any;
+    if (!r.ok || !d.access_token) {
+      return res.status(r.status || 400).json({ error: d.error?.message || "No se pudo renovar el token." });
+    }
+    res.json({ token: d.access_token, expires_in: d.expires_in || 60 * 24 * 60 * 60 });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo renovar el token." });
   }
 });
 
@@ -295,6 +351,43 @@ app.post("/api/metrics/instagram", async (req, res) => {
   }
 });
 
+// Real Facebook Page metrics: recent posts with likes/comments/shares.
+app.post("/api/metrics/facebook", async (req, res) => {
+  const { pageId, token, limit } = req.body || {};
+  const activeToken = token || req.headers.authorization?.replace("Bearer ", "");
+  if (!activeToken || !pageId) {
+    return res.status(400).json({ error: "Faltan pageId y token de Meta." });
+  }
+  try {
+    const n = Math.min(Number(limit) || 12, 25);
+    const url =
+      `https://graph.facebook.com/v18.0/${pageId}/posts?` +
+      `fields=id,message,created_time,permalink_url,likes.summary(true),comments.summary(true),shares` +
+      `&limit=${n}&access_token=${activeToken}`;
+    const r = await fetch(url);
+    const d = (await r.json()) as any;
+    if (!r.ok) return res.status(r.status).json({ error: d.error?.message || d });
+    const media = (d.data || []).map((p: any) => {
+      const likes = p.likes?.summary?.total_count || 0;
+      const comments = p.comments?.summary?.total_count || 0;
+      const shares = p.shares?.count || 0;
+      return {
+        id: p.id,
+        caption: p.message || "",
+        permalink: p.permalink_url,
+        timestamp: p.created_time,
+        likes,
+        comments,
+        shares,
+        engagement: likes + comments + shares,
+      };
+    });
+    res.json({ media });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudieron obtener las métricas de Facebook" });
+  }
+});
+
 // 4. POST /api/linkedin/post - Publishes posts on LinkedIn via ugcPosts
 app.post("/api/linkedin/post", async (req, res) => {
   const { text, authorUrn, token, imageUrls } = req.body || {};
@@ -312,7 +405,7 @@ app.post("/api/linkedin/post", async (req, res) => {
 
 // 8. POST /api/meta/instagram/post - Publishes to IG Business
 app.post("/api/meta/instagram/post", async (req, res) => {
-  const { igAccountId, imageUrl, caption, token } = req.body || {};
+  const { igAccountId, imageUrl, caption, firstComment, token } = req.body || {};
   const activeToken = token || req.headers.authorization?.replace("Bearer ", "");
   if (!activeToken) {
     return res.status(401).json({ error: "Missing active Meta access token" });
@@ -321,16 +414,53 @@ app.post("/api/meta/instagram/post", async (req, res) => {
     return res.status(400).json({ error: "Missing required fields (igAccountId, imageUrl)" });
   }
   try {
-    const result = await publishInstagramPost({ igAccountId, imageUrl, caption, token: activeToken });
+    const result = await publishInstagramPost({ igAccountId, imageUrl, caption, firstComment, token: activeToken });
     res.status(result.ok ? 200 : result.status).json(result.data);
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to publish on Instagram Business" });
   }
 });
 
+// 8.c POST /api/meta/instagram/reel - Publishes a video as an IG Reel
+// (waits for Instagram's server-side processing, usually 15-60s).
+app.post("/api/meta/instagram/reel", async (req, res) => {
+  const { igAccountId, videoUrl, caption, firstComment, token } = req.body || {};
+  const activeToken = token || req.headers.authorization?.replace("Bearer ", "");
+  if (!activeToken) {
+    return res.status(401).json({ error: "Falta el token de acceso de Meta." });
+  }
+  if (!igAccountId || !videoUrl) {
+    return res.status(400).json({ error: "Se requieren igAccountId y videoUrl (URL pública del video)." });
+  }
+  try {
+    const result = await publishInstagramReel({ igAccountId, videoUrl, caption, firstComment, token: activeToken });
+    res.status(result.ok ? 200 : result.status).json(result.data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo publicar el Reel" });
+  }
+});
+
+// 9.b POST /api/meta/facebook/video - Publishes a video on a Facebook Page
+app.post("/api/meta/facebook/video", async (req, res) => {
+  const { pageId, videoUrl, description, pageToken, token } = req.body || {};
+  const activeToken = pageToken || token || req.headers.authorization?.replace("Bearer ", "");
+  if (!activeToken) {
+    return res.status(401).json({ error: "Falta el token de la página de Facebook." });
+  }
+  if (!pageId || !videoUrl) {
+    return res.status(400).json({ error: "Se requieren pageId y videoUrl (URL pública del video)." });
+  }
+  try {
+    const result = await publishFacebookVideo({ pageId, videoUrl, description, token: activeToken });
+    res.status(result.ok ? 200 : result.status).json(result.data);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo publicar el video en Facebook" });
+  }
+});
+
 // 8.b POST /api/meta/instagram/carousel - Publishes a multi-image carousel
 app.post("/api/meta/instagram/carousel", async (req, res) => {
-  const { igAccountId, imageUrls, caption, token } = req.body || {};
+  const { igAccountId, imageUrls, caption, firstComment, token } = req.body || {};
   const activeToken = token || req.headers.authorization?.replace("Bearer ", "");
   if (!activeToken) {
     return res.status(401).json({ error: "Falta el token de acceso de Meta." });
@@ -339,11 +469,25 @@ app.post("/api/meta/instagram/carousel", async (req, res) => {
     return res.status(400).json({ error: "Se requieren igAccountId y al menos 2 imágenes (máx 10)." });
   }
   try {
-    const result = await publishInstagramCarousel({ igAccountId, imageUrls, caption, token: activeToken });
+    const result = await publishInstagramCarousel({ igAccountId, imageUrls, caption, firstComment, token: activeToken });
     res.status(result.ok ? 200 : result.status).json(result.data);
   } catch (error: any) {
     console.error("Error publishing IG carousel:", error);
     res.status(500).json({ error: error.message || "Failed to publish Instagram carousel" });
+  }
+});
+
+// 11. POST /api/publish-all - One click -> Instagram + Facebook + LinkedIn.
+// Publishes immediately, or schedules one post per network when publishAt
+// is provided. Each network succeeds/fails on its own.
+app.post("/api/publish-all", async (req, res) => {
+  const body = parseBody(publishAllSchema, req, res);
+  if (!body) return;
+  try {
+    const result = await runPublishAll(body);
+    res.status(result.status).json(result.body);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "No se pudo publicar en las redes" });
   }
 });
 
