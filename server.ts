@@ -21,6 +21,7 @@ import { registerIntegrationRoutes } from "./server/integrationRoutes";
 import { registerSocialRoutes } from "./server/socialRoutes";
 import { registerBrandImageRoutes } from "./server/brandImageRoutes";
 import { registerExternalApi } from "./server/externalApi";
+import { registerAuthGate } from "./server/authGate";
 import { startScheduler } from "./server/scheduler";
 import { initCloudStore } from "./server/cloudStore";
 import { exportStoreSnapshot, hasLocalStoreData, replaceStoreFromCloud } from "./serverStore";
@@ -136,6 +137,10 @@ function getCustomAiClient(req: express.Request): GoogleGenAI | null {
 }
 
 const ctx: ServerContext = { ai, anthropicClient, getCustomAiClient, publicBaseUrl };
+
+// Access gate FIRST: with APP_PASSWORD set, every /api route below requires
+// the session cookie (see server/authGate.ts for the exemptions).
+registerAuthGate(app);
 
 registerAiRoutes(app, ctx);
 registerStoreRoutes(app, ctx);

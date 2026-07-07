@@ -30,9 +30,12 @@ Este documento resume las medidas de seguridad implementadas en AdTeam AI y el m
 - **Path traversal**: el borrado de assets usa `path.basename`; los archivos se sirven vía `express.static`.
 - **Supabase (opcional)**: la tabla usa RLS activo sin políticas — solo la `service_role` key del servidor accede; la clave pública no tiene acceso a datos.
 
+### Control de acceso (instancias desplegadas)
+- **Gate por contraseña**: con `APP_PASSWORD` configurada, toda la app y la API exigen login. La sesión es una cookie `HttpOnly; SameSite=Lax` (+`Secure` en producción) con un token HMAC sin estado — cambiar la contraseña revoca todas las sesiones. El login tiene rate limit propio (10/min) y comparación en tiempo constante. Quedan públicos solo `/uploads` (las redes sociales deben poder leer las imágenes) y `/api/ext/*` (protegido por sus propias API keys).
+
 ## Limitaciones conocidas (por diseño de la fase actual)
 
-- **Aplicación mono-usuario sin autenticación propia**: pensada para ejecutarse en una URL privada de un solo operador. Los tokens de sesión del navegador viven en `localStorage`. La fase multi-usuario (Supabase Auth + roles) está en el roadmap y convertirá los endpoints en autenticados por sesión.
+- **Aplicación mono-operador**: hay una contraseña de acceso global (no cuentas individuales ni roles). Los tokens de sesión de redes del navegador viven en `localStorage`. La fase multi-usuario (Supabase Auth + roles) está en el roadmap.
 - **Sin CSP estricta**: las páginas de callback OAuth usan scripts inline mínimos; se mitigó con serialización segura en lugar de CSP.
 
 ## Reporte de vulnerabilidades

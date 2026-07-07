@@ -102,7 +102,7 @@ El scheduler corre dentro del proceso Express, así que necesita un hosting **si
 
 1. `npm run build && npm start` (un solo proceso sirve frontend + API; puerto vía `PORT`).
 2. `APP_URL` con tu dominio HTTPS (Instagram exige URLs públicas para las imágenes).
-3. Variables de `.env.example` en el panel del hosting.
+3. Variables de `.env.example` en el panel del hosting — en especial **`APP_PASSWORD`** (bloquea la app tras una pantalla de login) y **`APP_SECRET`** (clave estable de cifrado de tokens).
 4. Disco persistente para `.data/`, **o** conecta Supabase: ejecuta [`supabase/migration.sql`](./supabase/migration.sql) una vez y define `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` — el estado y las imágenes pasan a la nube y sobreviven redeploys.
 
 ## 🧪 Calidad
